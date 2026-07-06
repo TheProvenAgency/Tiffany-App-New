@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ms. Financial Solutions — Login</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(1200px 600px at 70% -10%,#3a1228 0%,#191A1F 55%,#0d0d11 100%);
+    font-family:'Segoe UI',system-ui,sans-serif;color:#fff}
+  .card{background:rgba(255,255,255,.04);border:1px solid rgba(224,191,184,.25);border-radius:18px;
+    padding:44px 40px;width:340px;text-align:center;backdrop-filter:blur(8px);box-shadow:0 30px 60px rgba(0,0,0,.5)}
+  img{width:190px;margin-bottom:10px}
+  h1{font-size:15px;font-weight:600;letter-spacing:.22em;color:#E0BFB8;margin:0 0 26px;text-transform:uppercase}
+  input{width:100%;box-sizing:border-box;padding:13px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.15);
+    background:rgba(0,0,0,.35);color:#fff;font-size:15px;outline:none;margin-bottom:14px}
+  input:focus{border-color:#FF2E9A}
+  button{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;
+    background:linear-gradient(90deg,#FF2E9A,#B76E79);color:#fff;letter-spacing:.05em}
+  button:hover{filter:brightness(1.12)}
+  .err{color:#ff6b9d;font-size:13px;height:18px;margin-top:10px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <img src="https://msfinancialsolutions.net/wp-content/uploads/2025/04/FInancial-Solutions.png" alt="Ms. Financial Solutions">
+    <h1>Command Center</h1>
+    <form id="f">
+      <input type="password" id="pw" placeholder="Password" autofocus>
+      <button>Sign In</button>
+      <div class="err" id="err"></div>
+    </form>
+  </div>
+<script>
+document.getElementById('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({password:document.getElementById('pw').value})});
+  if (r.ok) location.href='/'; else document.getElementById('err').textContent='Wrong password';
+});
+</script>
+</body>
+</html>
