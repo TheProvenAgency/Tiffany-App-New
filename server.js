@@ -227,6 +227,37 @@ app.get('/api/dashboard', async (req, res) => {
     // dispute events (from DisputeFox webhook feed)
     const disputes = store.getEvents().filter(e => e.type === 'dispute' && inRange(e.at || e.receivedAt, from, to));
 
+    // previous equal-length period comparison (for hero vs-% )
+    let prevRevenue = null;
+    if (from && to) {
+      const f = new Date(from), t = new Date(to);
+      const days = Math.round((t - f) / 86400000) + 1;
+      const pf = new Date(f); pf.setDate(pf.getDate() - days);
+      const pt = new Date(f); pt.setDate(pt.getDate() - 1);
+      const pfs = pf.toISOString().slice(0, 10), pts = pt.toISOString().slice(0, 10);
+      prevRevenue = payments.filter(p => inRange(p.at, pfs, pts)).reduce((s, p) => s + (p.amount || 0), 0);
+      prevRevenue = Math.round(prevRevenue * 100) / 100;
+    }
+
+    // client-base segments + value metrics + system health
+    const unclassified = clients.filter(c => c.status !== 'active' && c.status !== 'inactive').length;
+    const payers = new Set(payments.map(p => p.email).filter(Boolean));
+    const perEmailCount = {};
+    for (const p of payments) if (p.email) perEmailCount[p.email] = (perEmailCount[p.email] || 0) + 1;
+    const repeatRevenue = payments.filter(p => perEmailCount[p.email] > 1).reduce((s, p) => s + (p.amount || 0), 0);
+    const allEvents = store.getEvents();
+    const lastOf = t => { const es = allEvents.filter(e => e.type === t); return es.length ? (es[es.length - 1].at || es[es.length - 1].receivedAt) : null; };
+    const snaps = store.getSnapshots();
+    const health = {
+      lastPaymentEventAt: lastOf('payment'),
+      lastDisputeAt: lastOf('dispute'),
+      lastSnapshotAt: snaps.length ? snaps[snaps.length - 1].date : null,
+      unclassified,
+      paymentFeedOk: (() => { const l = lastOf('payment'); return l ? (Date.now() - new Date(l)) < 48 * 3600e3 : false; })(),
+      disputeFeedOk: (() => { const l = lastOf('dispute'); return l ? (Date.now() - new Date(l)) < 7 * 86400e3 : false; })(),
+      socialOk: (() => { const l = snaps.length ? snaps[snaps.length - 1].date : null; return l ? (Date.now() - new Date(l)) < 48 * 3600e3 : false; })()
+    };
+
     res.json({
       mode: liveMode() ? 'live' : 'demo',
       generatedAt: new Date().toISOString(),
@@ -248,8 +279,14 @@ app.get('/api/dashboard', async (req, res) => {
         fbFollowers: latestSnap.fbFollowers ?? null,
         igDelta: followerDelta.ig,
         fbDelta: followerDelta.fb,
-        disputesSent: disputes.length
+        disputesSent: disputes.length,
+        prevRevenue,
+        unclassified,
+        distinctPayers: payers.size,
+        ltv: payers.size ? Math.round(payments.reduce((s, p) => s + (p.amount || 0), 0) / payers.size) : 0,
+        repeatRevenue: Math.round(repeatRevenue)
       },
+      health,
       series: {
         revenue: revenueSeries,
         payments: seriesFrom(paysIn, granularity, () => 1, p => p.at),
@@ -381,6 +418,23 @@ app.get('/api/reactivation', async (req, res) => {
 });
 app.post('/api/reactivation/:id/worked', (req, res) => {
   res.json({ ok: true, worked: store.setWorked(req.params.id, req.body.worked ? { outcome: req.body.outcome || '' } : false) });
+});
+
+// merged activity feed: latest sales, disputes, new clients
+app.get('/api/activity', async (req, res) => {
+  try {
+    const clients = await getClients();
+    const events = store.getEvents();
+    const items = [];
+    for (const p of events.filter(e => e.type === 'payment').slice(-40))
+      items.push({ kind: 'sale', at: p.at || p.receivedAt, title: p.name || p.email, sub: (p.product || 'payment'), amount: p.amount });
+    for (const d of events.filter(e => e.type === 'dispute').slice(-20))
+      items.push({ kind: 'dispute', at: d.at || d.receivedAt, title: d.name || d.email, sub: (d.action || 'dispute') + (d.round ? ' · R' + d.round : '') });
+    for (const c of clients.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 15))
+      items.push({ kind: 'client', at: c.createdAt, title: c.name, sub: 'new client' });
+    items.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+    res.json({ items: items.slice(0, 30) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // pipeline board: active clients grouped by round (mirrors GHL Credit Repair Delivery)
