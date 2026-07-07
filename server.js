@@ -12,6 +12,7 @@ const { demoData } = require('./lib/demo');
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' })); // Zapier webhooks post form-encoded
 const PORT = process.env.PORT || 3000;
 
 // ------------------------- auth -------------------------
