@@ -6,283 +6,400 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --bg:#191A1F; --bg2:#0d0d11; --card:#212229; --card2:#26272f;
-  --pink:#FF2E9A; --rose:#B76E79; --rosegold:#E0BFB8; --gold:#d4a373;
-  --text:#f4f2f3; --muted:#9a97a0; --green:#3ddc97; --red:#ff5c7a;
-  --border:rgba(224,191,184,.16);
+  --bg:#f5f2ec; --card:#ffffff; --ink:#211d18; --muted:#8d8577; --line:#e8e2d6;
+  --sidebar:#211c18; --sidebar-ink:#cfc8bd; --sidebar-dim:#8d8577;
+  --green:#2e7d54; --green-soft:#e4efe7; --red:#b3372f; --red-soft:#f6e5e3;
+  --blue:#3563a8; --blue-soft:#e6ecf6; --gray:#b9b3a8; --gold:#b98a2f; --gold-soft:#f5ecd8;
+  --pink:#e91e8c;
 }
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(1400px 700px at 80% -20%,#33101f 0%,var(--bg) 50%,var(--bg2) 100%);
-  background-attachment:fixed;color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
-a{color:var(--pink)}
-/* ---------- topbar ---------- */
-header{display:flex;align-items:center;gap:16px;padding:14px 26px;border-bottom:1px solid var(--border);
-  position:sticky;top:0;background:rgba(17,17,22,.88);backdrop-filter:blur(10px);z-index:50;flex-wrap:wrap}
-header img{height:44px}
-.badge{font-size:10px;font-weight:800;letter-spacing:.14em;padding:4px 10px;border-radius:20px;text-transform:uppercase}
-.badge.demo{background:rgba(212,163,115,.18);color:var(--gold);border:1px solid rgba(212,163,115,.4)}
-.badge.live{background:rgba(61,220,151,.15);color:var(--green);border:1px solid rgba(61,220,151,.4)}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,'Segoe UI',Inter,system-ui,sans-serif;font-size:14px;display:flex}
+button{font-family:inherit}
+/* ============ sidebar ============ */
+aside{width:212px;min-width:212px;background:var(--sidebar);color:var(--sidebar-ink);height:100vh;position:sticky;top:0;
+  display:flex;flex-direction:column;padding:14px 0}
+.brand{display:flex;align-items:center;gap:10px;padding:8px 16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.brand .chip{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#f7d9c9,#caa28f);color:#211c18;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+.brand b{display:block;font-size:13px;color:#f1ece4}
+.brand span{font-size:10.5px;color:var(--sidebar-dim)}
+.sec{font-size:9.5px;letter-spacing:.18em;color:var(--sidebar-dim);text-transform:uppercase;padding:18px 18px 6px}
+.nav button{display:flex;align-items:center;gap:10px;width:calc(100% - 16px);margin:1px 8px;padding:9px 10px;border:none;
+  background:none;color:var(--sidebar-ink);font-size:13px;border-radius:8px;cursor:pointer;text-align:left}
+.nav button:hover{background:rgba(255,255,255,.06)}
+.nav button.on{background:#3a332c;color:#fff;font-weight:600}
+.nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:10.5px;font-weight:700;padding:2px 8px}
+.nav svg{width:15px;height:15px;opacity:.75}
 .spacer{flex:1}
-.iconbtn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;
-  padding:8px 14px;cursor:pointer;font-size:13px}
-.iconbtn:hover{border-color:var(--pink)}
-/* ---------- filter bar ---------- */
-.filters{display:flex;align-items:center;gap:10px;padding:14px 26px;flex-wrap:wrap}
-.presets{display:flex;gap:6px;flex-wrap:wrap}
-.presets button,.gran button{background:var(--card);border:1px solid var(--border);color:var(--muted);
-  padding:7px 13px;border-radius:20px;cursor:pointer;font-size:12.5px}
-.presets button.on,.gran button.on{background:linear-gradient(90deg,var(--pink),var(--rose));color:#fff;border-color:transparent;font-weight:700}
-.custom{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px}
-.custom input{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 9px;font-size:12.5px;color-scheme:dark}
-.gran{display:flex;gap:6px;margin-left:auto}
-/* ---------- KPI grid ---------- */
-.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:12px;padding:4px 26px 12px}
-.kpi{background:linear-gradient(160deg,var(--card) 0%,var(--card2) 100%);border:1px solid var(--border);
-  border-radius:14px;padding:15px 16px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--pink),var(--rose))}
-.kpi .lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-.kpi .val{font-size:24px;font-weight:800;letter-spacing:-.01em}
-.kpi .sub{font-size:11.5px;color:var(--muted);margin-top:4px}
-.kpi .sub .up{color:var(--green)} .kpi .sub .down{color:var(--red)}
-/* ---------- charts ---------- */
-.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;padding:8px 26px 26px}
-.panel{background:linear-gradient(160deg,var(--card) 0%,var(--card2) 100%);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
-.panel h3{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rosegold)}
-.panel .cwrap{position:relative;height:260px}
-.c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}
-@media(max-width:1100px){.c8,.c6,.c4{grid-column:span 12}}
-/* ---------- table ---------- */
-.tbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.tbar input,.tbar select{background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 11px;font-size:13px}
-.tbar input{flex:1;min-width:180px}
+.sources{padding:0 18px 8px}
+.src{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sidebar-dim);padding:3.5px 0}
+.dot{width:7px;height:7px;border-radius:50%;background:#4caf7d}
+.dot.bad{background:#c0392b}
+.src .fix{margin-left:auto;color:#d98d84;font-size:10.5px;cursor:pointer}
+/* ============ main ============ */
+main{flex:1;min-width:0;padding:0 26px 40px}
+header{display:flex;align-items:center;gap:14px;padding:16px 0 10px;position:sticky;top:0;background:var(--bg);z-index:40}
+header h1{font-size:19px;margin:0;font-weight:700}
+.livepill{background:var(--green-soft);color:var(--green);font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px}
+.livepill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green)}
+.hspace{flex:1}
+.search{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:250px;font-size:13px;color:var(--ink)}
+.avatar{width:32px;height:32px;border-radius:50%;background:#211c18;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
+/* filter row */
+.filters{display:flex;align-items:center;gap:8px;background:#eee9df;border-radius:12px;padding:7px 10px;margin-bottom:16px;flex-wrap:wrap}
+.chip{background:none;border:none;padding:6px 12px;border-radius:8px;font-size:12.5px;color:#6d675c;cursor:pointer;font-weight:600}
+.chip.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rangebox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;color:#6d675c;display:flex;gap:6px;align-items:center}
+.rangebox input{border:none;font-size:12px;color:var(--ink);width:105px;background:none;color-scheme:light}
+.gran{margin-left:auto;display:flex;gap:2px;background:#e2dcd0;border-radius:9px;padding:3px}
+.gran button{border:none;background:none;padding:5px 13px;font-size:12.5px;border-radius:7px;color:#6d675c;cursor:pointer;font-weight:600}
+.gran button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:0 1px 2px rgba(30,25,15,.03)}
+.grid{display:grid;gap:14px}
+.eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
+.badge-ok{background:var(--green-soft);color:var(--green)}
+.badge-warn{background:var(--gold-soft);color:var(--gold)}
+h3.cardtitle{margin:0;font-size:14.5px;display:flex;align-items:center;gap:8px}
+h3.cardtitle .sub{display:block}
+.cardsub{color:var(--muted);font-size:12px;margin-top:2px}
+.linklike{margin-left:auto;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none}
+/* hero */
+.hero{display:grid;grid-template-columns:1fr 230px;gap:0}
+.hero .big{font-size:44px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px}
+.hero .big sup{font-size:22px;font-weight:700;vertical-align:22px}
+.hero .note{color:var(--muted);font-size:12.5px}
+.hero .note b.up{color:var(--green)} .hero .note b.down{color:var(--red)}
+.hero .cwrap{height:190px;margin-top:14px}
+.rail{border-left:1px solid var(--line);padding-left:20px;display:flex;flex-direction:column;justify-content:space-around}
+.rail .item{display:flex;gap:11px;align-items:flex-start;padding:8px 0}
+.rail .ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--gold-soft)}
+.rail b{font-size:19px;display:block}
+.rail span{font-size:11px;color:var(--muted)}
+/* client base */
+.segbar{display:flex;height:14px;border-radius:8px;overflow:hidden;margin:14px 0 12px;background:#eee}
+.segbar div{height:100%}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{border:1px solid var(--line);border-radius:11px;padding:11px 13px;cursor:pointer}
+.tile:hover{border-color:#cfc8b8}
+.tile .dot2{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+.tile b{font-size:19px}
+.tile span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+/* attention */
+.att{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.att:last-child{border-bottom:none}
+.att .ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--gold-soft);font-size:13px}
+.att b{font-size:13px;display:block}
+.att span{font-size:11.5px;color:var(--muted)}
+.att .act{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.att .act.dark{background:#211c18;color:#fff;border-color:#211c18}
+/* feed */
+.feeditem{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.feeditem:last-child{border:none}
+.feeditem .k{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px}
+.k.sale{background:var(--green-soft)} .k.client{background:var(--blue-soft)} .k.dispute{background:var(--gold-soft)}
+.feeditem .t{flex:1;min-width:0} .feeditem .t b{font-size:12.5px} .feeditem .t span{display:block;color:var(--muted);font-size:11px}
+.feeditem .amt{font-weight:700;color:var(--green)}
+.feeditem .when{color:var(--muted);font-size:10.5px;white-space:nowrap}
+/* conversations + charts */
+.cwrap2{height:210px}
+.convtotals{display:flex;gap:34px;margin:6px 0 8px}
+.convtotals b{font-size:26px}
+.convtotals .rep{background:var(--green-soft);color:var(--green);font-size:10.5px;font-weight:700;border-radius:10px;padding:2px 8px;margin-left:6px}
+.convtotals span{display:block;font-size:11px;color:var(--muted)}
+/* tables (clients etc.) */
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{color:var(--rosegold);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;
-  padding:9px 10px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap}
-th:hover{color:var(--pink)}
-td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
-tr:hover td{background:rgba(255,46,154,.05)}
+th{color:var(--muted);text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #f0ece2}
+tr:hover td{background:#faf8f3}
 .pill{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
-.pill.active{background:rgba(61,220,151,.15);color:var(--green)}
-.pill.inactive{background:rgba(255,92,122,.13);color:var(--red)}
-.pill.unknown{background:rgba(154,151,160,.15);color:var(--muted)}
+.pill.active{background:var(--green-soft);color:var(--green)}
+.pill.inactive{background:var(--red-soft);color:var(--red)}
+.pill.unknown{background:#efece4;color:var(--muted)}
+.tbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.tbar input,.tbar select{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--ink)}
+.tbar input{flex:1;min-width:180px}
 .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--muted);font-size:12.5px}
-.pager button{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 11px;cursor:pointer}
-/* ---------- settings modal ---------- */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow:auto;padding:40px 16px}
-.overlay.show{display:flex}
-.modal{background:var(--bg);border:1px solid var(--border);border-radius:16px;max-width:640px;width:100%;padding:28px 30px}
-.modal h2{margin:0 0 4px;font-size:18px;color:var(--rosegold)}
-.modal p.hint{color:var(--muted);font-size:12.5px;margin:2px 0 16px;line-height:1.5}
-.modal label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 5px}
-.modal input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:10px 13px;font-size:13.5px}
-.modal .row{display:flex;gap:12px}.modal .row>div{flex:1}
-.modal .btns{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
-.btn{padding:10px 18px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:13.5px}
-.btn.primary{background:linear-gradient(90deg,var(--pink),var(--rose));color:#fff}
-.btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--border)}
-.testres{font-size:12.5px;margin-top:10px;min-height:16px}
-.testres.ok{color:var(--green)}.testres.bad{color:var(--red)}
-.hookurl{background:var(--bg2);border:1px dashed var(--border);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:12px;color:var(--rosegold);margin-top:6px;word-break:break-all}
-.note{background:rgba(212,163,115,.08);border:1px solid rgba(212,163,115,.3);border-radius:10px;padding:10px 14px;color:var(--gold);font-size:12.5px;margin:0 26px 10px;display:none}
-.note.show{display:block}
-footer{color:var(--muted);text-align:center;font-size:11.5px;padding:10px 0 26px}
-/* ---------- nav ---------- */
-nav{display:flex;gap:4px;padding:0 26px;border-bottom:1px solid var(--border);background:rgba(17,17,22,.6)}
-nav button{background:none;border:none;color:var(--muted);padding:12px 18px;font-size:13.5px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
-nav button.on{color:var(--text);border-bottom-color:var(--pink)}
-nav button:hover{color:var(--rosegold)}
+.pager button{background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink)}
 section.view{display:none} section.view.on{display:block}
-/* ---------- client drawer ---------- */
-.drawer{position:fixed;top:0;right:-560px;width:540px;max-width:95vw;height:100vh;background:var(--bg);
-  border-left:1px solid var(--border);z-index:120;transition:right .25s;overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
+/* drawer */
+.drawer{position:fixed;top:0;right:-580px;width:560px;max-width:95vw;height:100vh;background:#fff;border-left:1px solid var(--line);
+  z-index:120;transition:right .25s;overflow-y:auto;box-shadow:-18px 0 50px rgba(30,25,15,.15)}
 .drawer.open{right:0}
-.drawer .dhead{padding:22px 24px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:2}
+.drawer .dhead{padding:22px 24px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
 .drawer .dbody{padding:18px 24px 40px}
 .drawer h2{margin:0;font-size:19px}
 .drawer .dmeta{color:var(--muted);font-size:12.5px;margin-top:5px;line-height:1.7}
-.drawer .close{position:absolute;top:16px;right:18px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 11px;cursor:pointer}
+.drawer .close{position:absolute;top:16px;right:18px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
 .dsec{margin-top:20px}
-.dsec h4{margin:0 0 8px;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--rosegold)}
+.dsec h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
 .dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-.dstat div{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+.dstat div{background:#faf8f3;border:1px solid var(--line);border-radius:10px;padding:9px 11px}
 .dstat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .dstat .v{font-size:16px;font-weight:800;margin-top:2px}
-.evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+.evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0ece2;font-size:12.5px}
 .evrow .mut{color:var(--muted)}
-.noterow{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
+.noterow{background:#faf8f3;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
 .noterow .mut{color:var(--muted);font-size:11px;margin-top:4px}
-.dsec textarea{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:9px 12px;font-size:13px;min-height:58px;resize:vertical;box-sizing:border-box}
+.dsec textarea{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;min-height:58px;resize:vertical}
 .dactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-/* ---------- tasks & reactivation ---------- */
-.taskrow{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:8px}
+.btn{padding:9px 16px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}
+.btn.primary{background:#211c18;color:#fff}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.testres{font-size:12.5px;min-height:16px}
+.testres.ok{color:var(--green)}.testres.bad{color:var(--red)}
+/* tasks / react */
+.taskrow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px}
 .taskrow.done{opacity:.5}
-.taskrow input[type=checkbox]{width:17px;height:17px;accent-color:var(--pink)}
+.taskrow input[type=checkbox]{width:16px;height:16px;accent-color:var(--green)}
 .taskrow .tt{flex:1}
-.taskrow .due{font-size:11.5px;color:var(--gold)}
-.taskrow .due.over{color:var(--red);font-weight:700}
-.taskrow .cl{font-size:11.5px;color:var(--muted)}
-.taskrow .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px}
+.taskrow .due{font-size:11.5px;color:var(--gold)} .taskrow .due.over{color:var(--red);font-weight:700}
+.taskrow .cl{font-size:11.5px;color:var(--muted)} .taskrow .del{background:none;border:none;color:var(--muted);cursor:pointer}
 .addtask{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-.addtask input{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;color-scheme:dark}
+.addtask input{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:13px;color-scheme:light}
 .addtask input[type=text]{flex:1;min-width:220px}
-.statchips{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.statchips span{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
-.statchips b{color:var(--text)}
+.statchips{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
+.statchips span{background:#faf8f3;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
+.statchips b{color:var(--ink)}
+/* settings modal */
+.overlay{position:fixed;inset:0;background:rgba(30,25,15,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;overflow:auto;padding:40px 16px}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:28px 30px}
+.modal h2{margin:0 0 4px;font-size:18px}
+.modal p.hint{color:var(--muted);font-size:12.5px;margin:2px 0 14px;line-height:1.5}
+.modal label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 5px}
+.modal input{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px}
+.modal .row{display:flex;gap:12px}.modal .row>div{flex:1}
+.hookurl{background:#faf8f3;border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:11.5px;color:#7a6a3d;margin-top:6px;word-break:break-all}
+@media(max-width:1150px){.hero{grid-template-columns:1fr}.rail{border-left:none;padding-left:0;flex-direction:row}.tiles{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
-<header>
-  <img src="https://msfinancialsolutions.net/wp-content/uploads/2025/04/FInancial-Solutions.png" alt="Ms. Financial Solutions">
-  <div>
-    <div style="font-weight:800;font-size:15px;letter-spacing:.03em">Business Command Center</div>
-    <div style="color:var(--muted);font-size:11.5px">GoHighLevel · Fanbasis · DisputeFox · Instagram · Facebook</div>
+<aside>
+  <div class="brand">
+    <div class="chip">ms</div>
+    <div><b>Command Center</b><span>Business overview</span></div>
   </div>
-  <span class="badge demo" id="modeBadge">…</span>
+  <div class="sec">Workspace</div>
+  <div class="nav" id="nav">
+    <button data-v="dash" class="on" onclick="showView('dash')">▦ Dashboard</button>
+    <button data-v="pipeline" onclick="showView('pipeline')">⚲ Pipeline</button>
+    <button data-v="clients" onclick="showView('clients')">◉ Clients</button>
+    <button data-v="react" onclick="showView('react')">↻ Reactivation <span class="badge" id="reactBadge"></span></button>
+    <button data-v="tasks" onclick="showView('tasks')">☰ Follow-Ups</button>
+    <button data-v="social" onclick="showView('social')">✦ Social</button>
+  </div>
+  <div class="sec">Account</div>
+  <div class="nav">
+    <button onclick="openSettings()">✧ Settings</button>
+    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())">→ Sign out</button>
+  </div>
   <div class="spacer"></div>
-  <button class="iconbtn" onclick="refreshAll(true)">⟳ Refresh</button>
-  <button class="iconbtn" onclick="openSettings()">⚙ Settings</button>
-  <button class="iconbtn" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())">Sign out</button>
-</header>
+  <div class="sec">Data sources</div>
+  <div class="sources" id="sources"></div>
+</aside>
 
-<div class="note" id="demoNote">Demo mode — showing realistic sample data shaped like the real business (3,512 clients, $360K collected). Open <b>⚙ Settings</b> and paste the API keys to go live.</div>
+<main>
+  <header>
+    <h1 id="pageTitle">Dashboard</h1>
+    <span class="livepill" id="modePill">LIVE</span>
+    <div class="hspace"></div>
+    <input class="search" id="globalSearch" placeholder="Search clients, payments…">
+    <div class="avatar">MS</div>
+  </header>
 
-<nav>
-  <button class="on" data-v="dash" onclick="showView('dash')">Dashboard</button>
-  <button data-v="pipeline" onclick="showView('pipeline')">Pipeline</button>
-  <button data-v="clients" onclick="showView('clients')">Clients</button>
-  <button data-v="react" onclick="showView('react')">Reactivation</button>
-  <button data-v="tasks" onclick="showView('tasks')">Follow-Ups <span id="taskCount" style="color:var(--pink)"></span></button>
-  <button data-v="social" onclick="showView('social')">Social</button>
-</nav>
-
-<section class="view on" id="view-dash">
-<div class="filters">
-  <div class="presets" id="presets"></div>
-  <div class="custom">
-    <input type="date" id="fromD"> – <input type="date" id="toD">
-    <button class="iconbtn" style="padding:6px 12px" onclick="applyCustom()">Apply</button>
-  </div>
-  <div class="gran" id="gran"></div>
-</div>
-
-<div class="kpis" id="kpis"></div>
-
-<div class="grid">
-  <div class="panel c8"><h3>Revenue</h3><div class="cwrap"><canvas id="chRevenue"></canvas></div></div>
-  <div class="panel c4"><h3>Active vs Inactive Clients</h3><div class="cwrap"><canvas id="chActive"></canvas></div></div>
-  <div class="panel c6"><h3>Payments & New Clients</h3><div class="cwrap"><canvas id="chPayments"></canvas></div></div>
-  <div class="panel c6"><h3>Texts In / Out</h3><div class="cwrap"><canvas id="chSms"></canvas></div></div>
-  <div class="panel c6"><h3>Instagram & Facebook Followers</h3><div class="cwrap"><canvas id="chSocial"></canvas></div></div>
-  <div class="panel c6"><h3>Lifetime Revenue by Package</h3><div class="cwrap"><canvas id="chDeals"></canvas></div></div>
-  <div class="panel c6"><h3>Active Clients by Dispute Round</h3><div class="cwrap"><canvas id="chRounds"></canvas></div></div>
-  <div class="panel c6"><h3>Churn Recency (Inactive Clients)</h3><div class="cwrap"><canvas id="chChurn"></canvas></div></div>
-</div>
-</section>
-
-<!-- ============ PIPELINE ============ -->
-<section class="view" id="view-pipeline">
-<div class="grid" style="padding-top:20px">
-  <div class="panel c12">
-    <h3>Credit Repair Delivery — Active Clients by Round</h3>
-    <div class="statchips" id="pipeStats"></div>
-    <div id="pipeBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px"></div>
-  </div>
-</div>
-</section>
-
-<!-- ============ CLIENTS ============ -->
-<section class="view" id="view-clients">
-<div class="grid" style="padding-top:20px">
-  <div class="panel c12">
-    <h3>Clients</h3>
-    <div class="tbar">
-      <input id="q" placeholder="Search name, email, phone…">
-      <select id="fStatus"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
-      <select id="fDeal"><option value="">All packages</option></select>
-      <select id="fRound"><option value="">All rounds</option></select>
+  <div class="filters">
+    <span id="presets"></span>
+    <div class="rangebox">
+      <input type="date" id="fromD"> → <input type="date" id="toD">
+      <button class="chip" style="padding:4px 10px" onclick="applyCustom()">Apply</button>
     </div>
-    <div style="overflow-x:auto"><table>
-      <thead><tr>
-        <th data-s="name">Name</th><th data-s="email">Email</th><th data-s="phone">Phone</th>
-        <th data-s="status">Status</th><th data-s="deal">Package</th><th data-s="round">Round</th>
-        <th data-s="totalSpent">Total Spent</th><th data-s="numberOfPayments"># Pays</th>
-        <th data-s="lastPaymentDate">Last Payment</th><th data-s="createdAt">Joined</th>
-      </tr></thead>
-      <tbody id="tbody"></tbody>
-    </table></div>
-    <div class="pager">
-      <span id="pageInfo"></span>
-      <button onclick="page=Math.max(1,page-1);loadClients()">‹ Prev</button>
-      <button onclick="page++;loadClients()">Next ›</button>
-    </div>
+    <div class="gran" id="gran"></div>
   </div>
-</div>
-</section>
 
-<!-- ============ REACTIVATION ============ -->
-<section class="view" id="view-react">
-<div class="grid" style="padding-top:20px">
-  <div class="panel c12">
-    <h3>Reactivation Queue — Lapsed Clients (hottest first)</h3>
-    <div class="statchips" id="reactStats"></div>
-    <div class="tbar">
-      <label style="display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px">
-        <input type="checkbox" id="hideWorked" onchange="rPage=1;loadReact()" style="accent-color:var(--pink)"> Hide already-worked
-      </label>
+  <!-- ================= DASHBOARD ================= -->
+  <section class="view on" id="view-dash">
+    <div class="grid" style="grid-template-columns:1fr">
+      <div class="card hero">
+        <div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span class="eyebrow" id="heroLabel">COLLECTED</span>
+            <span class="badge-soft badge-ok" id="heroBadge">FANBASIS LIVE</span>
+          </div>
+          <div class="big" id="heroAmt"><sup>$</sup>0</div>
+          <div class="note" id="heroNote">—</div>
+          <div class="cwrap"><canvas id="chHero"></canvas></div>
+        </div>
+        <div class="rail">
+          <div class="item"><div class="ico">◈</div><div><b id="railLifetime">—</b><span id="railLifetimeSub">Lifetime collected</span></div></div>
+          <div class="item"><div class="ico">▤</div><div><b id="railAvg">—</b><span>Avg payment · per transaction</span></div></div>
+          <div class="item"><div class="ico">◎</div><div><b id="railLtv">—</b><span>LTV · per paying client</span></div></div>
+          <div class="item"><div class="ico">✚</div><div><b id="railNew">—</b><span>New clients · joined in period</span></div></div>
+        </div>
+      </div>
     </div>
-    <div style="overflow-x:auto"><table>
-      <thead><tr><th>Name</th><th>Contact</th><th>Package</th><th>Total Spent</th><th>Last Payment</th><th>Days Lapsed</th><th>Worked?</th></tr></thead>
-      <tbody id="rbody"></tbody>
-    </table></div>
-    <div class="pager">
-      <span id="rPageInfo"></span>
-      <button onclick="rPage=Math.max(1,rPage-1);loadReact()">‹ Prev</button>
-      <button onclick="rPage++;loadReact()">Next ›</button>
-    </div>
-  </div>
-</div>
-</section>
 
-<!-- ============ FOLLOW-UPS ============ -->
-<section class="view" id="view-tasks">
-<div class="grid" style="padding-top:20px">
-  <div class="panel c12">
-    <h3>Follow-Ups & Tasks</h3>
-    <div class="addtask">
-      <input type="text" id="ntTitle" placeholder="New task… e.g. Call LaRue about Round 5 renewal">
-      <input type="date" id="ntDue">
-      <button class="btn primary" onclick="addTaskUI()">Add</button>
-    </div>
-    <div id="taskList"></div>
-    <h3 style="margin-top:26px">Recently Completed</h3>
-    <div id="taskDone"></div>
-  </div>
-</div>
-</section>
+    <div class="grid" style="grid-template-columns:1.55fr 1fr;margin-top:14px">
+      <div>
+        <div class="card">
+          <h3 class="cardtitle">◉ Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
+          <div class="cardsub">Where every client sits right now</div>
+          <div class="segbar" id="segbar"></div>
+          <div class="tiles" id="tiles"></div>
+        </div>
 
-<!-- ============ SOCIAL ============ -->
-<section class="view" id="view-social">
-<div class="grid" style="padding-top:20px">
-  <div class="panel c12">
-    <h3>Social Media</h3>
-    <div class="statchips" id="socialStats"></div>
-    <div class="dactions" style="margin-bottom:6px">
-      <button class="btn ghost" onclick="refreshSocial()">↻ Refresh follower counts now</button>
-      <span class="testres" id="socialRes"></span>
+        <div class="card" style="margin-top:14px">
+          <h3 class="cardtitle">🗨 Conversations <button class="linklike" onclick="showView('clients')">Open inbox →</button></h3>
+          <div class="cardsub">SMS volume · inbound above the line, outbound below</div>
+          <div class="convtotals">
+            <div><b id="convIn">0</b><span class="rep" id="convRatio"></span><span>Inbound texts</span></div>
+            <div><b id="convOut" style="color:var(--red)">0</b><span>Outbound texts</span></div>
+          </div>
+          <div class="cwrap2"><canvas id="chConv"></canvas></div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:14px">
+          <div class="card">
+            <h3 class="cardtitle">◈ Revenue by package</h3>
+            <div class="cardsub">Fanbasis sales in period</div>
+            <div class="cwrap2"><canvas id="chDeals"></canvas></div>
+          </div>
+          <div class="card">
+            <h3 class="cardtitle">⚲ Active by dispute round</h3>
+            <div class="cardsub">Credit repair delivery stages</div>
+            <div class="cwrap2"><canvas id="chRounds"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:14px">
+          <div class="card">
+            <h3 class="cardtitle">↻ Churn recency</h3>
+            <div class="cardsub">How long ago inactive clients lapsed</div>
+            <div class="cwrap2"><canvas id="chChurn"></canvas></div>
+          </div>
+          <div class="card">
+            <h3 class="cardtitle">✦ Social growth</h3>
+            <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
+            <div class="cwrap2"><canvas id="chSocial"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 class="cardtitle">⚠ Needs attention</h3>
+          <div class="cardsub">Fix these before trusting the numbers</div>
+          <div id="attention" style="margin-top:6px"></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3 class="cardtitle">⚡ Activity</h3>
+          <div class="cardsub">Latest sales, disputes & new clients</div>
+          <div id="feed" style="margin-top:6px"></div>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="panel c6">
-    <h3>Instagram — Recent Posts <a id="igLink" href="#" target="_blank" style="float:right;font-size:11px">open profile ↗</a></h3>
-    <iframe id="igFrame" style="width:100%;height:560px;border:1px solid var(--border);border-radius:10px;background:#fff" loading="lazy"></iframe>
-  </div>
-  <div class="panel c6">
-    <h3>Facebook — Timeline <a id="fbLink" href="#" target="_blank" style="float:right;font-size:11px">open profile ↗</a></h3>
-    <iframe id="fbFrame" style="width:100%;height:560px;border:1px solid var(--border);border-radius:10px;background:#fff" loading="lazy"></iframe>
-    <div style="color:var(--muted);font-size:11.5px;margin-top:8px">If the Facebook feed doesn't display (personal profiles limit embedding), use "open profile".</div>
-  </div>
-</div>
-</section>
+  </section>
+
+  <!-- ================= PIPELINE ================= -->
+  <section class="view" id="view-pipeline">
+    <div class="card">
+      <h3 class="cardtitle">Credit Repair Delivery — active clients by round</h3>
+      <div class="statchips" id="pipeStats" style="margin-top:10px"></div>
+      <div id="pipeBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px"></div>
+    </div>
+  </section>
+
+  <!-- ================= CLIENTS ================= -->
+  <section class="view" id="view-clients">
+    <div class="card">
+      <h3 class="cardtitle">Clients</h3>
+      <div class="tbar" style="margin-top:12px">
+        <input id="q" placeholder="Search name, email, phone…">
+        <select id="fStatus"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+        <select id="fDeal"><option value="">All packages</option></select>
+        <select id="fRound"><option value="">All rounds</option></select>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr>
+          <th data-s="name">Name</th><th data-s="email">Email</th><th data-s="phone">Phone</th>
+          <th data-s="status">Status</th><th data-s="deal">Package</th><th data-s="round">Round</th>
+          <th data-s="totalSpent">Total Spent</th><th data-s="numberOfPayments"># Pays</th>
+          <th data-s="lastPaymentDate">Last Payment</th><th data-s="createdAt">Joined</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table></div>
+      <div class="pager">
+        <span id="pageInfo"></span>
+        <button onclick="page=Math.max(1,page-1);loadClients()">‹ Prev</button>
+        <button onclick="page++;loadClients()">Next ›</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REACTIVATION ================= -->
+  <section class="view" id="view-react">
+    <div class="card">
+      <h3 class="cardtitle">Reactivation queue — lapsed clients, hottest first</h3>
+      <div class="statchips" id="reactStats" style="margin-top:10px"></div>
+      <div class="tbar">
+        <label style="display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px">
+          <input type="checkbox" id="hideWorked" onchange="rPage=1;loadReact()" style="accent-color:var(--green)"> Hide already-worked
+        </label>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Name</th><th>Contact</th><th>Package</th><th>Total Spent</th><th>Last Payment</th><th>Days Lapsed</th><th>Worked?</th></tr></thead>
+        <tbody id="rbody"></tbody>
+      </table></div>
+      <div class="pager">
+        <span id="rPageInfo"></span>
+        <button onclick="rPage=Math.max(1,rPage-1);loadReact()">‹ Prev</button>
+        <button onclick="rPage++;loadReact()">Next ›</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOLLOW-UPS ================= -->
+  <section class="view" id="view-tasks">
+    <div class="card">
+      <h3 class="cardtitle">Follow-ups & tasks</h3>
+      <div class="addtask" style="margin-top:12px">
+        <input type="text" id="ntTitle" placeholder="New task… e.g. Call LaRue about Round 5 renewal">
+        <input type="date" id="ntDue">
+        <button class="btn primary" onclick="addTaskUI()">Add</button>
+      </div>
+      <div id="taskList"></div>
+      <h3 class="cardtitle" style="margin-top:26px">Recently completed</h3>
+      <div id="taskDone" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <!-- ================= SOCIAL ================= -->
+  <section class="view" id="view-social">
+    <div class="card">
+      <h3 class="cardtitle">Social media</h3>
+      <div class="statchips" id="socialStats" style="margin-top:10px"></div>
+      <div class="dactions" style="margin-bottom:6px">
+        <button class="btn ghost" onclick="refreshSocial()">↻ Refresh follower counts now</button>
+        <span class="testres" id="socialRes"></span>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:14px">
+      <div class="card">
+        <h3 class="cardtitle">Instagram — recent posts <a id="igLink" href="#" target="_blank" class="linklike">open ↗</a></h3>
+        <iframe id="igFrame" style="width:100%;height:560px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:10px" loading="lazy"></iframe>
+      </div>
+      <div class="card">
+        <h3 class="cardtitle">Facebook — timeline <a id="fbLink" href="#" target="_blank" class="linklike">open ↗</a></h3>
+        <iframe id="fbFrame" style="width:100%;height:560px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:10px" loading="lazy"></iframe>
+        <div style="color:var(--muted);font-size:11.5px;margin-top:8px">If the Facebook feed doesn't display (personal profiles limit embedding), use "open".</div>
+      </div>
+    </div>
+  </section>
+</main>
 
 <!-- ============ CLIENT DRAWER ============ -->
 <div class="drawer" id="drawer">
@@ -294,58 +411,45 @@ section.view{display:none} section.view.on{display:block}
     <div class="dactions" id="dActions"></div>
   </div>
   <div class="dbody">
-    <div class="dsec"><h4>Send Text (via GoHighLevel)</h4>
+    <div class="dsec"><h4>Send text (via GoHighLevel)</h4>
       <textarea id="dSms" placeholder="Type a message…"></textarea>
       <div class="dactions"><button class="btn primary" onclick="sendSmsUI()">Send SMS</button><span class="testres" id="dSmsRes"></span></div>
     </div>
-    <div class="dsec"><h4>Add Note</h4>
+    <div class="dsec"><h4>Add note</h4>
       <textarea id="dNote" placeholder="Log a call, promise-to-pay, dispute update…"></textarea>
-      <div class="dactions"><button class="btn ghost" onclick="addNoteUI()">Save Note</button>
-      <button class="btn ghost" onclick="addFollowUpUI()">+ Follow-up task for this client</button></div>
+      <div class="dactions"><button class="btn ghost" onclick="addNoteUI()">Save note</button>
+      <button class="btn ghost" onclick="addFollowUpUI()">+ Follow-up task</button></div>
     </div>
     <div class="dsec"><h4>Notes</h4><div id="dNotes"></div></div>
-    <div class="dsec"><h4>Payment History</h4><div id="dPays"></div></div>
-    <div class="dsec"><h4>Dispute Activity</h4><div id="dDisputes"></div></div>
-    <div class="dsec"><h4>Open Tasks</h4><div id="dTasks"></div></div>
+    <div class="dsec"><h4>Payment history</h4><div id="dPays"></div></div>
+    <div class="dsec"><h4>Dispute activity</h4><div id="dDisputes"></div></div>
+    <div class="dsec"><h4>Open tasks</h4><div id="dTasks"></div></div>
   </div>
 </div>
 
-<footer>Ms. Financial Solutions · Command Center v1 · <span id="genAt"></span></footer>
-
-<!-- ---------- settings ---------- -->
+<!-- ============ SETTINGS ============ -->
 <div class="overlay" id="overlay">
   <div class="modal">
-    <h2>Settings & Connections</h2>
-    <p class="hint">Paste each key once — the app stores them on the server and switches from demo to live automatically.</p>
-
-    <label>GoHighLevel — Private Integration Token</label>
-    <p class="hint" style="margin:0 0 4px">GHL sub-account → Settings → Private Integrations → create with scopes: contacts.readonly, conversations.readonly, conversations/message.readonly, opportunities.readonly.</p>
+    <h2>Settings & connections</h2>
+    <p class="hint">Keys are stored on the server and masked here.</p>
+    <label>GoHighLevel — private integration token</label>
     <input id="s_ghlToken" placeholder="pit-…">
-    <div class="row">
-      <div><label>GHL Location ID</label><input id="s_ghlLocationId" placeholder="e.g. ve9EPM428h8vShlRW1KT"></div>
-    </div>
-    <div class="btns" style="margin-top:10px"><button class="btn ghost" onclick="testGhl()">Test GHL connection</button><span class="testres" id="r_ghl"></span></div>
-
-    <label style="margin-top:22px">Meta (Instagram + Facebook) — Page Access Token</label>
-    <p class="hint" style="margin:0 0 4px">developers.facebook.com → app → Graph API. Needs pages_read_engagement + instagram_basic. Follower counts snapshot daily to build the growth chart.</p>
+    <div class="row"><div><label>GHL location ID</label><input id="s_ghlLocationId"></div></div>
+    <div class="dactions"><button class="btn ghost" onclick="testGhl()">Test GHL</button><span class="testres" id="r_ghl"></span></div>
+    <label style="margin-top:20px">Meta page access token (optional — public counts used otherwise)</label>
     <input id="s_metaPageToken" placeholder="EAAG…">
     <div class="row">
-      <div><label>Facebook Page ID</label><input id="s_fbPageId" placeholder="1234567890"></div>
-      <div><label>Instagram Business User ID</label><input id="s_igUserId" placeholder="17841400000000000"></div>
+      <div><label>Facebook page ID</label><input id="s_fbPageId"></div>
+      <div><label>Instagram business user ID</label><input id="s_igUserId"></div>
     </div>
-    <div class="btns" style="margin-top:10px"><button class="btn ghost" onclick="testMeta()">Test Meta connection</button><span class="testres" id="r_meta"></span></div>
-
-    <label style="margin-top:22px">Webhook secret (protects the URLs below)</label>
+    <div class="dactions"><button class="btn ghost" onclick="testMeta()">Test Meta</button><span class="testres" id="r_meta"></span></div>
+    <label style="margin-top:20px">Webhook secret</label>
     <input id="s_webhookSecret" placeholder="any-random-string">
-    <p class="hint" style="margin:10px 0 2px">Point Zapier at these (add ?secret=YOUR_SECRET):</p>
     <div class="hookurl" id="hookFan"></div>
     <div class="hookurl" id="hookFox"></div>
-    <div class="hookurl" id="hookSms"></div>
-
-    <label style="margin-top:22px">Dashboard password</label>
+    <label style="margin-top:20px">Dashboard password</label>
     <input id="s_appPassword" type="text" placeholder="change the login password">
-
-    <div class="btns">
+    <div class="dactions" style="margin-top:20px">
       <button class="btn primary" onclick="saveSettings()">Save</button>
       <button class="btn ghost" onclick="document.getElementById('overlay').classList.remove('show')">Close</button>
       <span class="testres" id="r_save"></span>
@@ -354,137 +458,169 @@ section.view{display:none} section.view.on{display:block}
 </div>
 
 <script>
-/* ================= state ================= */
-let from=null, to=null, granularity='day', preset='30d', page=1, sort='totalSpent', dir='desc';
-const $ = id => document.getElementById(id);
-const fmt$ = n => '$' + Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
-const fmtN = n => n==null ? '—' : Number(n).toLocaleString();
-const iso = d => d.toISOString().slice(0,10);
-
-const PRESETS = [
-  ['today','Today'],['yesterday','Yesterday'],['7d','7 Days'],['thisweek','This Week'],
-  ['30d','30 Days'],['thismonth','This Month'],['90d','90 Days'],['ytd','YTD'],
-  ['thisyear','This Year'],['lastyear','Last Year'],['all','All Time']
-];
+/* ================= state & utils ================= */
+let from=null,to=null,granularity='day',preset='30d',page=1,sort='totalSpent',dir='desc',rPage=1;
+const $=id=>document.getElementById(id);
+const fmt$=n=>'$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+const fmtN=n=>n==null?'—':Number(n).toLocaleString();
+const iso=d=>d.toISOString().slice(0,10);
+const PRESETS=[['today','Today'],['7d','7D'],['30d','30D'],['90d','90D'],['ytd','YTD'],['all','All']];
 function presetRange(p){
-  const now=new Date(); const t=iso(now);
+  const now=new Date();const t=iso(now);
   const d=n=>{const x=new Date(now);x.setDate(x.getDate()-n);return iso(x)};
-  switch(p){
-    case 'today': return [t,t];
-    case 'yesterday': return [d(1),d(1)];
-    case '7d': return [d(6),t];
-    case 'thisweek': {const x=new Date(now);x.setDate(x.getDate()-((x.getDay()+6)%7));return [iso(x),t];}
-    case '30d': return [d(29),t];
-    case 'thismonth': return [t.slice(0,8)+'01',t];
-    case '90d': return [d(89),t];
-    case 'ytd': case 'thisyear': return [t.slice(0,4)+'-01-01',t];
-    case 'lastyear': {const y=now.getFullYear()-1;return [y+'-01-01',y+'-12-31'];}
-    case 'all': return [null,null];
-  }
+  switch(p){case 'today':return[t,t];case '7d':return[d(6),t];case '30d':return[d(29),t];
+    case '90d':return[d(89),t];case 'ytd':return[t.slice(0,4)+'-01-01',t];case 'all':return[null,null];}
 }
-function pickGran(f,t){
-  if(!f||!t) return 'month';
-  const days=(new Date(t)-new Date(f))/86400000;
-  if(days<=2) return 'day'; if(days<=90) return 'day'; if(days<=400) return 'week'; return 'month';
+function pickGran(f,t){if(!f||!t)return 'month';const days=(new Date(t)-new Date(f))/86400000;
+  if(days<=92)return 'day';if(days<=400)return 'week';return 'month';}
+function rangeLabel(){
+  const map={today:'TODAY','7d':'LAST 7 DAYS','30d':'LAST 30 DAYS','90d':'LAST 90 DAYS',ytd:'YEAR TO DATE',all:'ALL TIME'};
+  return map[preset]||`${from} → ${to}`;
 }
-
-/* ================= filter UI ================= */
 function renderFilters(){
-  $('presets').innerHTML = PRESETS.map(([k,l])=>`<button class="${preset===k?'on':''}" onclick="setPreset('${k}')">${l}</button>`).join('');
-  $('gran').innerHTML = ['day','week','month','year'].map(g=>`<button class="${granularity===g?'on':''}" onclick="setGran('${g}')">${g[0].toUpperCase()+g.slice(1)}</button>`).join('');
-  $('fromD').value = from||''; $('toD').value = to||'';
+  $('presets').innerHTML=PRESETS.map(([k,l])=>`<button class="chip ${preset===k?'on':''}" onclick="setPreset('${k}')">${l}</button>`).join('');
+  $('gran').innerHTML=['day','week','month'].map(g=>`<button class="${granularity===g?'on':''}" onclick="setGran('${g}')">${g[0].toUpperCase()+g.slice(1)}</button>`).join('');
+  $('fromD').value=from||'';$('toD').value=to||'';
 }
-function setPreset(p){ preset=p; [from,to]=presetRange(p); granularity=pickGran(from,to); renderFilters(); loadDashboard(); }
-function applyCustom(){ preset=''; from=$('fromD').value||null; to=$('toD').value||null; granularity=pickGran(from,to); renderFilters(); loadDashboard(); }
-function setGran(g){ granularity=g; renderFilters(); loadDashboard(); }
+function setPreset(p){preset=p;[from,to]=presetRange(p);granularity=pickGran(from,to);renderFilters();loadDashboard();}
+function applyCustom(){preset='';from=$('fromD').value||null;to=$('toD').value||null;granularity=pickGran(from,to);renderFilters();loadDashboard();}
+function setGran(g){granularity=g;renderFilters();loadDashboard();}
 
 /* ================= charts ================= */
-Chart.defaults.color='#9a97a0'; Chart.defaults.borderColor='rgba(255,255,255,.06)';
-Chart.defaults.font.family="'Segoe UI',system-ui,sans-serif";
+Chart.defaults.color='#8d8577';Chart.defaults.borderColor='#efece2';
+Chart.defaults.font.family="-apple-system,'Segoe UI',Inter,sans-serif";
 const charts={};
-function mkChart(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart($(id),cfg); }
-const PINK='#FF2E9A', ROSE='#B76E79', ROSEGOLD='#E0BFB8', GOLD='#d4a373', GREEN='#3ddc97', RED='#ff5c7a', BLUE='#7aa7ff';
-function grad(ctx,color){ const g=ctx.createLinearGradient(0,0,0,260); g.addColorStop(0,color+'55'); g.addColorStop(1,color+'05'); return g; }
+function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
+const GREEN='#2e7d54',RED='#b3372f',BLUE='#3563a8',GOLD='#b98a2f',GRAY='#b9b3a8',INK='#211d18';
+function grad(ctx,color,h){const g=ctx.createLinearGradient(0,0,0,h||190);g.addColorStop(0,color+'33');g.addColorStop(1,color+'00');return g;}
 
-/* ================= dashboard load ================= */
+/* ================= dashboard ================= */
 async function loadDashboard(){
-  const qs=new URLSearchParams({granularity}); if(from)qs.set('from',from); if(to)qs.set('to',to);
-  const r=await fetch('/api/dashboard?'+qs); if(r.status===401){location.href='/login.html';return;}
-  const d=await r.json();
-  $('modeBadge').textContent=d.mode.toUpperCase();
-  $('modeBadge').className='badge '+d.mode;
-  $('demoNote').classList.toggle('show',d.mode==='demo');
-  $('genAt').textContent='updated '+new Date(d.generatedAt).toLocaleString();
-  const k=d.kpis;
-
-  $('kpis').innerHTML=[
-    ['Revenue (range)', fmt$(k.revenueTotal), k.revenueApprox?'approx. from last-payment data':(k.paymentsCount+' payments')],
-    ['Avg Payment', fmt$(k.avgPayment), 'per transaction'],
-    ['Lifetime Collected', fmt$(k.lifetimeRevenue), 'all '+fmtN(k.totalClients)+' clients'],
-    ['Active Clients', fmtN(k.activeClients), 'in service window'],
-    ['Inactive Clients', fmtN(k.inactiveClients), 'reactivation pool'],
-    ['New Clients (range)', fmtN(k.newClients), 'joined in period'],
-    ['Texts In', fmtN(k.textsIn), 'inbound SMS in period'],
-    ['Texts Out', fmtN(k.textsOut), 'outbound SMS in period'],
-    ['Instagram', fmtN(k.igFollowers), k.igDelta?`<span class="${k.igDelta>=0?'up':'down'}">${k.igDelta>=0?'▲':'▼'} ${fmtN(Math.abs(k.igDelta))}</span> in period`:'followers'],
-    ['Facebook', fmtN(k.fbFollowers), k.fbDelta?`<span class="${k.fbDelta>=0?'up':'down'}">${k.fbDelta>=0?'▲':'▼'} ${fmtN(Math.abs(k.fbDelta))}</span> in period`:'followers'],
-    ['Disputes Sent', fmtN(k.disputesSent), 'DisputeFox (webhook feed)'],
-  ].map(([l,v,s])=>`<div class="kpi"><div class="lbl">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join('');
-
-  const s=d.series, b=d.breakdowns;
-  const labels=x=>x.map(p=>p.label), vals=x=>x.map(p=>p.value);
-
-  mkChart('chRevenue',{type:'bar',data:{labels:labels(s.revenue),datasets:[{label:'Revenue',data:vals(s.revenue),
-    backgroundColor:ctx=>grad(ctx.chart.ctx,PINK),borderColor:PINK,borderWidth:1.5,borderRadius:5}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.y)}}},
-    scales:{y:{ticks:{callback:v=>fmt$(v)}}}}});
-
-  mkChart('chActive',{type:'doughnut',data:{labels:['Active','Inactive'],datasets:[{data:[k.activeClients,k.inactiveClients],
-    backgroundColor:[GREEN,'#54303c'],borderColor:'#191A1F',borderWidth:3}]},
-    options:{maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom'}}}});
-
-  mkChart('chPayments',{type:'line',data:{labels:labels(s.payments.length?s.payments:s.newClients),datasets:[
-    {label:'Payments',data:vals(s.payments),borderColor:PINK,backgroundColor:PINK,tension:.35,pointRadius:2},
-    {label:'New clients',data:vals(s.newClients),borderColor:ROSEGOLD,backgroundColor:ROSEGOLD,tension:.35,pointRadius:2}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
-
-  mkChart('chSms',{type:'bar',data:{labels:labels(s.smsIn),datasets:[
-    {label:'Inbound',data:vals(s.smsIn),backgroundColor:BLUE+'cc',borderRadius:4,stack:'s'},
-    {label:'Outbound',data:vals(s.smsOut),backgroundColor:ROSE+'cc',borderRadius:4,stack:'s'}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true}}}});
-
-  mkChart('chSocial',{type:'line',data:{labels:labels(s.igFollowers),datasets:[
-    {label:'Instagram',data:vals(s.igFollowers),borderColor:PINK,backgroundColor:ctx=>grad(ctx.chart.ctx,PINK),fill:true,tension:.3,pointRadius:0},
-    {label:'Facebook',data:vals(s.fbFollowers),borderColor:BLUE,backgroundColor:ctx=>grad(ctx.chart.ctx,BLUE),fill:true,tension:.3,pointRadius:0}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
-
-  mkChart('chDeals',{type:'bar',data:{labels:b.byDeal.map(x=>x.key),datasets:[{label:'Revenue',data:b.byDeal.map(x=>x.revenue),
-    backgroundColor:[PINK,ROSE,ROSEGOLD,GOLD,'#c2547e','#8a5a63','#6e4a52'].slice(0,b.byDeal.length),borderRadius:5}]},
-    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},
-    tooltip:{callbacks:{label:c=>fmt$(c.parsed.x)+' · '+b.byDeal[c.dataIndex].count+' clients'}}},
-    scales:{x:{ticks:{callback:v=>fmt$(v)}}}}});
-
-  mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{label:'Active clients',data:b.byRound.map(x=>x.count),
-    backgroundColor:ctx=>grad(ctx.chart.ctx,ROSEGOLD),borderColor:ROSEGOLD,borderWidth:1.5,borderRadius:5}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{display:false},
-    tooltip:{callbacks:{label:c=>c.parsed.y+' clients · '+fmt$(b.byRound[c.dataIndex].revenue)+' revenue'}}}}});
-
-  mkChart('chChurn',{type:'bar',data:{labels:b.churnRecency.map(x=>x.key),datasets:[{label:'Clients',data:b.churnRecency.map(x=>x.count),
-    backgroundColor:[GREEN+'99',GOLD+'99',ROSE+'99',RED+'88','#71313f'],borderRadius:5}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-
-  // fill deal/round filter dropdowns once
-  if($('fDeal').options.length<=1){
-    for(const x of b.byDeal) $('fDeal').add(new Option(x.key,x.key));
-    for(const x of b.byRound) $('fRound').add(new Option(x.key,x.key.replace('Round ','')));
+  const qs=new URLSearchParams({granularity});if(from)qs.set('from',from);if(to)qs.set('to',to);
+  const r=await fetch('/api/dashboard?'+qs);if(r.status===401){location.href='/login.html';return;}
+  const d=await r.json();const k=d.kpis;
+  $('modePill').textContent=d.mode==='live'?'LIVE':'DEMO';
+  // hero
+  $('heroLabel').textContent='COLLECTED · '+rangeLabel();
+  const okFeed=d.health&&d.health.paymentFeedOk;
+  $('heroBadge').textContent=okFeed?'FANBASIS LIVE':'PAYMENT SYNC DOWN';
+  $('heroBadge').className='badge-soft '+(okFeed?'badge-ok':'badge-warn');
+  const amt=Math.round(k.revenueTotal).toLocaleString();
+  $('heroAmt').innerHTML=`<sup>$</sup>${amt}`;
+  let cmp='';
+  if(k.prevRevenue!=null&&k.prevRevenue>0){
+    const pct=Math.round((k.revenueTotal-k.prevRevenue)/k.prevRevenue*1000)/10;
+    cmp=` · <b class="${pct>=0?'up':'down'}">${pct>=0?'▲':'▼'} ${Math.abs(pct)}%</b> vs previous period`;
   }
+  $('heroNote').innerHTML=`${fmtN(k.paymentsCount)} payments · avg ${fmt$(k.avgPayment)}${cmp} — every dollar from individual Fanbasis sales with exact dates`;
+  $('railLifetime').textContent=fmt$(k.lifetimeRevenue);
+  $('railLifetimeSub').textContent=`Lifetime collected · ${fmtN(k.distinctPayers)} paying clients`;
+  $('railAvg').textContent=fmt$(k.avgPayment);
+  $('railLtv').textContent=fmt$(k.ltv);
+  $('railNew').textContent=fmtN(k.newClients);
+  const s=d.series;const labels=x=>x.map(p=>p.label),vals=x=>x.map(p=>p.value);
+  mkChart('chHero',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:GREEN,borderWidth:2,
+    backgroundColor:c=>grad(c.chart.ctx,GREEN),fill:true,tension:.35,pointRadius:0,pointHitRadius:12}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.y)}}},
+    scales:{y:{border:{display:false},grid:{tickBorderDash:[3,3]},ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'K':v)}},x:{grid:{display:false},ticks:{maxTicksLimit:8}}}}});
+  // client base
+  const segs=[[k.activeClients,GREEN,'Active · in window','active'],[k.newClients,BLUE,'New this period',''],
+    [k.inactiveClients,RED,'Inactive · reactivation','inactive'],[k.unclassified,GRAY,'Unclassified','unknown']];
+  const total=k.totalClients||1;
+  $('viewAllClients').textContent=`View all ${fmtN(k.totalClients)} →`;
+  $('segbar').innerHTML=segs.map(([n,c])=>`<div style="width:${Math.max(1,n/total*100)}%;background:${c}"></div>`).join('');
+  $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="tile" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><b>${fmtN(n)}</b><span>${l}</span></div>`).join('');
+  $('reactBadge').textContent=fmtN(k.inactiveClients);
+  // conversations
+  $('convIn').textContent=fmtN(k.textsIn);$('convOut').textContent=fmtN(k.textsOut);
+  $('convRatio').textContent=k.textsIn?((k.textsOut/k.textsIn).toFixed(1)+'× replies'):'';
+  mkChart('chConv',{type:'bar',data:{labels:labels(s.smsIn),datasets:[
+    {label:'Inbound',data:vals(s.smsIn),backgroundColor:BLUE+'cc',borderRadius:3},
+    {label:'Outbound',data:s.smsOut.map(p=>-p.value),backgroundColor:RED+'99',borderRadius:3}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>Math.abs(c.parsed.y)+(c.datasetIndex?' out':' in')}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:10}},y:{stacked:true,ticks:{callback:v=>Math.abs(v)}}}}});
+  // packages / rounds / churn / social
+  const b=d.breakdowns;
+  mkChart('chDeals',{type:'bar',data:{labels:b.byDeal.slice(0,7).map(x=>x.key),datasets:[{data:b.byDeal.slice(0,7).map(x=>x.revenue),
+    backgroundColor:[GREEN,BLUE,GOLD,'#6b8f71','#8a9fc4','#c9a96a','#b9b3a8'],borderRadius:5}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.x)}}},
+    scales:{x:{ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'K':v)}},y:{grid:{display:false}}}}});
+  mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{data:b.byRound.map(x=>x.count),
+    backgroundColor:c=>grad(c.chart.ctx,GREEN,210),borderColor:GREEN,borderWidth:1.5,borderRadius:5}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  mkChart('chChurn',{type:'bar',data:{labels:b.churnRecency.map(x=>x.key),datasets:[{data:b.churnRecency.map(x=>x.count),
+    backgroundColor:[GREEN+'88',GOLD+'88','#c9a96a88',RED+'77',RED+'aa'],borderRadius:5}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  mkChart('chSocial',{type:'line',data:{labels:labels(s.igFollowers),datasets:[
+    {label:'Instagram',data:vals(s.igFollowers),borderColor:'#c2547e',backgroundColor:c=>grad(c.chart.ctx,'#c2547e',210),fill:true,tension:.3,pointRadius:0},
+    {label:'Facebook',data:vals(s.fbFollowers),borderColor:BLUE,backgroundColor:c=>grad(c.chart.ctx,BLUE,210),fill:true,tension:.3,pointRadius:0}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  $('socialSub').textContent=`Instagram ${fmtN(k.igFollowers)} · Facebook ${fmtN(k.fbFollowers)}${k.igDelta?` · IG ${k.igDelta>=0?'+':''}${k.igDelta} in period`:''}`;
+  // needs attention + sources
+  renderAttention(d);renderSources(d);
+  if($('fDeal').options.length<=1){
+    for(const x of b.byDeal)$('fDeal').add(new Option(x.key,x.key));
+    for(const x of b.byRound)$('fRound').add(new Option(x.key,x.key.replace('Round ','')));
+  }
+  loadFeed();
+}
+function renderAttention(d){
+  const h=d.health||{};const k=d.kpis;const rows=[];
+  if(!h.paymentFeedOk)rows.push(['◈','Payment sync quiet','No Fanbasis sale in 48h — verify the Zap','Verify',()=>openSettings()]);
+  if(!h.disputeFeedOk)rows.push(['▤','Dispute feed silent','No DisputeFox event in 7 days','Verify',()=>openSettings()]);
+  if(!h.socialOk)rows.push(['✦','Social snapshots stale','No follower check in 24h','Refresh',()=>{showView('social');refreshSocial();}]);
+  if(k.unclassified>0)rows.push(['◉',`${fmtN(k.unclassified)} unclassified clients`,`${Math.round(k.unclassified/(k.totalClients||1)*100)}% of base has no lifecycle stage`,'Review',()=>goClients('unknown')]);
+  if(!rows.length)rows.push(['✓','All systems reporting','Feeds healthy across all sources','',null]);
+  $('attention').innerHTML=rows.map(([i,t,s,a],idx)=>`<div class="att"><div class="ico">${i}</div>
+    <div><b>${t}</b><span>${s}</span></div>${a?`<button class="act ${idx===0?'dark':''}" onclick="__att[${idx}]()">${a}</button>`:''}</div>`).join('');
+  window.__att=rows.map(r=>r[4]||(()=>{}));
+}
+function renderSources(d){
+  const h=d.health||{};
+  const rows=[['GoHighLevel',true],['Fanbasis',!!h.paymentFeedOk],['DisputeFox',!!h.disputeFeedOk],['Instagram',!!h.socialOk],['Facebook',!!h.socialOk]];
+  $('sources').innerHTML=rows.map(([n,ok])=>`<div class="src"><span class="dot ${ok?'':'bad'}"></span>${n}${ok?'':'<span class="fix" onclick="openSettings()">Fix</span>'}</div>`).join('');
+}
+async function loadFeed(){
+  const d=await fetch('/api/activity').then(r=>r.json()).catch(()=>({items:[]}));
+  const ago=t=>{if(!t)return '';const m=Math.round((Date.now()-new Date(t))/60000);
+    if(m<60)return m+'m ago';if(m<1440)return Math.round(m/60)+'h ago';return Math.round(m/1440)+'d ago';};
+  const ic={sale:'$',client:'✚',dispute:'▤'};
+  $('feed').innerHTML=(d.items||[]).slice(0,12).map(i=>`<div class="feeditem"><div class="k ${i.kind}">${ic[i.kind]||'•'}</div>
+    <div class="t"><b>${i.title||''}</b><span>${i.sub||''}</span></div>
+    ${i.amount?`<span class="amt">${fmt$(i.amount)}</span>`:''}<span class="when">${ago(i.at)}</span></div>`).join('')||'<div class="cardsub">No activity yet.</div>';
+}
+function goClients(status){showView('clients');$('fStatus').value=(status==='active'||status==='inactive')?status:'';page=1;loadClients();}
+
+/* ================= views ================= */
+const TITLES={dash:'Dashboard',pipeline:'Pipeline',clients:'Clients',react:'Reactivation',tasks:'Follow-Ups',social:'Social'};
+function showView(v){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
+  $('pageTitle').textContent=TITLES[v]||'Dashboard';
+  if(v==='pipeline')loadPipeline();if(v==='react')loadReact();if(v==='tasks')loadTasks();
+  if(v==='clients')loadClients();if(v==='social')loadSocial();
+}
+$('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){showView('clients');$('q').value=$('globalSearch').value;page=1;loadClients();}});
+
+/* ================= pipeline ================= */
+async function loadPipeline(){
+  const d=await(await fetch('/api/pipeline')).json();
+  $('pipeStats').innerHTML=`<span><b>${fmtN(d.totalActive)}</b> active clients</span><span><b>${fmt$(d.totalRevenue)}</b> lifetime value in pipeline</span><span><b>${d.columns.length}</b> stages</span>`;
+  $('pipeBoard').innerHTML=d.columns.map(col=>`
+    <div style="min-width:230px;flex:0 0 230px;background:#faf8f3;border:1px solid var(--line);border-radius:12px;padding:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="font-size:13px">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span></div>
+      <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:10px">${fmt$(col.revenue)}</div>
+      ${col.clients.map(c=>`<div onclick="openClient('${c.id}')" style="cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px">
+        <div style="font-weight:600;font-size:12.5px">${c.name}</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:2px">${c.deal||''} · ${fmt$(c.totalSpent)}</div></div>`).join('')}
+      ${col.count>30?`<div style="color:var(--muted);font-size:11.5px;text-align:center">+ ${col.count-30} more</div>`:''}
+    </div>`).join('');
 }
 
-/* ================= clients table ================= */
+/* ================= clients ================= */
 async function loadClients(){
-  const qs=new URLSearchParams({page,pageSize:25,sort,dir,q:$('q').value,
-    status:$('fStatus').value,deal:$('fDeal').value,round:$('fRound').value});
-  const r=await fetch('/api/clients?'+qs); const d=await r.json();
+  const qs=new URLSearchParams({page,pageSize:25,sort,dir,q:$('q').value,status:$('fStatus').value,deal:$('fDeal').value,round:$('fRound').value});
+  const r=await fetch('/api/clients?'+qs);const d=await r.json();
   const maxP=Math.max(1,Math.ceil(d.total/d.pageSize));
   if(page>maxP){page=maxP;return loadClients();}
   $('pageInfo').textContent=`${d.total.toLocaleString()} clients · page ${d.page}/${maxP}`;
@@ -497,113 +633,12 @@ async function loadClients(){
     <td>${c.createdAt?c.createdAt.slice(0,10):'—'}</td></tr>`).join('');
 }
 document.querySelectorAll('th[data-s]').forEach(th=>th.addEventListener('click',()=>{
-  const s=th.dataset.s; if(sort===s)dir=dir==='asc'?'desc':'asc'; else{sort=s;dir='desc';} page=1; loadClients();
+  const s=th.dataset.s;if(sort===s)dir=dir==='asc'?'desc':'asc';else{sort=s;dir='desc';}page=1;loadClients();
 }));
-let qTimer; $('q').addEventListener('input',()=>{clearTimeout(qTimer);qTimer=setTimeout(()=>{page=1;loadClients();},300)});
+let qTimer;$('q').addEventListener('input',()=>{clearTimeout(qTimer);qTimer=setTimeout(()=>{page=1;loadClients();},300)});
 ['fStatus','fDeal','fRound'].forEach(id=>$(id).addEventListener('change',()=>{page=1;loadClients();}));
 
-/* ================= settings ================= */
-async function openSettings(){
-  const c=await (await fetch('/api/config')).json();
-  for(const k of ['ghlToken','ghlLocationId','metaPageToken','fbPageId','igUserId']) $('s_'+k).value=c[k]||'';
-  $('s_webhookSecret').value=''; $('s_webhookSecret').placeholder=c.webhookSecret||'any-random-string';
-  $('s_appPassword').value='';
-  const base=location.origin;
-  $('hookFan').textContent='Fanbasis payments → POST '+base+'/webhooks/fanbasis';
-  $('hookFox').textContent='DisputeFox events → POST '+base+'/webhooks/disputefox';
-  $('hookSms').textContent='SMS events (optional) → POST '+base+'/webhooks/sms';
-  $('overlay').classList.add('show');
-}
-async function saveSettings(){
-  const body={};
-  for(const k of ['ghlToken','ghlLocationId','metaPageToken','fbPageId','igUserId','webhookSecret','appPassword']){
-    const v=$('s_'+k).value.trim(); if(v) body[k]=v;
-  }
-  const r=await(await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-  $('r_save').textContent='Saved — mode: '+r.mode.toUpperCase(); $('r_save').className='testres ok';
-  refreshAll();
-}
-async function testGhl(){
-  $('r_ghl').textContent='Testing…'; $('r_ghl').className='testres';
-  await saveQuiet(['ghlToken','ghlLocationId']);
-  const r=await fetch('/api/test/ghl',{method:'POST'}); const d=await r.json();
-  $('r_ghl').textContent=d.ok?('Connected ✓ '+(d.totalContacts??'')+' contacts'):('✗ '+(d.error||'failed'));
-  $('r_ghl').className='testres '+(d.ok?'ok':'bad');
-}
-async function testMeta(){
-  $('r_meta').textContent='Testing…'; $('r_meta').className='testres';
-  await saveQuiet(['metaPageToken','fbPageId','igUserId']);
-  const r=await fetch('/api/test/meta',{method:'POST'}); const d=await r.json();
-  const bits=[]; if(d.igFollowers!=null)bits.push('IG '+d.igFollowers.toLocaleString()); if(d.fbFollowers!=null)bits.push('FB '+d.fbFollowers.toLocaleString());
-  if(d.igError)bits.push('IG: '+d.igError); if(d.fbError)bits.push('FB: '+d.fbError);
-  $('r_meta').textContent=bits.length?bits.join(' · '):'no data — check IDs';
-  $('r_meta').className='testres '+((d.igFollowers!=null||d.fbFollowers!=null)?'ok':'bad');
-}
-async function saveQuiet(keys){
-  const body={}; for(const k of keys){const v=$('s_'+k).value.trim(); if(v&&!v.includes('••••'))body[k]=v;}
-  if(Object.keys(body).length) await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-}
-async function refreshAll(hard){
-  if(hard) await fetch('/api/refresh',{method:'POST'});
-  await loadDashboard(); await loadClients();
-}
-
-/* ================= views ================= */
-function showView(v){
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
-  if(v==='pipeline') loadPipeline();
-  if(v==='react') loadReact();
-  if(v==='tasks') loadTasks();
-  if(v==='clients') loadClients();
-  if(v==='social') loadSocial();
-}
-
-/* ================= social ================= */
-let socialLoaded=false;
-async function loadSocial(){
-  const d=await(await fetch('/api/social')).json();
-  const l=d.latest||{};
-  $('socialStats').innerHTML=`
-    <span>Instagram: <b>${l.igFollowers!=null?l.igFollowers.toLocaleString():'—'}</b> followers (@${d.igHandle})</span>
-    <span>Facebook: <b>${l.fbFollowers!=null?l.fbFollowers.toLocaleString():'—'}</b> followers</span>
-    <span style="color:var(--muted)">counts auto-update every 6h${l.date?' · last: '+l.date:''}</span>`;
-  $('igLink').href=d.igUrl; $('fbLink').href=d.fbPageUrl;
-  if(!socialLoaded){
-    $('igFrame').src=d.igUrl.replace(/\/$/,'')+'/embed';
-    $('fbFrame').src='https://www.facebook.com/plugins/page.php?href='+encodeURIComponent(d.fbPageUrl)+'&tabs=timeline&width=500&height=560&small_header=true&adapt_container_width=true&hide_cover=false';
-    socialLoaded=true;
-  }
-}
-async function refreshSocial(){
-  $('socialRes').textContent='Checking public profiles…'; $('socialRes').className='testres';
-  const r=await(await fetch('/api/social/refresh',{method:'POST'})).json();
-  const l=r.latest||{};
-  $('socialRes').textContent=(l.igFollowers!=null||l.fbFollowers!=null)?'Updated ✓':'Could not read counts (profiles may be rate-limiting) — will retry automatically';
-  $('socialRes').className='testres '+((l.igFollowers!=null||l.fbFollowers!=null)?'ok':'bad');
-  loadSocial(); loadDashboard();
-}
-
-/* ================= pipeline ================= */
-async function loadPipeline(){
-  const d=await(await fetch('/api/pipeline')).json();
-  $('pipeStats').innerHTML=`<span><b>${fmtN(d.totalActive)}</b> active clients</span><span><b>${fmt$(d.totalRevenue)}</b> lifetime value in pipeline</span><span><b>${d.columns.length}</b> stages</span>`;
-  $('pipeBoard').innerHTML=d.columns.map(col=>`
-    <div style="min-width:230px;flex:0 0 230px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <b style="color:var(--rosegold)">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span>
-      </div>
-      <div style="color:var(--pink);font-weight:700;font-size:13px;margin-bottom:10px">${fmt$(col.revenue)}</div>
-      ${col.clients.map(c=>`<div onclick="openClient('${c.id}')" style="cursor:pointer;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:8px 10px;margin-bottom:7px">
-        <div style="font-weight:600;font-size:12.5px">${c.name}</div>
-        <div style="color:var(--muted);font-size:11px;margin-top:2px">${c.deal||''} · ${fmt$(c.totalSpent)}</div>
-      </div>`).join('')}
-      ${col.count>30?`<div style="color:var(--muted);font-size:11.5px;text-align:center">+ ${col.count-30} more</div>`:''}
-    </div>`).join('');
-}
-
 /* ================= reactivation ================= */
-let rPage=1;
 async function loadReact(){
   const d=await(await fetch('/api/reactivation?page='+rPage+($('hideWorked').checked?'&hideWorked=1':''))).json();
   const maxP=Math.max(1,Math.ceil(d.total/d.pageSize));
@@ -615,7 +650,7 @@ async function loadReact(){
     <td>${c.phone||c.email||''}</td><td>${c.deal||'—'}</td><td><b>${fmt$(c.totalSpent)}</b></td>
     <td>${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</td>
     <td><span style="color:${c.daysLapsed<=90?'var(--gold)':'var(--muted)'}">${c.daysLapsed??'—'}d</span></td>
-    <td><input type="checkbox" ${c.worked?'checked':''} style="accent-color:var(--pink)"
+    <td><input type="checkbox" ${c.worked?'checked':''} style="accent-color:var(--green)"
       onchange="fetch('/api/reactivation/${c.id}/worked',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({worked:this.checked})})"></td>
   </tr>`).join('');
 }
@@ -623,16 +658,14 @@ async function loadReact(){
 /* ================= tasks ================= */
 async function loadTasks(){
   const d=await(await fetch('/api/tasks')).json();
-  $('taskCount').textContent=d.open.length?('('+d.open.length+')'):'';
   const today=new Date().toISOString().slice(0,10);
   const row=t=>`<div class="taskrow${t.done?' done':''}">
     <input type="checkbox" ${t.done?'checked':''} onchange="fetch('/api/tasks/${t.id}',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({done:this.checked})}).then(loadTasks)">
     <div class="tt">${t.title}${t.clientName?` <span class="cl">· ${t.clientName}</span>`:''}</div>
     ${t.due?`<span class="due${t.due<today&&!t.done?' over':''}">${t.due}</span>`:''}
-    <button class="del" onclick="fetch('/api/tasks/${t.id}',{method:'DELETE'}).then(loadTasks)">✕</button>
-  </div>`;
-  $('taskList').innerHTML=d.open.length?d.open.map(row).join(''):'<div style="color:var(--muted)">No open tasks — add one above.</div>';
-  $('taskDone').innerHTML=d.done.length?d.done.map(row).join(''):'<div style="color:var(--muted)">Nothing completed yet.</div>';
+    <button class="del" onclick="fetch('/api/tasks/${t.id}',{method:'DELETE'}).then(loadTasks)">✕</button></div>`;
+  $('taskList').innerHTML=d.open.length?d.open.map(row).join(''):'<div class="cardsub">No open tasks — add one above.</div>';
+  $('taskDone').innerHTML=d.done.length?d.done.map(row).join(''):'<div class="cardsub">Nothing completed yet.</div>';
 }
 async function addTaskUI(clientId,clientName){
   const title=clientId?prompt('Follow-up task for '+clientName+':'):$('ntTitle').value.trim();
@@ -640,52 +673,75 @@ async function addTaskUI(clientId,clientName){
   const due=clientId?null:($('ntDue').value||null);
   await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due,clientId,clientName})});
   if(!clientId){$('ntTitle').value='';$('ntDue').value='';}
-  loadTasks(); if(clientId&&curClient)openClient(clientId);
+  loadTasks();if(clientId&&curClient)openClient(clientId);
 }
 
-/* ================= client drawer ================= */
+/* ================= social ================= */
+let socialLoaded=false;
+async function loadSocial(){
+  const d=await(await fetch('/api/social')).json();const l=d.latest||{};
+  $('socialStats').innerHTML=`<span>Instagram: <b>${l.igFollowers!=null?l.igFollowers.toLocaleString():'—'}</b> (@${d.igHandle})</span>
+    <span>Facebook: <b>${l.fbFollowers!=null?l.fbFollowers.toLocaleString():'—'}</b></span>
+    <span style="color:var(--muted)">auto-updates every 6h${l.date?' · last: '+l.date:''}</span>`;
+  $('igLink').href=d.igUrl;$('fbLink').href=d.fbPageUrl;
+  if(!socialLoaded){
+    $('igFrame').src=d.igUrl.replace(/\/$/,'')+'/embed';
+    $('fbFrame').src='https://www.facebook.com/plugins/page.php?href='+encodeURIComponent(d.fbPageUrl)+'&tabs=timeline&width=500&height=560&small_header=true';
+    socialLoaded=true;
+  }
+}
+async function refreshSocial(){
+  $('socialRes').textContent='Checking public profiles…';$('socialRes').className='testres';
+  const r=await(await fetch('/api/social/refresh',{method:'POST'})).json();const l=r.latest||{};
+  const ok=l.igFollowers!=null||l.fbFollowers!=null;
+  $('socialRes').textContent=ok?'Updated ✓':'Could not read counts — will retry automatically';
+  $('socialRes').className='testres '+(ok?'ok':'bad');
+  loadSocial();loadDashboard();
+}
+
+/* ================= drawer ================= */
 let curClient=null;
 function closeDrawer(){$('drawer').classList.remove('open');curClient=null;}
 async function openClient(id){
-  const r=await fetch('/api/clients/'+id); if(!r.ok)return;
-  const d=await r.json(); const c=d.client; curClient=c;
+  const r=await fetch('/api/clients/'+id);if(!r.ok)return;
+  const d=await r.json();const c=d.client;curClient=c;
   $('drawer').classList.add('open');
   $('dName').textContent=c.name;
   $('dMeta').innerHTML=`${c.email||''}${c.phone?' · '+c.phone:''}<br>
     <span class="pill ${c.status}">${c.status}</span>&nbsp; ${c.deal?'package: <b>'+c.deal+'</b>':''} ${c.round?' · round <b>'+c.round+'</b>':''}
     ${c.createdAt?' · joined '+c.createdAt.slice(0,10):''}`;
   $('dStats').innerHTML=`
-    <div><div class="l">Total Spent</div><div class="v">${fmt$(c.totalSpent)}</div></div>
-    <div><div class="l"># Payments</div><div class="v">${c.numberOfPayments||d.payments.length||0}</div></div>
-    <div><div class="l">Last Payment</div><div class="v" style="font-size:13px">${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</div></div>`;
+    <div><div class="l">Total spent</div><div class="v">${fmt$(c.totalSpent)}</div></div>
+    <div><div class="l"># payments</div><div class="v">${c.numberOfPayments||d.payments.length||0}</div></div>
+    <div><div class="l">Last payment</div><div class="v" style="font-size:13px">${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</div></div>`;
   $('dActions').innerHTML=c.status==='active'
-    ?`<button class="btn ghost" onclick="setStatusUI('inactive')">Mark Inactive</button>`
-    :`<button class="btn primary" onclick="setStatusUI('active')">Mark Active (reactivated)</button>`;
+    ?`<button class="btn ghost" onclick="setStatusUI('inactive')">Mark inactive</button>`
+    :`<button class="btn primary" onclick="setStatusUI('active')">Mark active (reactivated)</button>`;
   $('dNotes').innerHTML=d.notes.length?d.notes.map(n=>`<div class="noterow">${n.text}<div class="mut">${new Date(n.at).toLocaleString()}
     <a href="#" onclick="fetch('/api/notes/${n.id}',{method:'DELETE'}).then(()=>openClient('${c.id}'));return false" style="color:var(--muted)"> · delete</a></div></div>`).join('')
-    :'<div style="color:var(--muted);font-size:12.5px">No notes yet.</div>';
+    :'<div class="cardsub">No notes yet.</div>';
   $('dPays').innerHTML=d.payments.length?d.payments.map(p=>`<div class="evrow"><span>${(p.product||'payment')}</span><span><b>${fmt$(p.amount)}</b> <span class="mut">${(p.at||'').slice(0,10)}</span></span></div>`).join('')
-    :`<div style="color:var(--muted);font-size:12.5px">${c.lastPaymentDate?'Last payment '+c.lastPaymentDate.slice(0,10)+' (detail arrives via Fanbasis webhook)':'No payment history yet.'}</div>`;
+    :`<div class="cardsub">${c.lastPaymentDate?'Last payment '+c.lastPaymentDate.slice(0,10):'No payment history yet.'}</div>`;
   $('dDisputes').innerHTML=d.disputes.length?d.disputes.map(x=>`<div class="evrow"><span>${x.action||'dispute'} ${x.round?'· R'+x.round:''}</span><span class="mut">${(x.at||'').slice(0,10)}</span></div>`).join('')
-    :`<div style="color:var(--muted);font-size:12.5px">${c.round?'Currently Round '+c.round+' (from GHL). Event feed arrives via DisputeFox webhook.':'No dispute activity recorded.'}</div>`;
+    :`<div class="cardsub">${c.round?'Currently Round '+c.round+' (from GHL).':'No dispute activity recorded.'}</div>`;
   $('dTasks').innerHTML=d.tasks.length?d.tasks.map(t=>`<div class="evrow"><span>${t.title}</span><span class="mut">${t.due||''}</span></div>`).join('')
-    :'<div style="color:var(--muted);font-size:12.5px">No open tasks for this client.</div>';
-  $('dSms').value=''; $('dNote').value=''; $('dSmsRes').textContent='';
+    :'<div class="cardsub">No open tasks for this client.</div>';
+  $('dSms').value='';$('dNote').value='';$('dSmsRes').textContent='';
 }
 async function setStatusUI(status){
   if(!curClient)return;
   await fetch('/api/clients/'+curClient.id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
-  openClient(curClient.id); loadDashboard();
+  openClient(curClient.id);loadDashboard();
 }
 async function addNoteUI(){
-  const text=$('dNote').value.trim(); if(!text||!curClient)return;
+  const text=$('dNote').value.trim();if(!text||!curClient)return;
   await fetch('/api/clients/'+curClient.id+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
   openClient(curClient.id);
 }
-function addFollowUpUI(){ if(curClient) addTaskUI(curClient.id,curClient.name); }
+function addFollowUpUI(){if(curClient)addTaskUI(curClient.id,curClient.name);}
 async function sendSmsUI(){
-  const message=$('dSms').value.trim(); if(!message||!curClient)return;
-  $('dSmsRes').textContent='Sending…'; $('dSmsRes').className='testres';
+  const message=$('dSms').value.trim();if(!message||!curClient)return;
+  $('dSmsRes').textContent='Sending…';$('dSmsRes').className='testres';
   const r=await(await fetch('/api/clients/'+curClient.id+'/sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})})).json();
   $('dSmsRes').textContent=r.ok?(r.demo?'Demo mode — not sent':'Sent ✓'):('✗ '+(r.error||'failed'));
   $('dSmsRes').className='testres '+(r.ok?'ok':'bad');
@@ -693,10 +749,44 @@ async function sendSmsUI(){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
 
+/* ================= settings ================= */
+async function openSettings(){
+  const c=await(await fetch('/api/config')).json();
+  for(const k of ['ghlToken','ghlLocationId','metaPageToken','fbPageId','igUserId'])$('s_'+k).value=c[k]||'';
+  $('s_webhookSecret').value='';$('s_webhookSecret').placeholder=c.webhookSecret||'any-random-string';
+  $('s_appPassword').value='';
+  const base=location.origin;
+  $('hookFan').textContent='Fanbasis → POST '+base+'/webhooks/fanbasis?secret=…';
+  $('hookFox').textContent='DisputeFox → POST '+base+'/webhooks/disputefox?secret=…';
+  $('overlay').classList.add('show');
+}
+async function saveSettings(){
+  const body={};
+  for(const k of ['ghlToken','ghlLocationId','metaPageToken','fbPageId','igUserId','webhookSecret','appPassword']){
+    const v=$('s_'+k).value.trim();if(v&&!v.includes('••••'))body[k]=v;
+  }
+  const r=await(await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  $('r_save').textContent='Saved — mode: '+r.mode.toUpperCase();$('r_save').className='testres ok';
+  loadDashboard();
+}
+async function testGhl(){
+  $('r_ghl').textContent='Testing…';$('r_ghl').className='testres';
+  const r=await fetch('/api/test/ghl',{method:'POST'});const d=await r.json();
+  $('r_ghl').textContent=d.ok?('Connected ✓ '+(d.totalContacts??'')+' contacts'):('✗ '+(d.error||'failed'));
+  $('r_ghl').className='testres '+(d.ok?'ok':'bad');
+}
+async function testMeta(){
+  $('r_meta').textContent='Testing…';$('r_meta').className='testres';
+  const r=await fetch('/api/test/meta',{method:'POST'});const d=await r.json();
+  const bits=[];if(d.igFollowers!=null)bits.push('IG '+d.igFollowers.toLocaleString());if(d.fbFollowers!=null)bits.push('FB '+d.fbFollowers.toLocaleString());
+  $('r_meta').textContent=bits.length?bits.join(' · '):'no data — check IDs';
+  $('r_meta').className='testres '+(bits.length?'ok':'bad');
+}
+
 /* ================= boot ================= */
-[from,to]=presetRange(preset); granularity=pickGran(from,to);
-renderFilters(); refreshAll(); loadTasks();
-setInterval(()=>refreshAll(false), 5*60*1000); // auto-refresh every 5 min
+[from,to]=presetRange(preset);granularity=pickGran(from,to);
+renderFilters();loadDashboard();loadTasks();
+setInterval(loadDashboard,5*60*1000);
 </script>
 </body>
 </html>
