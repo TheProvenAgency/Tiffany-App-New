@@ -7,6 +7,7 @@ const path = require('path');
 const store = require('./lib/store');
 const ghl = require('./lib/ghl');
 const meta = require('./lib/meta');
+const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
 
 const app = express();
@@ -52,9 +53,47 @@ function liveMode() {
 }
 
 async function getClients() {
-  if (!liveMode()) return demoData().clients;
-  const cfg = store.getConfig();
-  return store.cached('clients', 10 * 60 * 1000, () => ghl.fetchAllContacts(cfg));
+  let clients;
+  if (!liveMode()) clients = demoData().clients;
+  else {
+    const cfg = store.getConfig();
+    clients = await store.cached('clients', 10 * 60 * 1000, () => ghl.fetchAllContacts(cfg));
+  }
+  return decorateClients(clients);
+}
+
+// ---- active status computed from what each client PAID FOR ----
+// Service window (days after last payment) per package, mirroring the audit's
+// refined logic, plus a rounds cap: a fixed-round package is done once that
+// many dispute rounds went out after the payment (fed by the DisputeFox webhook).
+const DEAL_WINDOWS = {
+  'full-repair': 150, 'unlimited': 120, '3-rounds': 110, '3-round': 110,
+  '1-month': 45, '1-round': 40, 'quick-fix': 30, 'sweeps': 60
+};
+const DEAL_ROUNDS = { '1-round': 1, 'quick-fix': 1, 'sweeps': 1, '1-month': 1, '3-rounds': 3, '3-round': 3 };
+function decorateClients(clients) {
+  const disputes = store.getEvents().filter(e => e.type === 'dispute');
+  const byEmail = {};
+  for (const d of disputes) {
+    const em = (d.email || '').toLowerCase();
+    if (em) (byEmail[em] = byEmail[em] || []).push(d);
+  }
+  const now = Date.now();
+  return clients.map(c => {
+    const out = { ...c, tagStatus: c.status };
+    if (c.lastPaymentDate && !isNaN(new Date(c.lastPaymentDate))) {
+      const days = (now - new Date(c.lastPaymentDate)) / 86400000;
+      let active = days <= (DEAL_WINDOWS[c.deal] ?? 120);
+      const included = DEAL_ROUNDS[c.deal];
+      if (active && included) {
+        const used = (byEmail[(c.email || '').toLowerCase()] || [])
+          .filter(d => new Date(d.at || d.receivedAt) >= new Date(c.lastPaymentDate)).length;
+        if (used >= included) active = false; // package used up (e.g. 3-round deal, 3 rounds in)
+      }
+      out.status = active ? 'active' : 'inactive';
+    }
+    return out;
+  });
 }
 
 function getPaymentEvents() {
@@ -85,16 +124,26 @@ function getFollowerSeries() {
 }
 
 // ------------------------- bucketing -------------------------
-function bucketKey(dateStr, granularity) {
+// All date math uses the business timezone so "Today" on the filter bar,
+// the KPI cards, and the chart buckets all agree.
+const BIZ_TZ = process.env.BIZ_TZ || 'America/Chicago'; // Birmingham, AL = Central
+const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: BIZ_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+function localDay(dateStr) { // -> 'YYYY-MM-DD' in business tz
   const d = new Date(dateStr);
-  if (granularity === 'year') return String(d.getUTCFullYear());
-  if (granularity === 'month') return d.toISOString().slice(0, 7);
+  if (isNaN(d)) return String(dateStr).slice(0, 10);
+  return dayFmt.format(d);
+}
+function bucketKey(dateStr, granularity) {
+  const day = localDay(dateStr);
+  if (granularity === 'year') return day.slice(0, 4);
+  if (granularity === 'month') return day.slice(0, 7);
   if (granularity === 'week') {
-    const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const [y, m, dd] = day.split('-').map(Number);
+    const t = new Date(Date.UTC(y, m - 1, dd));
     t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7)); // Monday
     return t.toISOString().slice(0, 10);
   }
-  return d.toISOString().slice(0, 10);
+  return day;
 }
 
 function seriesFrom(items, granularity, valueFn, dateFn) {
@@ -108,7 +157,7 @@ function seriesFrom(items, granularity, valueFn, dateFn) {
 
 function inRange(dateStr, from, to) {
   if (!dateStr) return false;
-  const d = dateStr.slice(0, 10);
+  const d = localDay(dateStr);
   return (!from || d >= from) && (!to || d <= to);
 }
 
@@ -359,7 +408,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 app.post('/api/config', (req, res) => {
-  const allowed = ['ghlToken', 'ghlLocationId', 'metaPageToken', 'fbPageId', 'igUserId', 'webhookSecret', 'appPassword'];
+  const allowed = ['ghlToken', 'ghlLocationId', 'metaPageToken', 'fbPageId', 'igUserId', 'igHandle', 'fbPageUrl', 'webhookSecret', 'appPassword'];
   const patch = {};
   for (const k of allowed) if (typeof req.body[k] === 'string' && req.body[k] !== '' && !req.body[k].includes('••••')) patch[k] = req.body[k].trim();
   store.setConfig(patch);
@@ -375,6 +424,30 @@ app.post('/api/test/meta', async (req, res) => {
   catch (e) { res.status(400).json({ ok: false, error: e.message }); }
 });
 app.post('/api/refresh', (req, res) => { store.clearCache(); res.json({ ok: true }); });
+
+// social profile info for the Social tab (+ manual snapshot trigger)
+app.get('/api/social', async (req, res) => {
+  const cfg = store.getConfig();
+  const snaps = store.getSnapshots();
+  res.json({
+    igHandle: cfg.igHandle, fbPageUrl: cfg.fbPageUrl,
+    igUrl: 'https://www.instagram.com/' + cfg.igHandle + '/',
+    latest: snaps[snaps.length - 1] || null
+  });
+});
+app.post('/api/social/refresh', async (req, res) => {
+  await takeSnapshot();
+  const snaps = store.getSnapshots();
+  res.json({ ok: true, latest: snaps[snaps.length - 1] || null });
+});
+// manual count entry (e.g. read straight off the public profiles)
+app.post('/api/social/seed', (req, res) => {
+  const snap = { date: localDay(new Date()) };
+  if (req.body.igFollowers != null) snap.igFollowers = parseInt(req.body.igFollowers);
+  if (req.body.fbFollowers != null) snap.fbFollowers = parseInt(req.body.fbFollowers);
+  store.upsertSnapshot(snap);
+  res.json({ ok: true, snap });
+});
 
 // ------------------------- webhooks (Zapier: Fanbasis, DisputeFox, GHL SMS) -------------------------
 function checkSecret(req, res) {
@@ -422,11 +495,16 @@ app.post('/webhooks/sms', (req, res) => {
 async function takeSnapshot() {
   try {
     const cfg = store.getConfig();
-    const snap = { date: new Date().toISOString().slice(0, 10) };
+    const snap = { date: localDay(new Date()) };
     if (cfg.metaPageToken) {
       const f = await meta.getFollowers(cfg);
       if (f.igFollowers != null) snap.igFollowers = f.igFollowers;
       if (f.fbFollowers != null) snap.fbFollowers = f.fbFollowers;
+    }
+    if (snap.igFollowers == null || snap.fbFollowers == null) {
+      const p = await social.publicCounts(cfg);
+      if (snap.igFollowers == null && p.igFollowers != null) snap.igFollowers = p.igFollowers;
+      if (snap.fbFollowers == null && p.fbFollowers != null) snap.fbFollowers = p.fbFollowers;
     }
     if (liveMode()) {
       const clients = await getClients();
