@@ -153,6 +153,7 @@ section.view{display:none} section.view.on{display:block}
   <button data-v="clients" onclick="showView('clients')">Clients</button>
   <button data-v="react" onclick="showView('react')">Reactivation</button>
   <button data-v="tasks" onclick="showView('tasks')">Follow-Ups <span id="taskCount" style="color:var(--pink)"></span></button>
+  <button data-v="social" onclick="showView('social')">Social</button>
 </nav>
 
 <section class="view on" id="view-dash">
@@ -256,6 +257,29 @@ section.view{display:none} section.view.on{display:block}
     <div id="taskList"></div>
     <h3 style="margin-top:26px">Recently Completed</h3>
     <div id="taskDone"></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ SOCIAL ============ -->
+<section class="view" id="view-social">
+<div class="grid" style="padding-top:20px">
+  <div class="panel c12">
+    <h3>Social Media</h3>
+    <div class="statchips" id="socialStats"></div>
+    <div class="dactions" style="margin-bottom:6px">
+      <button class="btn ghost" onclick="refreshSocial()">↻ Refresh follower counts now</button>
+      <span class="testres" id="socialRes"></span>
+    </div>
+  </div>
+  <div class="panel c6">
+    <h3>Instagram — Recent Posts <a id="igLink" href="#" target="_blank" style="float:right;font-size:11px">open profile ↗</a></h3>
+    <iframe id="igFrame" style="width:100%;height:560px;border:1px solid var(--border);border-radius:10px;background:#fff" loading="lazy"></iframe>
+  </div>
+  <div class="panel c6">
+    <h3>Facebook — Timeline <a id="fbLink" href="#" target="_blank" style="float:right;font-size:11px">open profile ↗</a></h3>
+    <iframe id="fbFrame" style="width:100%;height:560px;border:1px solid var(--border);border-radius:10px;background:#fff" loading="lazy"></iframe>
+    <div style="color:var(--muted);font-size:11.5px;margin-top:8px">If the Facebook feed doesn't display (personal profiles limit embedding), use "open profile".</div>
   </div>
 </div>
 </section>
@@ -532,6 +556,32 @@ function showView(v){
   if(v==='react') loadReact();
   if(v==='tasks') loadTasks();
   if(v==='clients') loadClients();
+  if(v==='social') loadSocial();
+}
+
+/* ================= social ================= */
+let socialLoaded=false;
+async function loadSocial(){
+  const d=await(await fetch('/api/social')).json();
+  const l=d.latest||{};
+  $('socialStats').innerHTML=`
+    <span>Instagram: <b>${l.igFollowers!=null?l.igFollowers.toLocaleString():'—'}</b> followers (@${d.igHandle})</span>
+    <span>Facebook: <b>${l.fbFollowers!=null?l.fbFollowers.toLocaleString():'—'}</b> followers</span>
+    <span style="color:var(--muted)">counts auto-update every 6h${l.date?' · last: '+l.date:''}</span>`;
+  $('igLink').href=d.igUrl; $('fbLink').href=d.fbPageUrl;
+  if(!socialLoaded){
+    $('igFrame').src=d.igUrl.replace(/\/$/,'')+'/embed';
+    $('fbFrame').src='https://www.facebook.com/plugins/page.php?href='+encodeURIComponent(d.fbPageUrl)+'&tabs=timeline&width=500&height=560&small_header=true&adapt_container_width=true&hide_cover=false';
+    socialLoaded=true;
+  }
+}
+async function refreshSocial(){
+  $('socialRes').textContent='Checking public profiles…'; $('socialRes').className='testres';
+  const r=await(await fetch('/api/social/refresh',{method:'POST'})).json();
+  const l=r.latest||{};
+  $('socialRes').textContent=(l.igFollowers!=null||l.fbFollowers!=null)?'Updated ✓':'Could not read counts (profiles may be rate-limiting) — will retry automatically';
+  $('socialRes').className='testres '+((l.igFollowers!=null||l.fbFollowers!=null)?'ok':'bad');
+  loadSocial(); loadDashboard();
 }
 
 /* ================= pipeline ================= */
