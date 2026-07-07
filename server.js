@@ -175,19 +175,26 @@ app.get('/api/dashboard', async (req, res) => {
     const active = clients.filter(c => c.status === 'active');
     const inactive = clients.filter(c => c.status === 'inactive');
 
-    // revenue fallback for live mode before webhook history accumulates:
-    // count clients whose last payment fell in range
+    // Revenue = Fanbasis sale events (each sale carries its exact timestamp).
+    // Day-by-day accurate: range totals and charts are sums of individual sales.
+    const FANBASIS_TRUSTED = payments.length >= 20; // backfill has landed
     let revenueSeries = seriesFrom(paysIn, granularity, p => p.amount || 0, p => p.at);
     let paymentsCount = paysIn.length;
     let revenueTotal = paysIn.reduce((s, p) => s + (p.amount || 0), 0);
     let revenueApprox = false;
-    if (liveMode() && payments.length === 0) {
+    let revenueSource = 'fanbasis';
+    if (liveMode() && !FANBASIS_TRUSTED && payments.length === 0) {
       const lastPays = clients.filter(c => inRange(c.lastPaymentDate, from, to));
       revenueSeries = seriesFrom(lastPays, granularity, c => c.numberOfPayments ? c.totalSpent / c.numberOfPayments : c.totalSpent, c => c.lastPaymentDate);
       paymentsCount = lastPays.length;
       revenueTotal = revenueSeries.reduce((s, b) => s + b.value, 0);
       revenueApprox = true;
+      revenueSource = 'ghl-approx';
     }
+    // Lifetime: sum of all Fanbasis sales once backfilled; GHL field sum until then.
+    const fanbasisLifetime = payments.reduce((s, p) => s + (p.amount || 0), 0);
+    const ghlLifetime = clients.reduce((s, c) => s + (c.totalSpent || 0), 0);
+    const lifetimeRevenue = FANBASIS_TRUSTED ? fanbasisLifetime : ghlLifetime;
 
     const by = (list, keyFn) => {
       const m = {};
@@ -226,9 +233,11 @@ app.get('/api/dashboard', async (req, res) => {
       kpis: {
         revenueTotal: Math.round(revenueTotal * 100) / 100,
         revenueApprox,
+        revenueSource,
         paymentsCount,
         avgPayment: paymentsCount ? Math.round(revenueTotal / paymentsCount * 100) / 100 : 0,
-        lifetimeRevenue: Math.round(clients.reduce((s, c) => s + (c.totalSpent || 0), 0)),
+        lifetimeRevenue: Math.round(lifetimeRevenue),
+        ghlLifetime: Math.round(ghlLifetime),
         totalClients: clients.length,
         activeClients: active.length,
         inactiveClients: inactive.length,
@@ -461,15 +470,30 @@ function checkSecret(req, res) {
 app.post('/webhooks/fanbasis', (req, res) => {
   if (!checkSecret(req, res)) return;
   const b = req.body || {};
-  const ev = store.addEvent({
+  const ev = {
     type: 'payment',
     at: b.sale_date || b.date || b.created_at || new Date().toISOString(),
-    amount: parseFloat(b.amount || b.total || b.price) || 0,
+    amount: parseFloat(String(b.amount || b.total || b.price || '').replace(/[$,]/g, '')) || 0,
     email: (b.email || b.customer_email || '').toLowerCase(),
     name: b.name || b.customer_name || '',
     product: b.product || b.product_name || b.offer || ''
-  });
-  res.json({ ok: true, id: ev.id });
+  };
+  // dedupe: same email + amount + same day = same sale (protects webhook+backfill overlap)
+  const day = localDay(ev.at);
+  const dup = store.getEvents().find(e => e.type === 'payment' && e.email === ev.email
+    && Math.abs((e.amount || 0) - ev.amount) < 0.01 && localDay(e.at || e.receivedAt) === day);
+  if (dup) return res.json({ ok: true, id: dup.id, deduped: true });
+  const saved = store.addEvent(ev);
+  res.json({ ok: true, id: saved.id });
+});
+
+// admin cleanup: remove payment events by email (test data etc.) — login-gated like all /api routes
+app.post('/api/events/cleanup', (req, res) => {
+  const emails = (req.body.emails || []).map(e => String(e).toLowerCase());
+  if (!emails.length) return res.status(400).json({ error: 'emails required' });
+  const before = store.getEvents().length;
+  store.removeEvents(e => e.type === 'payment' && emails.includes((e.email || '').toLowerCase()));
+  res.json({ ok: true, removed: before - store.getEvents().length });
 });
 app.post('/webhooks/disputefox', (req, res) => {
   if (!checkSecret(req, res)) return;
