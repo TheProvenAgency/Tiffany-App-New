@@ -191,7 +191,6 @@ section.view{display:none} section.view.on{display:block}
     <button data-v="clients" onclick="showView('clients')">◉ Clients</button>
     <button data-v="react" onclick="showView('react')">↻ Reactivation <span class="badge" id="reactBadge"></span></button>
     <button data-v="tasks" onclick="showView('tasks')">☰ Follow-Ups</button>
-    <button data-v="social" onclick="showView('social')">✦ Social</button>
   </div>
   <div class="sec">Account</div>
   <div class="nav">
@@ -281,11 +280,6 @@ section.view{display:none} section.view.on{display:block}
             <div class="cardsub">How long ago inactive clients lapsed</div>
             <div class="cwrap2"><canvas id="chChurn"></canvas></div>
           </div>
-          <div class="card">
-            <h3 class="cardtitle">✦ Social growth</h3>
-            <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
-            <div class="cwrap2"><canvas id="chSocial"></canvas></div>
-          </div>
         </div>
       </div>
 
@@ -374,29 +368,6 @@ section.view{display:none} section.view.on{display:block}
       <div id="taskList"></div>
       <h3 class="cardtitle" style="margin-top:26px">Recently completed</h3>
       <div id="taskDone" style="margin-top:8px"></div>
-    </div>
-  </section>
-
-  <!-- ================= SOCIAL ================= -->
-  <section class="view" id="view-social">
-    <div class="card">
-      <h3 class="cardtitle">Social media</h3>
-      <div class="statchips" id="socialStats" style="margin-top:10px"></div>
-      <div class="dactions" style="margin-bottom:6px">
-        <button class="btn ghost" onclick="refreshSocial()">↻ Refresh follower counts now</button>
-        <span class="testres" id="socialRes"></span>
-      </div>
-    </div>
-    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:14px">
-      <div class="card">
-        <h3 class="cardtitle">Instagram — recent posts <a id="igLink" href="#" target="_blank" class="linklike">open ↗</a></h3>
-        <iframe id="igFrame" style="width:100%;height:560px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:10px" loading="lazy"></iframe>
-      </div>
-      <div class="card">
-        <h3 class="cardtitle">Facebook — timeline <a id="fbLink" href="#" target="_blank" class="linklike">open ↗</a></h3>
-        <iframe id="fbFrame" style="width:100%;height:560px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:10px" loading="lazy"></iframe>
-        <div style="color:var(--muted);font-size:11.5px;margin-top:8px">If the Facebook feed doesn't display (personal profiles limit embedding), use "open".</div>
-      </div>
     </div>
   </section>
 </main>
@@ -551,11 +522,6 @@ async function loadDashboard(){
   mkChart('chChurn',{type:'bar',data:{labels:b.churnRecency.map(x=>x.key),datasets:[{data:b.churnRecency.map(x=>x.count),
     backgroundColor:[GREEN+'88',GOLD+'88','#c9a96a88',RED+'77',RED+'aa'],borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
-  mkChart('chSocial',{type:'line',data:{labels:labels(s.igFollowers),datasets:[
-    {label:'Instagram',data:vals(s.igFollowers),borderColor:'#c2547e',backgroundColor:c=>grad(c.chart.ctx,'#c2547e',210),fill:true,tension:.3,pointRadius:0},
-    {label:'Facebook',data:vals(s.fbFollowers),borderColor:BLUE,backgroundColor:c=>grad(c.chart.ctx,BLUE,210),fill:true,tension:.3,pointRadius:0}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
-  $('socialSub').textContent=`Instagram ${fmtN(k.igFollowers)} · Facebook ${fmtN(k.fbFollowers)}${k.igDelta?` · IG ${k.igDelta>=0?'+':''}${k.igDelta} in period`:''}`;
   // needs attention + sources
   renderAttention(d);renderSources(d);
   if($('fDeal').options.length<=1){
@@ -568,7 +534,6 @@ function renderAttention(d){
   const h=d.health||{};const k=d.kpis;const rows=[];
   if(!h.paymentFeedOk)rows.push(['◈','Payment sync quiet','No Fanbasis sale in 48h — verify the Zap','Verify',()=>openSettings()]);
   if(!h.disputeFeedOk)rows.push(['▤','Dispute feed silent','No DisputeFox event in 7 days','Verify',()=>openSettings()]);
-  if(!h.socialOk)rows.push(['✦','Social snapshots stale','No follower check in 24h','Refresh',()=>{showView('social');refreshSocial();}]);
   if(k.unclassified>0)rows.push(['◉',`${fmtN(k.unclassified)} unclassified clients`,`${Math.round(k.unclassified/(k.totalClients||1)*100)}% of base has no lifecycle stage`,'Review',()=>goClients('unknown')]);
   if(!rows.length)rows.push(['✓','All systems reporting','Feeds healthy across all sources','',null]);
   $('attention').innerHTML=rows.map(([i,t,s,a],idx)=>`<div class="att"><div class="ico">${i}</div>
@@ -577,7 +542,7 @@ function renderAttention(d){
 }
 function renderSources(d){
   const h=d.health||{};
-  const rows=[['GoHighLevel',true],['Fanbasis',!!h.paymentFeedOk],['DisputeFox',!!h.disputeFeedOk],['Instagram',!!h.socialOk],['Facebook',!!h.socialOk]];
+  const rows=[['GoHighLevel',true],['Fanbasis',!!h.paymentFeedOk],['DisputeFox',!!h.disputeFeedOk]];
   $('sources').innerHTML=rows.map(([n,ok])=>`<div class="src"><span class="dot ${ok?'':'bad'}"></span>${n}${ok?'':'<span class="fix" onclick="openSettings()">Fix</span>'}</div>`).join('');
 }
 async function loadFeed(){
@@ -592,13 +557,13 @@ async function loadFeed(){
 function goClients(status){showView('clients');$('fStatus').value=(status==='active'||status==='inactive')?status:'';page=1;loadClients();}
 
 /* ================= views ================= */
-const TITLES={dash:'Dashboard',pipeline:'Pipeline',clients:'Clients',react:'Reactivation',tasks:'Follow-Ups',social:'Social'};
+const TITLES={dash:'Dashboard',pipeline:'Pipeline',clients:'Clients',react:'Reactivation',tasks:'Follow-Ups'};
 function showView(v){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
   $('pageTitle').textContent=TITLES[v]||'Dashboard';
   if(v==='pipeline')loadPipeline();if(v==='react')loadReact();if(v==='tasks')loadTasks();
-  if(v==='clients')loadClients();if(v==='social')loadSocial();
+  if(v==='clients')loadClients();
 }
 $('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){showView('clients');$('q').value=$('globalSearch').value;page=1;loadClients();}});
 
@@ -678,7 +643,7 @@ async function addTaskUI(clientId,clientName){
 
 /* ================= social ================= */
 let socialLoaded=false;
-async function loadSocial(){
+async function loadSocial(){ if(!$('socialStats'))return;
   const d=await(await fetch('/api/social')).json();const l=d.latest||{};
   $('socialStats').innerHTML=`<span>Instagram: <b>${l.igFollowers!=null?l.igFollowers.toLocaleString():'—'}</b> (@${d.igHandle})</span>
     <span>Facebook: <b>${l.fbFollowers!=null?l.fbFollowers.toLocaleString():'—'}</b></span>
