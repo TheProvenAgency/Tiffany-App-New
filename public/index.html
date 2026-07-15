@@ -218,7 +218,6 @@ section.view{display:none} section.view.on{display:block}
       <input type="date" id="fromD"> → <input type="date" id="toD">
       <button class="chip" style="padding:4px 10px" onclick="applyCustom()">Apply</button>
     </div>
-    <div class="gran" id="gran"></div>
   </div>
 
   <!-- ================= DASHBOARD ================= -->
@@ -269,22 +268,30 @@ section.view{display:none} section.view.on{display:block}
             <div class="cwrap2"><canvas id="chDeals"></canvas></div>
           </div>
           <div class="card">
-            <h3 class="cardtitle">⚲ Active by dispute round</h3>
-            <div class="cardsub">Credit repair delivery stages</div>
-            <div class="cwrap2"><canvas id="chRounds"></canvas></div>
+            <h3 class="cardtitle">🎓 Mentorship program</h3>
+            <div class="cardsub">Fanbasis mentorship sales</div>
+            <div class="dstat" style="grid-template-columns:1fr 1fr;margin-top:14px" id="mentorStats"></div>
           </div>
         </div>
 
         <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:14px">
           <div class="card">
-            <h3 class="cardtitle">↻ Churn recency</h3>
-            <div class="cardsub">How long ago inactive clients lapsed</div>
-            <div class="cwrap2"><canvas id="chChurn"></canvas></div>
+            <h3 class="cardtitle">⚲ Active by dispute round</h3>
+            <div class="cardsub">Credit repair delivery stages</div>
+            <div class="cwrap2"><canvas id="chRounds"></canvas></div>
           </div>
           <div class="card">
             <h3 class="cardtitle">✦ Social growth</h3>
             <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
             <div class="cwrap2"><canvas id="chSocial"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:1fr;margin-top:14px">
+          <div class="card">
+            <h3 class="cardtitle">↻ Churn recency</h3>
+            <div class="cardsub">How long ago inactive clients lapsed</div>
+            <div class="cwrap2"><canvas id="chChurn"></canvas></div>
           </div>
         </div>
       </div>
@@ -294,6 +301,20 @@ section.view{display:none} section.view.on{display:block}
           <h3 class="cardtitle">⚠ Needs attention</h3>
           <div class="cardsub">Fix these before trusting the numbers</div>
           <div id="attention" style="margin-top:6px"></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3 class="cardtitle">✦ Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
+          <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
+          <div class="dstat" style="margin-top:12px">
+            <div><div class="l">IG followers</div><div class="v">3,656</div></div>
+            <div><div class="l">IG posts</div><div class="v">59</div></div>
+            <div><div class="l">Group members</div><div class="v">15,090</div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3 class="cardtitle">🏆 Top performing content</h3>
+          <div class="cardsub">Public engagement · read Jul 14, 2026</div>
+          <div id="topPostsMini" style="margin-top:6px"></div>
         </div>
         <div class="card" style="margin-top:14px">
           <h3 class="cardtitle">⚡ Activity</h3>
@@ -401,6 +422,11 @@ section.view{display:none} section.view.on{display:block}
       </div>
     </div>
     <div class="card" style="margin-top:14px">
+      <h3 class="cardtitle">🏆 Top performing content</h3>
+      <div class="cardsub">Real public engagement, read Jul 14 2026 — connect Meta in Settings for automatic ranking</div>
+      <div id="topPostsFull" style="margin-top:6px"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
       <h3 class="cardtitle">Live tracking</h3>
       <div class="statchips" id="socialStats" style="margin-top:10px"></div>
       <div class="dactions" style="margin-bottom:6px">
@@ -500,12 +526,10 @@ function rangeLabel(){
 }
 function renderFilters(){
   $('presets').innerHTML=PRESETS.map(([k,l])=>`<button class="chip ${preset===k?'on':''}" onclick="setPreset('${k}')">${l}</button>`).join('');
-  $('gran').innerHTML=['day','week','month'].map(g=>`<button class="${granularity===g?'on':''}" onclick="setGran('${g}')">${g[0].toUpperCase()+g.slice(1)}</button>`).join('');
   $('fromD').value=from||'';$('toD').value=to||'';
 }
 function setPreset(p){preset=p;[from,to]=presetRange(p);granularity=pickGran(from,to);renderFilters();loadDashboard();}
 function applyCustom(){preset='';from=$('fromD').value||null;to=$('toD').value||null;granularity=pickGran(from,to);renderFilters();loadDashboard();}
-function setGran(g){granularity=g;renderFilters();loadDashboard();}
 
 /* ================= charts ================= */
 Chart.defaults.color='#8d8577';Chart.defaults.borderColor='#efece2';
@@ -545,8 +569,9 @@ async function loadDashboard(){
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.y)}}},
     scales:{y:{border:{display:false},grid:{tickBorderDash:[3,3]},ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'K':v)}},x:{grid:{display:false},ticks:{maxTicksLimit:8}}}}});
   // client base
+  const leadsPlus=(k.leads||0)+(k.unclassified||0);
   const segs=[[k.activeClients,GREEN,'Active · in window','active'],[k.newClients,BLUE,'New this period',''],
-    [k.inactiveClients,RED,'Inactive · reactivation','inactive'],[k.unclassified,GRAY,'Unclassified','unknown']];
+    [k.inactiveClients,RED,'Inactive · reactivation','inactive'],[leadsPlus,GRAY,(k.leads>0?'Leads · no purchase':'Unclassified'),'unknown']];
   const total=k.totalClients||1;
   $('viewAllClients').textContent=`View all ${fmtN(k.totalClients)} →`;
   $('segbar').innerHTML=segs.map(([n,c])=>`<div style="width:${Math.max(1,n/total*100)}%;background:${c}"></div>`).join('');
@@ -562,7 +587,14 @@ async function loadDashboard(){
     scales:{x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:10}},y:{stacked:true,ticks:{callback:v=>Math.abs(v)}}}}});
   // packages / rounds / churn / social
   const b=d.breakdowns;
-  mkChart('chDeals',{type:'bar',data:{labels:b.byDeal.slice(0,7).map(x=>x.key),datasets:[{data:b.byDeal.slice(0,7).map(x=>x.revenue),
+  const prod=(b.byProduct&&b.byProduct.length)?b.byProduct:b.byDeal;
+  const m=k.mentorship||{};
+  $('mentorStats').innerHTML=`
+    <div><div class="l">Collected · range</div><div class="v">${fmt$(m.rangeRevenue)}</div></div>
+    <div><div class="l">Payments · range</div><div class="v">${fmtN(m.rangeCount)}</div></div>
+    <div><div class="l">Lifetime</div><div class="v">${fmt$(m.lifetimeRevenue)}</div></div>
+    <div><div class="l">Active mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
+  mkChart('chDeals',{type:'bar',data:{labels:prod.slice(0,7).map(x=>x.key),datasets:[{data:prod.slice(0,7).map(x=>x.revenue),
     backgroundColor:[GREEN,BLUE,GOLD,'#6b8f71','#8a9fc4','#c9a96a','#b9b3a8'],borderRadius:5}]},
     options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.x)}}},
     scales:{x:{ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'K':v)}},y:{grid:{display:false}}}}});
@@ -804,9 +836,30 @@ async function testMeta(){
   $('r_meta').className='testres '+(bits.length?'ok':'bad');
 }
 
+/* ================= top performing content (static, public data 07/14/2026) ================= */
+const TOP_POSTS=[
+  {rank:'🥇',title:'"I’m the credit repair blue print! & my clients stamp this!…"',
+   sub:'Facebook · pinned · Oct 31, 2025',stats:'392 reactions · 749 comments',
+   url:'https://www.facebook.com/tiffany.kiara.9'},
+  {rank:'🥈',title:'Recent Facebook post',
+   sub:'Facebook · July 2026',stats:'65 reactions · 19 comments · 2 shares',
+   url:'https://www.facebook.com/tiffany.kiara.9'},
+  {rank:'🥉',title:'Credit with Ms Financial — private group',
+   sub:'Facebook group · 15,090 members',stats:'Her biggest audience channel',
+   url:'https://www.facebook.com/groups/302248546068656/'}
+];
+function renderTopPosts(){
+  const row=p=>`<div class="feeditem"><div class="k sale" style="background:var(--gold-soft)">${p.rank}</div>
+    <div class="t"><b>${p.title}</b><span>${p.sub} · ${p.stats}</span></div>
+    <a class="linklike" href="${p.url}" target="_blank">view ↗</a></div>`;
+  const html=TOP_POSTS.map(row).join('');
+  if($('topPostsMini'))$('topPostsMini').innerHTML=html;
+  if($('topPostsFull'))$('topPostsFull').innerHTML=html;
+}
+
 /* ================= boot ================= */
 [from,to]=presetRange(preset);granularity=pickGran(from,to);
-renderFilters();loadDashboard();loadTasks();
+renderFilters();loadDashboard();loadTasks();renderTopPosts();
 setInterval(loadDashboard,5*60*1000);
 </script>
 </body>
