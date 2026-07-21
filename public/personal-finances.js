@@ -88,9 +88,10 @@ var RECURRING=[ // /v1/recurring_items shape (payee, cadence, amount, next billi
 var NW_TREND={ labels:['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'],
   values:[341000,345500,349000,351200,354800,358100,361000,363500,366200,368900,370800,0] };
 var IE_TREND={ labels:['Feb','Mar','Apr','May','Jun','Jul'],
-  income:[13248,12800,14100,13600,14248,14248], expenses:[9100,8700,9600,8200,8900,8100] };
+  income:[16000,18500,20000,22000,23275,47900], expenses:[9100,8700,9600,8200,8900,8100] };
 // Month-to-date totals (consistent with BUDGET spent). Recent TX above is a sample of activity; these are the full-month rollups.
-var MONTH={ income:14248.21, spendByGroup:{'Housing':2400,'Bills & Utilities':1320,'Food & Drink':980,'Shopping':640,'Business':1100,'Travel':520,'Transportation':410,'Entertainment':260,'Personal':290,'Health':180} };
+// income = current Fanbasis collected (last 30 days). When live, pull this from the Fanbasis feed instead of hardcoding.
+var MONTH={ income:47900, spendByGroup:{'Housing':2400,'Bills & Utilities':1320,'Food & Drink':980,'Shopping':640,'Business':1100,'Travel':520,'Transportation':410,'Entertainment':260,'Personal':290,'Health':180} };
 
 /* ---------- helpers ---------- */
 function isLiab(t){return t==='credit'||t==='loan'||t==='other liability';}
@@ -177,7 +178,7 @@ function renderOverview(){
    '<div class="lm-kpi hero"><div class="l">Net Worth</div><div class="v">'+money0(nw)+'</div><div class="s">assets minus liabilities</div></div>'+
    '<div class="lm-kpi good"><div class="l">Total Assets</div><div class="v">'+money0(assetsTotal())+'</div><div class="s">'+ACCOUNTS.filter(function(a){return !isLiab(a.type);}).length+' accounts</div></div>'+
    '<div class="lm-kpi bad"><div class="l">Liabilities</div><div class="v">'+money0(liabTotal())+'</div><div class="s">'+ACCOUNTS.filter(function(a){return isLiab(a.type);}).length+' accounts</div></div>'+
-   '<div class="lm-kpi good"><div class="l">Income (Jul)</div><div class="v">'+money0(inc)+'</div><div class="s">this month</div></div>'+
+   '<div class="lm-kpi good"><div class="l">Income (Jul)</div><div class="v">'+money0(inc)+'</div><div class="s">Fanbasis · last 30 days</div></div>'+
    '<div class="lm-kpi"><div class="l">Expenses (Jul)</div><div class="v">'+money0(exp)+'</div><div class="s">this month</div></div>'+
    '<div class="lm-kpi '+(flow>=0?'good':'bad')+'"><div class="l">Cash Flow</div><div class="v">'+(flow>=0?'+':'')+money0(flow)+'</div><div class="s">income minus spend</div></div>'+
   '</div>'+
