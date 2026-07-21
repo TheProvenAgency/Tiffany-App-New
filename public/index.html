@@ -1005,9 +1005,14 @@ function buildClients(){
   add(6,function(k){var b=3+(k%3);return {stage:'Completed',days:3+k,tu:B(b,'done'),eq:B(b,'done'),ex:B(b,'done'),docs:docs(8),va:'—'};});
   return out;
 }
-function load(){try{var s=localStorage.getItem(LS);if(s)return JSON.parse(s);}catch(e){}return buildClients();}
-function save(){try{localStorage.setItem(LS,JSON.stringify(CLIENTS));}catch(e){}}
-var CLIENTS=load();
+var CLIENTS=[]; var __loaded=false, __saveT=null;
+function save(){ if(__saveT)clearTimeout(__saveT); __saveT=setTimeout(function(){ try{ fetch('/api/production',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clients:CLIENTS})}); }catch(e){} },400); }
+function loadThen(cb){
+  fetch('/api/production').then(function(r){return r.json();}).then(function(d){
+    if(d&&Array.isArray(d.clients)&&d.clients.length){ CLIENTS=d.clients; __loaded=true; cb(); }
+    else { CLIENTS=buildClients(); __loaded=true; save(); cb(); }
+  }).catch(function(){ CLIENTS=buildClients(); __loaded=true; cb(); });
+}
 var curFilter='all',curSearch='',curView='table',openId=null;
 
 function bureaus(c){return [c.tu,c.eq,c.ex];}
@@ -1052,6 +1057,7 @@ function currentRows(){
 }
 function renderProduction(){
   var chips=document.getElementById('pvChips');if(!chips)return;
+  if(!__loaded){ loadThen(function(){ renderProduction(); }); return; }
   chips.innerHTML=FILTERS.map(function(fl){var n=CLIENTS.filter(fl.f).length;return '<div class="pv-chip'+(fl.id===curFilter?' active':'')+'" data-f="'+fl.id+'"><span class="dotc" style="background:'+fl.dot+'"></span>'+fl.label+' <span class="n">'+n+'</span></div>';}).join('');
   chips.querySelectorAll('.pv-chip').forEach(function(el){el.onclick=function(){curFilter=el.getAttribute('data-f');draw();};});
   var s=document.getElementById('pvSearch');if(s&&!s.__b){s.__b=1;s.oninput=function(){curSearch=s.value.toLowerCase();draw();};}
