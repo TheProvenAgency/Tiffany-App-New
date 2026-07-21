@@ -597,4 +597,17 @@ async function takeSnapshot() {
 setInterval(takeSnapshot, 6 * 60 * 60 * 1000); // every 6h
 setTimeout(takeSnapshot, 15 * 1000); // shortly after boot
 
+// ------------------------- Deal Production (client work desk) — shared team persistence -------------------------
+const fs = require('fs');
+const PROD_FILE = path.join(process.env.DATA_DIR || __dirname, 'production.json');
+function readProd() { try { return JSON.parse(fs.readFileSync(PROD_FILE, 'utf8')); } catch (e) { return null; } }
+function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); return true; } catch (e) { return false; } }
+app.get('/api/production', (req, res) => { res.json({ clients: readProd(), mode: liveMode() ? 'live' : 'demo' }); });
+app.post('/api/production', (req, res) => {
+  const c = req.body && req.body.clients;
+  if (!Array.isArray(c)) return res.status(400).json({ error: 'clients array required' });
+  writeProd(c);
+  res.json({ ok: true, count: c.length });
+});
+
 app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
