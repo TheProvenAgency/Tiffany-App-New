@@ -862,5 +862,198 @@ function renderTopPosts(){
 renderFilters();loadDashboard();loadTasks();renderTopPosts();
 setInterval(loadDashboard,5*60*1000);
 </script>
+<!-- MSFS Deal Production — injected section (append-only, self-wiring) -->
+<section id="view-production" style="display:none">
+  <style>
+  #view-production .pv-sub{color:var(--muted);font-size:12.5px;margin:2px 0 18px}
+  #view-production .pv-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+  #view-production .pv-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 15px}
+  #view-production .pv-kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  #view-production .pv-kpi .v{font-size:26px;font-weight:800;margin-top:7px;letter-spacing:-.5px}
+  #view-production .pv-kpi .s{font-size:11px;color:var(--muted);margin-top:4px}
+  #view-production .pv-kpi.alert{background:var(--red-soft);border-color:#eccbc7}
+  #view-production .pv-kpi.alert .v{color:var(--red)}
+  #view-production .pv-kpi.good .v{color:var(--green)}
+  #view-production .pv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+  #view-production .pv-card h3{margin:0 0 3px;font-size:14.5px}
+  #view-production .pv-card .cap{color:var(--muted);font-size:12px;margin:0 0 14px}
+  #view-production .pv-wrap{position:relative;height:250px}
+  #view-production .pv-wrap.sm{height:210px}
+  #view-production .pv-grid{display:grid;gap:16px}
+  #view-production .pv-g2{grid-template-columns:1.15fr .85fr}
+  #view-production .pv-g11{grid-template-columns:1fr 1fr}
+  #view-production .pv-funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+  #view-production .pv-stage{border-radius:11px;padding:14px;color:#fff}
+  #view-production .pv-stage.s1{background:#6b6256}
+  #view-production .pv-stage.s2{background:var(--blue)}
+  #view-production .pv-stage.s3{background:var(--green)}
+  #view-production .pv-stage.s4{background:var(--gold)}
+  #view-production .pv-stage .n{font-size:11px;opacity:.9;text-transform:uppercase;letter-spacing:.04em}
+  #view-production .pv-stage .c{font-size:27px;font-weight:800;margin-top:6px;line-height:1}
+  #view-production .pv-stage .p{font-size:11.5px;opacity:.9;margin-top:3px}
+  #view-production .pv-attn{margin-top:14px;background:var(--red-soft);border:1px solid #eccbc7;border-radius:11px;padding:12px 15px;color:var(--red);font-size:13px;display:flex;gap:10px;align-items:flex-start}
+  #view-production .pv-attn b{color:#8f2b25}
+  #view-production .pv-rows{display:flex;flex-direction:column;gap:9px}
+  #view-production .pv-row{display:flex;align-items:center;gap:10px}
+  #view-production .pv-row .lab{width:120px;font-size:12.5px}
+  #view-production .pv-row .track{flex:1;height:16px;background:#efeae0;border-radius:8px;overflow:hidden}
+  #view-production .pv-row .fill{height:100%;border-radius:8px}
+  #view-production .pv-row .val{width:64px;text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  #view-production .pv-note{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5}
+  #view-production .pv-mini{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #view-production .pv-ministat{background:#faf7f1;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+  #view-production .pv-ministat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  #view-production .pv-ministat .v{font-size:21px;font-weight:800;margin-top:5px}
+  </style>
+  <div class="pv-sub">How the deals actually run — credit-repair dispute production, document intake, mentorship onboarding, and the sales audit. Mirrors the MSF Credit Clients workbook. Aggregated view; client names, logins, and credentials are excluded.</div>
+  <div class="pv-kpis">
+    <div class="pv-kpi"><div class="l">Total members</div><div class="v" id="pvTotal">—</div><div class="s">all-time in the book</div></div>
+    <div class="pv-kpi good"><div class="l">Active clients</div><div class="v" id="pvActive">—</div><div class="s">flagged active</div></div>
+    <div class="pv-kpi"><div class="l">In rounds</div><div class="v" id="pvRounds">—</div><div class="s">actively disputing</div></div>
+    <div class="pv-kpi"><div class="l">Completed</div><div class="v" id="pvDone">—</div><div class="s">upsell to mentorship</div></div>
+    <div class="pv-kpi"><div class="l">Onboarding</div><div class="v" id="pvOnb">—</div><div class="s">not started yet</div></div>
+    <div class="pv-kpi alert"><div class="l">Needs attention</div><div class="v" id="pvAttn">—</div><div class="s">login / monitoring off</div></div>
+  </div>
+  <div class="pv-card">
+    <h3>Credit-repair production board</h3>
+    <p class="cap">Every active client sits in one stage. Workers add buyers at onboarding, mark them ready, then disputers run rounds until complete.</p>
+    <div class="pv-funnel" id="pvFunnel"></div>
+    <div class="pv-attn"><div>⚠</div><div><b id="pvAttn2">—</b> clients are stuck on a <b>login / monitoring issue</b> — MyFreeScoreNow is off, so their next round can't go out. They flip to "ready" the moment monitoring is turned back on. This is the daily work queue.</div></div>
+  </div>
+  <div class="pv-grid pv-g2">
+    <div class="pv-card" style="margin-bottom:0">
+      <h3>Dispute rounds by bureau</h3>
+      <p class="cap">Where each bureau stands across the whole book — TransUnion, Equifax, Experian.</p>
+      <div class="pv-wrap"><canvas id="pvBureau"></canvas></div>
+    </div>
+    <div class="pv-card" style="margin-bottom:0">
+      <h3>Login / monitoring queue</h3>
+      <p class="cap">Blocked rounds by bureau — clients to chase to turn monitoring back on.</p>
+      <div class="pv-rows" id="pvAttnRows"></div>
+      <div class="pv-note">Fix: a free round of credit repair is offered to get them to re-enable MyFreeScoreNow, which unblocks the next dispute round.</div>
+    </div>
+  </div>
+  <div class="pv-grid pv-g11" style="margin-top:16px">
+    <div class="pv-card" style="margin-bottom:0">
+      <h3>Onboarding &amp; documents — AMOB method</h3>
+      <p class="cap"><span id="pvAmobDone">—</span> of <span id="pvAmobTot">—</span> identity-theft dispute files complete. Document collection across the book.</p>
+      <div class="pv-rows" id="pvDocRows"></div>
+    </div>
+    <div class="pv-card" style="margin-bottom:0">
+      <h3>Lifetime package mix</h3>
+      <p class="cap">What clients bought — the credit-repair packages driving production.</p>
+      <div class="pv-wrap sm"><canvas id="pvPkg"></canvas></div>
+    </div>
+  </div>
+  <div class="pv-grid pv-g11" style="margin-top:16px">
+    <div class="pv-card" style="margin-bottom:0">
+      <h3>Mentorship onboarding</h3>
+      <p class="cap">Completed credit-repair clients get upsold here. Onboarding step completion.</p>
+      <div class="pv-mini" style="margin-bottom:14px">
+        <div class="pv-ministat"><div class="l">Members</div><div class="v" id="pvMentor">—</div></div>
+        <div class="pv-ministat"><div class="l">Funding referrals</div><div class="v" id="pvFunding">—</div></div>
+      </div>
+      <div class="pv-rows" id="pvMentorRows"></div>
+    </div>
+    <div class="pv-card" style="margin-bottom:0">
+      <h3>Sales audit &amp; chargebacks</h3>
+      <p class="cap">Purchases by month, and disputes/refunds to watch.</p>
+      <div class="pv-mini" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px">
+        <div class="pv-ministat"><div class="l">Units sold · Jan–May</div><div class="v" id="pvUnits">—</div></div>
+        <div class="pv-ministat"><div class="l">Chargebacks</div><div class="v" style="color:var(--red)" id="pvCbN">—</div></div>
+        <div class="pv-ministat"><div class="l">Chargeback total</div><div class="v" style="color:var(--red)" id="pvCbT">—</div></div>
+      </div>
+      <div class="pv-wrap sm" style="height:180px"><canvas id="pvSales"></canvas></div>
+    </div>
+  </div>
+</section>
+<script>
+(function(){
+const PROD_DATA={
+ total:3620, active:878,
+ stages:{Onboarding:1062,"Ready to dispute":137,"In rounds":1387,Completed:1034},
+ attn:676,
+ bureaus:{
+  TU:{"Not started":419,R1:686,R2:639,R3:637,R4:210,R5:116,"R6+":103,Ready:143,"Login issue":667},
+  EQ:{"Not started":467,R1:672,R2:637,R3:622,R4:209,R5:115,"R6+":103,Ready:143,"Login issue":652},
+  EX:{"Not started":422,R1:683,R2:641,R3:631,R4:215,R5:115,"R6+":105,Ready:142,"Login issue":666}
+ },
+ topPackages:[["3 Month Expedited",532],["Full Expedited Credit Repair",523],["3 Expedited Rounds",470],["1 Month Expedited",339],["2 Month Expedited",274],["Upgrade to Unlimited",141],["4 Month Expedited",82],["Help me fix it",80]],
+ docs:{total:146,done:60,completion:{SSC:60,DL:60,POA:60,FTC:60,"Data breach":60,Affidavit:23,"Perm. purpose":74,"Experian letter":5}},
+ mentorship:{total:34,steps:{Skool:10,"Skool hacks":10,"Onboarding call":10,"Set up":7}},
+ funding:{total:50},
+ salesByMonth:[["Jan",258],["Feb",259],["Mar",234],["Apr",315],["May",126]],
+ sales:{chargebackCount:7,chargebackTotal:1126.72}
+};
+let __prodRendered=false;
+function renderProduction(){
+  if(__prodRendered) return; if(typeof Chart==='undefined') return; __prodRendered=true;
+  const P=PROD_DATA, fmt=n=>n.toLocaleString();
+  const money=n=>"$"+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const C={blue:'#3563a8',green:'#2e7d54',gold:'#b98a2f',red:'#b3372f'};
+  const $=id=>document.getElementById(id);
+  $('pvTotal').textContent=fmt(P.total);$('pvActive').textContent=fmt(P.active);
+  $('pvRounds').textContent=fmt(P.stages["In rounds"]);$('pvDone').textContent=fmt(P.stages.Completed);
+  $('pvOnb').textContent=fmt(P.stages.Onboarding);$('pvAttn').textContent=fmt(P.attn);$('pvAttn2').textContent=fmt(P.attn);
+  const tot=Object.values(P.stages).reduce((a,b)=>a+b,0);
+  const st=[["Onboarding",P.stages.Onboarding,"s1"],["Ready",P.stages["Ready to dispute"],"s2"],["In rounds",P.stages["In rounds"],"s3"],["Completed",P.stages.Completed,"s4"]];
+  $('pvFunnel').innerHTML=st.map(([n,c,cls])=>'<div class="pv-stage '+cls+'"><div class="n">'+n+'</div><div class="c">'+fmt(c)+'</div><div class="p">'+Math.round(c/tot*100)+'% of book</div></div>').join("");
+  const cats=["Not started","R1","R2","R3","R4","R5","R6+","Ready","Login issue"];
+  new Chart($('pvBureau'),{type:'bar',data:{labels:cats,datasets:[
+    {label:'TransUnion',data:cats.map(c=>P.bureaus.TU[c]),backgroundColor:C.blue},
+    {label:'Equifax',data:cats.map(c=>P.bureaus.EQ[c]),backgroundColor:C.green},
+    {label:'Experian',data:cats.map(c=>P.bureaus.EX[c]),backgroundColor:C.gold}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:11,font:{size:11}}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#efeae0'},ticks:{font:{size:11}}}}}});
+  const bb=[["TransUnion",P.bureaus.TU["Login issue"],C.blue],["Equifax",P.bureaus.EQ["Login issue"],C.green],["Experian",P.bureaus.EX["Login issue"],C.gold]];
+  const bmx=Math.max.apply(null,bb.map(x=>x[1]));
+  $('pvAttnRows').innerHTML=bb.map(([n,v,c])=>'<div class="pv-row"><div class="lab">'+n+'</div><div class="track"><div class="fill" style="width:'+(v/bmx*100)+'%;background:'+c+'"></div></div><div class="val">'+fmt(v)+'</div></div>').join("");
+  $('pvAmobDone').textContent=fmt(P.docs.done);$('pvAmobTot').textContent=fmt(P.docs.total);
+  const dt=P.docs.total;
+  $('pvDocRows').innerHTML=Object.entries(P.docs.completion).map(([n,v])=>{const pct=Math.round(v/dt*100);const c=pct>=70?C.green:pct>=35?C.gold:C.red;return '<div class="pv-row"><div class="lab">'+n+'</div><div class="track"><div class="fill" style="width:'+(v/dt*100)+'%;background:'+c+'"></div></div><div class="val">'+v+'/'+dt+'</div></div>';}).join("");
+  new Chart($('pvPkg'),{type:'bar',data:{labels:P.topPackages.map(p=>p[0]),datasets:[{data:P.topPackages.map(p=>p[1]),backgroundColor:C.blue,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#efeae0'},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
+  $('pvMentor').textContent=fmt(P.mentorship.total);$('pvFunding').textContent=fmt(P.funding.total);
+  const mb=Math.max.apply(null,Object.values(P.mentorship.steps));
+  $('pvMentorRows').innerHTML=Object.entries(P.mentorship.steps).map(([n,v])=>'<div class="pv-row"><div class="lab">'+n+'</div><div class="track"><div class="fill" style="width:'+(v/mb*100)+'%;background:'+C.green+'"></div></div><div class="val">'+v+'</div></div>').join("");
+  $('pvCbN').textContent=P.sales.chargebackCount;$('pvCbT').textContent=money(P.sales.chargebackTotal);
+  $('pvUnits').textContent=fmt(P.salesByMonth.reduce((a,b)=>a+b[1],0));
+  new Chart($('pvSales'),{type:'bar',data:{labels:P.salesByMonth.map(m=>m[0]),datasets:[{data:P.salesByMonth.map(m=>m[1]),backgroundColor:C.green,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#efeae0'},ticks:{font:{size:10}}}}}});
+}
+function initProd(){
+  var nav=document.getElementById('nav');
+  if(nav && !document.getElementById('pvNavBtn')){
+    var sib=nav.querySelector('button');
+    var b=document.createElement('button'); b.id='pvNavBtn';
+    if(sib) b.className=sib.className;
+    b.setAttribute('onclick',"showView('production')");
+    b.innerHTML=(sib&&sib.querySelector('.dot')?'<span class="dot"></span>':'')+'Deal Production';
+    nav.appendChild(b);
+  }
+  if(typeof window.showView==='function' && !window.__pvWrap){
+    window.__pvWrap=true;
+    var _sv=window.showView;
+    window.showView=function(id){
+      if(id==='production'){
+        var vs=document.querySelectorAll('[id^="view-"]');
+        for(var i=0;i<vs.length;i++) vs[i].style.display='none';
+        var v=document.getElementById('view-production'); if(v) v.style.display='';
+        var nbs=document.querySelectorAll('#nav button');
+        for(var j=0;j<nbs.length;j++) nbs[j].classList.remove('active');
+        var nb=document.getElementById('pvNavBtn'); if(nb) nb.classList.add('active');
+        var pt=document.getElementById('pageTitle'); if(pt) pt.textContent='Deal Production';
+        renderProduction();
+      } else {
+        var v=document.getElementById('view-production'); if(v) v.style.display='none';
+        var nb=document.getElementById('pvNavBtn'); if(nb) nb.classList.remove('active');
+        _sv(id);
+      }
+    };
+  }
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initProd); else initProd();
+})();
+</script>
 </body>
 </html>
