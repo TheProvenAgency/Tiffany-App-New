@@ -16,6 +16,17 @@
       var heading = sources.previousElementSibling;
       if (heading && heading.className === 'sec') heading.style.display = 'none';
     }
+
+    // Enter in the global search runs showView('clients') + loadClients(),
+    // which an employee may not call. The server refuses it correctly, but the
+    // user would land on an empty Clients view with no explanation.
+    var search = document.getElementById('globalSearch');
+    if (search) search.style.display = 'none';
+
+    // The date range bar drives loadDashboard() — same problem.
+    Array.prototype.forEach.call(document.querySelectorAll('.filters'), function (f) {
+      if (!f.closest('#view-production')) f.style.display = 'none';
+    });
   }
 
   // production.js injects its own nav button, so wait for it to appear.
