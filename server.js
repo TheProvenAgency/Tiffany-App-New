@@ -89,7 +89,7 @@ app.use((req, res, next) => {
 
 app.get('/api/me', (req, res) => {
   const u = getUsers().find(x => x.id === req.user.userId);
-  res.json({ name: u ? u.name : 'User', username: u ? u.username : null, role: req.user.role });
+  res.json({ id: req.user.userId, name: u ? u.name : 'User', username: u ? u.username : null, role: req.user.role });
 });
 
 // user management (admin only — employees are blocked by canAccess)

@@ -127,6 +127,41 @@ test('/api/me reports the caller role', async () => {
   assert.equal(body.name, 'VA One');
 });
 
+test('/api/me includes the id, so Settings can change your own password', async () => {
+  const me = await (await req('/api/me', { cookie: adminCookie })).json();
+  assert.ok(me.id, 'id is needed to PATCH your own user');
+});
+
+test('disabling a user cuts off their existing session immediately', async () => {
+  // Revocation that waits for cookie expiry is not revocation.
+  await req('/api/users', {
+    method: 'POST', cookie: adminCookie,
+    body: { username: 'va2', name: 'VA Two', role: 'employee', password: 'pw2' }
+  });
+  const cookie = await login('va2', 'pw2');
+  assert.equal((await req('/api/production', { cookie })).status, 200);
+
+  const list = await (await req('/api/users', { cookie: adminCookie })).json();
+  const va2 = list.find(u => u.username === 'va2');
+  await req('/api/users/' + va2.id, { method: 'PATCH', cookie: adminCookie, body: { disabled: true } });
+
+  assert.equal((await req('/api/production', { cookie })).status, 401, 'session must die at once');
+});
+
+test('the last admin cannot be disabled', async () => {
+  // Otherwise the dashboard becomes unadministrable and nobody can undo it.
+  const list = await (await req('/api/users', { cookie: adminCookie })).json();
+  const admin = list.find(u => u.role === 'admin');
+  const r = await req('/api/users/' + admin.id, { method: 'PATCH', cookie: adminCookie, body: { disabled: true } });
+  assert.equal(r.status, 400);
+  assert.equal((await req('/api/dashboard', { cookie: adminCookie })).status, 200, 'admin still works');
+});
+
+test('a disabled user cannot log back in', async () => {
+  const r = await req('/api/login', { method: 'POST', body: { username: 'va2', password: 'pw2' } });
+  assert.equal(r.status, 401);
+});
+
 test('signing out invalidates the session', async () => {
   const cookie = await login('va1', 'va-pw');
   assert.equal((await req('/api/production', { cookie })).status, 200);
