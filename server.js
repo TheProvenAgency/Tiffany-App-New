@@ -49,11 +49,46 @@ function cookieToken(req) {
   return c ? c.slice(5) : null;
 }
 
+// Guess throttling. Keyed by account and client address so an attack on one
+// account cannot lock the rest of the team out. In memory on purpose: a
+// restart clearing it is an acceptable trade for having no new dependency.
+const MAX_ATTEMPTS = 10;
+const LOCKOUT_MS = 15 * 60 * 1000;
+const attempts = new Map();
+
+function attemptKey(req, username) {
+  return (username || '') + '|' + (req.ip || req.socket.remoteAddress || '');
+}
+function lockedOut(key) {
+  const a = attempts.get(key);
+  if (!a) return false;
+  if (Date.now() - a.first > LOCKOUT_MS) { attempts.delete(key); return false; }
+  return a.count >= MAX_ATTEMPTS;
+}
+function recordFailure(key) {
+  const a = attempts.get(key);
+  if (!a || Date.now() - a.first > LOCKOUT_MS) attempts.set(key, { count: 1, first: Date.now() });
+  else a.count++;
+}
+
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {};
+  const key = attemptKey(req, username || 'admin');
+
+  // Refuse before checking the password, so a correct guess on attempt 500
+  // still gets nowhere.
+  if (lockedOut(key)) {
+    console.warn(`[LOGIN] throttled ${key}`);
+    return res.status(429).json({ ok: false, error: 'Too many failed attempts — wait 15 minutes' });
+  }
+
   // username defaults to admin so the old password-only login form still works
   const user = auth.authenticate(getUsers(), username || 'admin', password || '');
-  if (!user) return res.status(401).json({ ok: false, error: 'Wrong username or password' });
+  if (!user) {
+    recordFailure(key);
+    return res.status(401).json({ ok: false, error: 'Wrong username or password' });
+  }
+  attempts.delete(key); // a real sign-in clears the record
   const token = sessions.create(user);
   persistSessions();
   res.setHeader('Set-Cookie', `msfs=${token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax`);

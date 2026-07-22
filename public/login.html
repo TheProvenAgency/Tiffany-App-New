@@ -36,7 +36,12 @@ document.getElementById('f').addEventListener('submit', async e => {
   e.preventDefault();
   const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username:document.getElementById('user').value.trim(),password:document.getElementById('pw').value})});
-  if (r.ok) location.href='/'; else document.getElementById('err').textContent='Wrong username or password';
+  if (r.ok) { location.href='/'; return; }
+  /* Show the server's reason — a throttled user needs to know to wait, not to
+     keep guessing at what looks like a wrong password. */
+  let msg='Wrong username or password';
+  try { const d=await r.json(); if (d && d.error) msg=d.error; } catch(e) {}
+  document.getElementById('err').textContent=msg;
 });
 </script>
 </body>
