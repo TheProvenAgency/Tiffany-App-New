@@ -107,7 +107,9 @@ var GROUPS=[
 function assetsTotal(){var s=0;ACCOUNTS.forEach(function(a){if(!isLiab(a.type))s+=a.balance;});return s;}
 function liabTotal(){var s=0;ACCOUNTS.forEach(function(a){if(isLiab(a.type))s+=a.balance;});return s;}
 function netWorth(){return assetsTotal()-liabTotal();}
-function moThisIncome(){return MONTH.income;}
+// Live Fanbasis collected figure from the dashboard hero (#heroAmt). Always reflects "whatever the current Fanbasis is at".
+function fanbasisIncome(){try{var el=document.getElementById('heroAmt');if(el){var n=parseInt((el.textContent||'').replace(/[^0-9]/g,''),10);if(n>0)return n;}}catch(e){}return MONTH.income;}
+function moThisIncome(){return fanbasisIncome();}
 function moThisExpense(){var s=0;for(var k in MONTH.spendByGroup)s+=MONTH.spendByGroup[k];return s;}
 function money(n){var neg=n<0;return (neg?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function money0(n){var neg=n<0;return (neg?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US');}
@@ -339,8 +341,9 @@ function drawCatChart(){
 }
 function drawIeChart(){
   if(!window.Chart)return;var el=document.getElementById('lmIeChart');if(!el)return;killChart('ie');
+  var incSeries=IE_TREND.income.slice();incSeries[incSeries.length-1]=fanbasisIncome();
   charts.ie=new Chart(el.getContext('2d'),{type:'bar',data:{labels:IE_TREND.labels,datasets:[
-    {label:'Income',data:IE_TREND.income,backgroundColor:C.green,borderRadius:4},
+    {label:'Income',data:incSeries,backgroundColor:C.green,borderRadius:4},
     {label:'Expenses',data:IE_TREND.expenses,backgroundColor:C.red,borderRadius:4}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:11,font:{size:11}}},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
