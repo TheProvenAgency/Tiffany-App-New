@@ -701,7 +701,23 @@ setTimeout(takeSnapshot, 15 * 1000).unref(); // shortly after boot
 
 // ------------------------- Deal Production (client work desk) — shared team persistence -------------------------
 const PROD_FILE = path.join(process.env.DATA_DIR || __dirname, 'production.json');
-function readProd() { try { return JSON.parse(fs.readFileSync(PROD_FILE, 'utf8')); } catch (e) { return null; } }
+// Held outside public/ on purpose: 3,578 real client records must not be
+// downloadable from a browser.
+const PROD_SEED = path.join(__dirname, 'seed', 'production-seed.json');
+
+function readProd() {
+  try { return JSON.parse(fs.readFileSync(PROD_FILE, 'utf8')); } catch (e) { /* fall through to seed */ }
+
+  // First run on a fresh disk. Without this the tracker comes up empty and
+  // looks broken rather than new.
+  try {
+    const seed = JSON.parse(fs.readFileSync(PROD_SEED, 'utf8'));
+    if (!Array.isArray(seed)) return null;
+    writeProd(seed);
+    console.log(`Seeded Deal Production with ${seed.length} clients`);
+    return seed;
+  } catch (e) { return null; }
+}
 function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); return true; } catch (e) { return false; } }
 app.get('/api/production', (req, res) => { res.json({ clients: readProd(), mode: liveMode() ? 'live' : 'demo' }); });
 app.post('/api/production', (req, res) => {
