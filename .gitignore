@@ -1,3 +1,8 @@
 node_modules/
 data/
 .env
+
+# Runtime state. DATA_DIR is set on Render, but locally these fall back to the
+# repo root — sessions.json holds live session tokens and must never be committed.
+sessions.json
+production.json
