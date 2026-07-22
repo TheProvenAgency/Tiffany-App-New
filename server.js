@@ -693,6 +693,50 @@ app.post('/api/production', (req, res) => {
   res.json({ ok: true, count: c.length });
 });
 
+// Update one lead. The UI used to POST all 3,578 records on every keystroke,
+// so whoever saved last silently erased everyone else's work. Patching a single
+// record means two people on different leads never collide.
+//
+// readProd/writeProd are synchronous, so this read-modify-write cannot be
+// interleaved by another request. No lock is needed.
+app.patch('/api/production/:id', (req, res) => {
+  const list = readProd();
+  if (!Array.isArray(list)) return res.status(503).json({ error: 'no production data loaded' });
+
+  const idx = list.findIndex(c => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'no such lead' });
+
+  // These are server-owned: the client may send them, but they are never trusted.
+  const patch = { ...(req.body || {}) };
+  delete patch.id;
+  delete patch.who;
+  delete patch.notes;
+
+  // Reject the whole patch rather than applying it partially — a partial save
+  // looks identical to a successful one from the UI.
+  const { allowed, denied } = auth.filterEditable(req.user.role, patch);
+  if (denied.length) {
+    return res.status(403).json({ error: 'not allowed to change: ' + denied.join(', ') });
+  }
+
+  const note = allowed.note;
+  delete allowed.note;
+
+  const lead = { ...list[idx], ...allowed };
+  if (note && String(note).trim()) {
+    const me = getUsers().find(u => u.id === req.user.userId);
+    lead.notes = (lead.notes || []).concat([{
+      when: new Date().toISOString().slice(0, 10),
+      who: me ? me.name : 'Unknown',
+      text: String(note).trim()
+    }]);
+  }
+
+  list[idx] = lead;
+  writeProd(list);
+  res.json({ ok: true, client: lead });
+});
+
 // Only listen when run directly, so tests can mount the app on a free port.
 if (require.main === module) {
   app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));

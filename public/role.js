@@ -51,6 +51,12 @@
         return;
       }
 
+      // The server rejects a stage change from an employee, so don't offer the
+      // control — a rejected save looks identical to a successful one.
+      var s = document.createElement('style');
+      s.textContent = 'body[data-role="employee"] #dStage{pointer-events:none;opacity:.55}';
+      document.head.appendChild(s);
+
       hideAdminChrome();
       retry(gateNav);
     })

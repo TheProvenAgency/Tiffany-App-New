@@ -165,9 +165,16 @@ test('an admin may load every asset', () => {
 
 // ------------------------- field-level permissions -------------------------
 
-test('an employee may edit dispute rounds, docs and notes', () => {
-  const { denied } = auth.filterEditable('employee', { tu: {}, eq: {}, ex: {}, docs: {}, notes: [] });
+test('an employee may edit dispute rounds, docs and append a note', () => {
+  const { denied } = auth.filterEditable('employee', { tu: {}, eq: {}, ex: {}, docs: {}, note: 'called' });
   assert.deepEqual(denied, []);
+});
+
+test('an employee may not rewrite the notes array', () => {
+  // Writing `notes` wholesale would let one employee delete or forge another's
+  // note. They append through `note`, which the server attributes.
+  const { denied } = auth.filterEditable('employee', { notes: [] });
+  assert.deepEqual(denied, ['notes']);
 });
 
 test('an employee may not change stage or va', () => {

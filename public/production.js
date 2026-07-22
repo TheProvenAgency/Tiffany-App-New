@@ -131,7 +131,9 @@ function bmini(b){
 }
 function stagePill(s){var m={'Onboarding':'stg-onb','Ready':'stg-ready','In rounds':'stg-rounds','Completed':'stg-done'};return '<span class="pv-stg '+(m[s]||'stg-onb')+'">'+s+'</span>';}
 function docCell(c){var n=docCount(c),t=DOCS.length;var cl=n===t?'doc-ok':n>=t/2?'doc-part':'doc-no';return '<span class="pv-doc '+cl+'">'+n+'/'+t+'</span>';}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+/* Notes are written by employees and read by the admin, so escaping has to hold
+   in attribute contexts too, not just between tags. */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function fmt(n){return n.toLocaleString();}
 
 function currentRows(){
@@ -140,9 +142,23 @@ function currentRows(){
 }
 
 /* ---------- server load/save ---------- */
-function save(){
-  if(saveT)clearTimeout(saveT);
-  saveT=setTimeout(function(){ try{ fetch('/api/production',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clients:CLIENTS})}); }catch(e){} },500);
+/* Save one lead at a time. This used to POST all 3,578 records on every edit,
+   so whoever saved last silently erased everyone else's work. */
+var saveTimers={};
+function patchLead(c,extra){
+  var role=document.body.getAttribute('data-role')||'admin';
+  var body={tu:c.tu,eq:c.eq,ex:c.ex,docs:c.docs};
+  if(role==='admin'){body.stage=c.stage;body.va=c.va;}
+  if(extra&&extra.note)body.note=extra.note;
+  return fetch('/api/production/'+encodeURIComponent(c.id),
+    {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+}
+function save(c,extra){
+  if(!c||!c.id)return Promise.resolve();
+  if(extra&&extra.note)return patchLead(c,extra); // notes send immediately
+  if(saveTimers[c.id])clearTimeout(saveTimers[c.id]);
+  saveTimers[c.id]=setTimeout(function(){ delete saveTimers[c.id]; try{patchLead(c);}catch(e){} },500);
+  return Promise.resolve();
 }
 function loadThen(cb){
   fetch('/api/production').then(function(r){return r.json();}).then(function(d){
@@ -281,13 +297,22 @@ function drawerBody(c){
 }
 function bindDrawer(c){
   var body=document.getElementById('dBody');
-  function commit(){save();if(curView==='overview')renderOverview();else drawWork();document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();}
+  function commit(){save(c);if(curView==='overview')renderOverview();else drawWork();document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();}
   document.getElementById('dStage').onchange=function(e){if(c.stage!==e.target.value){c.stage=e.target.value;c.days=0;}commit();document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
   document.getElementById('dVa').onchange=function(e){c.va=e.target.value;commit();};
   body.querySelectorAll('input[data-b]').forEach(function(el){el.onchange=function(){c[el.getAttribute('data-b')].r=parseInt(el.value||'0',10);commit();};});
   body.querySelectorAll('select[data-b]').forEach(function(el){el.onchange=function(){c[el.getAttribute('data-b')].st=el.value;commit();};});
   body.querySelectorAll('input[data-doc]').forEach(function(el){el.onchange=function(){if(!c.docs)c.docs={};c.docs[el.getAttribute('data-doc')]=el.checked;commit();document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};});
-  document.getElementById('dAddNote').onclick=function(){var t=document.getElementById('dNoteIn').value.trim();if(!t)return;if(!c.notes)c.notes=[];c.notes.unshift({when:new Date().toISOString().slice(0,10),who:'You',text:t});save();document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
+  /* The server stamps the author from the session, so take the notes list back
+     from its response rather than guessing the name here. */
+  document.getElementById('dAddNote').onclick=function(){
+    var t=document.getElementById('dNoteIn').value.trim();if(!t)return;
+    document.getElementById('dNoteIn').value='';
+    save(c,{note:t}).then(function(r){return r&&r.json?r.json():null;}).then(function(d){
+      if(d&&d.client)c.notes=d.client.notes;
+      document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);
+    }).catch(function(){});
+  };
 }
 
 /* ---------- init ---------- */
