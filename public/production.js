@@ -312,13 +312,21 @@ function initProd(){
     window.__pvWrap=true;var _sv=window.showView;
     window.showView=function(id){
       if(id==='production'){
-        var vs=document.querySelectorAll('[id^="view-"]');for(var i=0;i<vs.length;i++)vs[i].style.display='none';
+        // hide standard views via their class (never leave inline display:none on them — it breaks the app's .view.on toggle)
+        var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
+        var pl=document.getElementById('view-personal');if(pl)pl.style.display='none';
         var v=document.getElementById('view-production');if(v)v.style.display='';
         var nbs=document.querySelectorAll('#nav button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('active');
         var nb=document.getElementById('pvNavBtn');if(nb)nb.classList.add('active');
         var pt=document.getElementById('pageTitle');if(pt)pt.textContent='Deal Production';
         renderProduction();
-      } else { var v=document.getElementById('view-production');if(v)v.style.display='none';var nb=document.getElementById('pvNavBtn');if(nb)nb.classList.remove('active');_sv(id); }
+      } else {
+        var v=document.getElementById('view-production');if(v)v.style.display='none';
+        // clear any leftover inline display on standard views so the app's class toggle can show them again
+        var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++)sv[i].style.display='';
+        var nb=document.getElementById('pvNavBtn');if(nb)nb.classList.remove('active');
+        _sv(id);
+      }
     };
   }
 }
