@@ -62,7 +62,48 @@ Set any random string in Settings, then append `?secret=THAT_STRING` to the Zapi
 - **Clients table**: all 3,512 — search, filter by status/package/round, sort any column, paginated.
 - Auto-refreshes every 5 minutes; ⟳ Refresh forces a re-pull; GHL data cached 10 min to respect rate limits.
 
+## 5. Logins and roles
+
+Two roles:
+
+- **Admin** — everything, as before. Manage the team in ⚙ Settings → Team.
+- **Employee** — the Deal Production tracker and nothing else. No revenue, no
+  client list, no API keys, no personal finances.
+
+Sign in with a **username and password**. Your existing password became the
+`admin` account the first time this version booted, so it still works — just
+add the username.
+
+The boundary is enforced on the server and denies by default: an employee gets
+403 from every route and asset not explicitly opened to them, so anything added
+later is closed until someone opens it. Hiding buttons is only cosmetic.
+
+## Developing locally
+
+```
+npm install
+npm start          # http://localhost:3000, demo data
+npm test           # 57 tests
+```
+
+Set `READ_ONLY=1` when running against real GoHighLevel credentials:
+
+```
+READ_ONLY=1 npm start
+```
+
+Two routes can change live GHL data — status write-back (tag edits on a real
+contact) and sending an SMS (a real text to a real client). With `READ_ONLY=1`
+both refuse visibly and log what they blocked, rather than pretending to
+succeed. Leave it unset in production.
+
 ## Security notes
-- Login is password-gated (cookie). Change the password in Settings immediately.
+- Accounts use scrypt with a per-user salt. Session tokens are random and
+  opaque; the role is looked up server-side, so a cookie cannot be edited to
+  grant admin.
+- Disabling a user cuts off their existing sessions immediately, not at cookie
+  expiry. The last admin cannot be disabled or demoted.
 - API keys live only on the server (masked in the UI). Never shared with the browser.
 - Webhooks reject calls without the secret once one is set.
+- `sessions.json` and `production.json` are gitignored: `DATA_DIR` is set on
+  Render but falls back to the repo root locally.

@@ -1,7 +1,22 @@
 # Role-Based Access: Admin and Employee Logins
 
 **Date:** 2026-07-22
-**Status:** Approved, not yet implemented
+**Status:** Implemented and deployed 2026-07-22 (57 tests)
+
+Delivered as designed, with three changes made during implementation:
+
+- `notes` became admin-only; employees append via a `note` field the server
+  attributes. A writable notes array would have let one employee delete or
+  forge another's note, making server-side attribution pointless.
+- Static assets needed gating, not just the API — `personal-finances.js`
+  carries balances in its source. Recorded in section 3a.
+- The `READ_ONLY` guard refuses visibly instead of returning a fake success.
+  A silent no-op is the failure mode this whole design argues against.
+
+Still open: the personal finance figures remain hardcoded in client source and
+in git history, including in the `nikki-dashboard` copy.
+`public/production-seed.json` (1.4 MB of client records) is referenced by no
+code at all.
 
 ## Problem
 

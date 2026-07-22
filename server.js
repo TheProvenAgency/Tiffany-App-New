@@ -129,6 +129,22 @@ app.patch('/api/users/:id', (req, res) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ------------------------- read-only guard -------------------------
+// Set READ_ONLY=1 when developing against Tiffany's real GoHighLevel keys.
+// Only two routes can change anything there: status write-back (which edits
+// tags on a real contact) and sending an SMS (which texts a real client).
+//
+// The refusal is deliberately loud. Returning a fake success would leave you
+// believing a tag changed when it did not.
+const READ_ONLY = process.env.READ_ONLY === '1' || process.env.READ_ONLY === 'true';
+function refuseWrite(res, action, detail) {
+  console.warn(`[READ-ONLY] refused ${action} ${detail}`);
+  return res.status(403).json({
+    error: 'read-only mode — this would change live GoHighLevel data',
+    action
+  });
+}
+
 // ------------------------- mode + data assembly -------------------------
 function liveMode() {
   const cfg = store.getConfig();
@@ -444,6 +460,7 @@ app.delete('/api/notes/:id', (req, res) => { store.deleteNote(req.params.id); re
 app.post('/api/clients/:id/status', async (req, res) => {
   try {
     const status = req.body.status === 'active' ? 'active' : 'inactive';
+    if (READ_ONLY && liveMode()) return refuseWrite(res, 'setStatus', `${req.params.id} -> ${status}`);
     if (liveMode()) {
       await ghl.setStatus(store.getConfig(), req.params.id, status);
       store.clearCache();
@@ -460,6 +477,7 @@ app.post('/api/clients/:id/sms', async (req, res) => {
   try {
     const message = (req.body.message || '').trim();
     if (!message) return res.status(400).json({ error: 'empty message' });
+    if (READ_ONLY && liveMode()) return refuseWrite(res, 'sendSMS', `${req.params.id} (${message.length} chars)`);
     if (!liveMode()) return res.json({ ok: true, demo: true, note: 'Demo mode — no SMS actually sent. Connect GHL to enable.' });
     const r = await ghl.sendSMS(store.getConfig(), req.params.id, message);
     store.addEvent({ type: 'sms_out', at: new Date().toISOString(), clientId: req.params.id });
