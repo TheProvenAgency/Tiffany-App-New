@@ -4,7 +4,9 @@
 const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 const store = require('./lib/store');
+const auth = require('./lib/auth');
 const ghl = require('./lib/ghl');
 const meta = require('./lib/meta');
 const social = require('./lib/social');
@@ -16,34 +18,114 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' })); // Zapier webhook
 const PORT = process.env.PORT || 3000;
 
 // ------------------------- auth -------------------------
-const SALT = 'msfs-dash-v1';
-function passwordNow() {
+function legacyPassword() {
   return store.getConfig().appPassword || process.env.APP_PASSWORD || 'msfs2026';
 }
-function tokenFor(pw) { return crypto.createHash('sha256').update(SALT + pw).digest('hex'); }
-function authed(req) {
-  const cookie = (req.headers.cookie || '').split(';').map(s => s.trim()).find(s => s.startsWith('msfs='));
-  return cookie && cookie.slice(5) === tokenFor(passwordNow());
+
+// The app used to have a single shared password. Migrate it into an admin
+// account on first boot so the existing password keeps working.
+function getUsers() {
+  const cfg = store.getConfig();
+  if (Array.isArray(cfg.users) && cfg.users.some(u => u.role === 'admin')) return cfg.users;
+  const migrated = auth.ensureAdmin(cfg.users, legacyPassword());
+  store.setConfig({ users: migrated });
+  return migrated;
+}
+
+const SESSION_FILE = path.join(process.env.DATA_DIR || __dirname, 'sessions.json');
+function readSessions() {
+  try { return JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8')); } catch (e) { return {}; }
+}
+const sessions = auth.createSessions(readSessions());
+function persistSessions() {
+  try {
+    fs.mkdirSync(path.dirname(SESSION_FILE), { recursive: true });
+    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessions.serialize()));
+  } catch (e) { /* sessions survive in memory even if the disk is read-only */ }
+}
+
+function cookieToken(req) {
+  const c = (req.headers.cookie || '').split(';').map(s => s.trim()).find(s => s.startsWith('msfs='));
+  return c ? c.slice(5) : null;
 }
 
 app.post('/api/login', (req, res) => {
-  if ((req.body.password || '') === passwordNow()) {
-    res.setHeader('Set-Cookie', `msfs=${tokenFor(passwordNow())}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax`);
-    return res.json({ ok: true });
-  }
-  res.status(401).json({ ok: false, error: 'Wrong password' });
+  const { username, password } = req.body || {};
+  // username defaults to admin so the old password-only login form still works
+  const user = auth.authenticate(getUsers(), username || 'admin', password || '');
+  if (!user) return res.status(401).json({ ok: false, error: 'Wrong username or password' });
+  const token = sessions.create(user);
+  persistSessions();
+  res.setHeader('Set-Cookie', `msfs=${token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax`);
+  res.json({ ok: true, role: user.role, name: user.name });
 });
+
 app.post('/api/logout', (req, res) => {
+  const token = cookieToken(req);
+  if (token) { sessions.destroy(token); persistSessions(); }
   res.setHeader('Set-Cookie', 'msfs=; Path=/; Max-Age=0');
   res.json({ ok: true });
 });
 
-// webhooks + login page are public; everything else requires the cookie
+// webhooks + login page are public; everything else needs a session, and the
+// session's role decides what it may reach. Deny by default.
 app.use((req, res, next) => {
   const open = req.path.startsWith('/webhooks/') || req.path === '/api/login' || req.path === '/login.html' || req.path === '/favicon.ico';
-  if (open || authed(req)) return next();
-  if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'unauthorized' });
-  return res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  if (open) return next();
+
+  const session = sessions.resolve(cookieToken(req));
+  if (!session) {
+    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'unauthorized' });
+    return res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  }
+  req.user = session;
+
+  const permitted = req.path.startsWith('/api/')
+    ? auth.canAccess(session.role, req.method, req.path)
+    : auth.canAccessAsset(session.role, req.path);
+  if (!permitted) return res.status(403).json({ error: 'forbidden' });
+  next();
+});
+
+app.get('/api/me', (req, res) => {
+  const u = getUsers().find(x => x.id === req.user.userId);
+  res.json({ id: req.user.userId, name: u ? u.name : 'User', username: u ? u.username : null, role: req.user.role });
+});
+
+// user management (admin only — employees are blocked by canAccess)
+app.get('/api/users', (req, res) => {
+  res.json(getUsers().map(u => ({ id: u.id, username: u.username, name: u.name, role: u.role, disabled: !!u.disabled })));
+});
+
+app.post('/api/users', (req, res) => {
+  const { username, name, role, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'username and password required' });
+  if (role !== 'admin' && role !== 'employee') return res.status(400).json({ error: 'role must be admin or employee' });
+  const list = getUsers();
+  if (list.some(u => u.username === username)) return res.status(409).json({ error: 'username already taken' });
+  const user = auth.makeUser({ username, name, role, password });
+  store.setConfig({ users: list.concat([user]) });
+  res.json({ ok: true, id: user.id, username, role });
+});
+
+app.patch('/api/users/:id', (req, res) => {
+  const list = getUsers();
+  const u = list.find(x => x.id === req.params.id);
+  if (!u) return res.status(404).json({ error: 'no such user' });
+  // Never let the last admin lock themselves out.
+  const admins = list.filter(x => x.role === 'admin' && !x.disabled);
+  const demoting = (req.body.role && req.body.role !== 'admin') || req.body.disabled === true;
+  if (u.role === 'admin' && demoting && admins.length <= 1) {
+    return res.status(400).json({ error: 'cannot disable or demote the last admin' });
+  }
+  if (req.body.name) u.name = req.body.name;
+  if (req.body.role === 'admin' || req.body.role === 'employee') u.role = req.body.role;
+  if (typeof req.body.disabled === 'boolean') u.disabled = req.body.disabled;
+  if (req.body.password) Object.assign(u, auth.hashPassword(req.body.password));
+  // Revoking access must take effect immediately, not at cookie expiry.
+  if (u.disabled || req.body.password || req.body.role) { sessions.destroyForUser(u.id); persistSessions(); }
+  store.setConfig({ users: list });
+  res.json({ ok: true });
 });
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -594,11 +676,12 @@ async function takeSnapshot() {
     if (Object.keys(snap).length > 1) store.upsertSnapshot(snap);
   } catch (e) { console.error('snapshot failed:', e.message); }
 }
-setInterval(takeSnapshot, 6 * 60 * 60 * 1000); // every 6h
-setTimeout(takeSnapshot, 15 * 1000); // shortly after boot
+// unref so these timers never hold the process open on their own; the HTTP
+// server keeps the loop alive in production, and tests can exit cleanly.
+setInterval(takeSnapshot, 6 * 60 * 60 * 1000).unref(); // every 6h
+setTimeout(takeSnapshot, 15 * 1000).unref(); // shortly after boot
 
 // ------------------------- Deal Production (client work desk) — shared team persistence -------------------------
-const fs = require('fs');
 const PROD_FILE = path.join(process.env.DATA_DIR || __dirname, 'production.json');
 function readProd() { try { return JSON.parse(fs.readFileSync(PROD_FILE, 'utf8')); } catch (e) { return null; } }
 function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); return true; } catch (e) { return false; } }
@@ -610,4 +693,53 @@ app.post('/api/production', (req, res) => {
   res.json({ ok: true, count: c.length });
 });
 
-app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
+// Update one lead. The UI used to POST all 3,578 records on every keystroke,
+// so whoever saved last silently erased everyone else's work. Patching a single
+// record means two people on different leads never collide.
+//
+// readProd/writeProd are synchronous, so this read-modify-write cannot be
+// interleaved by another request. No lock is needed.
+app.patch('/api/production/:id', (req, res) => {
+  const list = readProd();
+  if (!Array.isArray(list)) return res.status(503).json({ error: 'no production data loaded' });
+
+  const idx = list.findIndex(c => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'no such lead' });
+
+  // These are server-owned: the client may send them, but they are never trusted.
+  const patch = { ...(req.body || {}) };
+  delete patch.id;
+  delete patch.who;
+  delete patch.notes;
+
+  // Reject the whole patch rather than applying it partially — a partial save
+  // looks identical to a successful one from the UI.
+  const { allowed, denied } = auth.filterEditable(req.user.role, patch);
+  if (denied.length) {
+    return res.status(403).json({ error: 'not allowed to change: ' + denied.join(', ') });
+  }
+
+  const note = allowed.note;
+  delete allowed.note;
+
+  const lead = { ...list[idx], ...allowed };
+  if (note && String(note).trim()) {
+    const me = getUsers().find(u => u.id === req.user.userId);
+    lead.notes = (lead.notes || []).concat([{
+      when: new Date().toISOString().slice(0, 10),
+      who: me ? me.name : 'Unknown',
+      text: String(note).trim()
+    }]);
+  }
+
+  list[idx] = lead;
+  writeProd(list);
+  res.json({ ok: true, client: lead });
+});
+
+// Only listen when run directly, so tests can mount the app on a free port.
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
+}
+
+module.exports = app;

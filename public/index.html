@@ -494,8 +494,20 @@ section.view{display:none} section.view.on{display:block}
     <input id="s_webhookSecret" placeholder="any-random-string">
     <div class="hookurl" id="hookFan"></div>
     <div class="hookurl" id="hookFox"></div>
-    <label style="margin-top:20px">Dashboard password</label>
-    <input id="s_appPassword" type="text" placeholder="change the login password">
+    <label style="margin-top:20px">Your password</label>
+    <input id="s_appPassword" type="text" placeholder="change your own login password">
+
+    <label style="margin-top:20px">Team</label>
+    <div id="userList"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <input id="u_username" placeholder="username" style="flex:1;min-width:110px">
+      <input id="u_name" placeholder="full name" style="flex:1;min-width:110px">
+      <input id="u_password" placeholder="temporary password" style="flex:1;min-width:130px">
+      <select id="u_role" style="flex:0 0 auto"><option value="employee">Employee</option><option value="admin">Admin</option></select>
+      <button class="btn ghost" onclick="addUser()">Add</button>
+    </div>
+    <span class="testres" id="r_user"></span>
+
     <div class="dactions" style="margin-top:20px">
       <button class="btn primary" onclick="saveSettings()">Save</button>
       <button class="btn ghost" onclick="document.getElementById('overlay').classList.remove('show')">Close</button>
@@ -811,15 +823,57 @@ async function openSettings(){
   const base=location.origin;
   $('hookFan').textContent='Fanbasis → POST '+base+'/webhooks/fanbasis?secret=…';
   $('hookFox').textContent='DisputeFox → POST '+base+'/webhooks/disputefox?secret=…';
+  loadUsers();
   $('overlay').classList.add('show');
+}
+
+/* ---------- team management (admin only; employees never see Settings) ---------- */
+function escUser(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+async function loadUsers(){
+  try{
+    const users=await(await fetch('/api/users')).json();
+    $('userList').innerHTML=users.map(u=>
+      `<div class="hookurl" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+         <span>${escUser(u.name)} · ${escUser(u.username)} · ${escUser(u.role)}${u.disabled?' · disabled':''}</span>
+         <button class="btn ghost" onclick="toggleUser('${escUser(u.id)}',${u.disabled?'false':'true'})">${u.disabled?'Enable':'Disable'}</button>
+       </div>`).join('')||'<div class="hookurl">No users yet.</div>';
+  }catch(e){ $('userList').innerHTML='<div class="hookurl">Could not load the team list.</div>'; }
+}
+async function addUser(){
+  const body={username:$('u_username').value.trim(),name:$('u_name').value.trim(),
+              password:$('u_password').value,role:$('u_role').value};
+  if(!body.username||!body.password){$('r_user').textContent='Username and password are required';$('r_user').className='testres bad';return;}
+  const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  $('r_user').textContent=r.ok?('Added '+body.username):('✗ '+(d.error||'failed'));
+  $('r_user').className='testres '+(r.ok?'ok':'bad');
+  if(r.ok){$('u_username').value='';$('u_name').value='';$('u_password').value='';loadUsers();}
+}
+async function toggleUser(id,disabled){
+  const r=await fetch('/api/users/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({disabled})});
+  const d=await r.json();
+  if(!r.ok){$('r_user').textContent='✗ '+(d.error||'failed');$('r_user').className='testres bad';}
+  loadUsers();
 }
 async function saveSettings(){
   const body={};
-  for(const k of ['ghlToken','ghlLocationId','metaPageToken','fbPageId','igUserId','webhookSecret','appPassword']){
+  for(const k of ['ghlToken','ghlLocationId','metaPageToken','fbPageId','igUserId','webhookSecret']){
     const v=$('s_'+k).value.trim();if(v&&!v.includes('••••'))body[k]=v;
   }
   const r=await(await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-  $('r_save').textContent='Saved — mode: '+r.mode.toUpperCase();$('r_save').className='testres ok';
+  let msg='Saved — mode: '+r.mode.toUpperCase(), ok=true;
+
+  /* The password now belongs to your account, not to the app. Changing it
+     revokes your sessions, so we send you back to the login page. */
+  const pw=$('s_appPassword').value.trim();
+  if(pw){
+    const me=await(await fetch('/api/me')).json();
+    const pr=await fetch('/api/users/'+me.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    ok=pr.ok;
+    msg=pr.ok?'Password changed — signing you back in…':'Settings saved, but the password change failed';
+    if(pr.ok)setTimeout(()=>location.reload(),1600);
+  }
+  $('r_save').textContent=msg;$('r_save').className='testres '+(ok?'ok':'bad');
   loadDashboard();
 }
 async function testGhl(){
@@ -862,6 +916,6 @@ function renderTopPosts(){
 renderFilters();loadDashboard();loadTasks();renderTopPosts();
 setInterval(loadDashboard,5*60*1000);
 </script>
-<script src="/production.js" defer></script><script src="/personal-finances.js" defer></script>
+<script src="/production.js" defer></script><script src="/role.js" defer></script>
 </body>
 </html>

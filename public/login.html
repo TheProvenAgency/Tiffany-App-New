@@ -25,7 +25,8 @@
     <img src="https://msfinancialsolutions.net/wp-content/uploads/2025/04/FInancial-Solutions.png" alt="Ms. Financial Solutions">
     <h1>Command Center</h1>
     <form id="f">
-      <input type="password" id="pw" placeholder="Password" autofocus>
+      <input type="text" id="user" placeholder="Username" autocomplete="username" autofocus>
+      <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
       <button>Sign In</button>
       <div class="err" id="err"></div>
     </form>
@@ -34,8 +35,8 @@
 document.getElementById('f').addEventListener('submit', async e => {
   e.preventDefault();
   const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({password:document.getElementById('pw').value})});
-  if (r.ok) location.href='/'; else document.getElementById('err').textContent='Wrong password';
+    body:JSON.stringify({username:document.getElementById('user').value.trim(),password:document.getElementById('pw').value})});
+  if (r.ok) location.href='/'; else document.getElementById('err').textContent='Wrong username or password';
 });
 </script>
 </body>
