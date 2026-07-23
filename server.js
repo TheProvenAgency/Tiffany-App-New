@@ -13,6 +13,10 @@ const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
 
 const app = express();
+// Render terminates TLS and forwards, so without this req.ip is Render's edge
+// rather than the visitor. Trust exactly one hop: entries a client forges
+// earlier in X-Forwarded-For are then ignored.
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' })); // Zapier webhooks post form-encoded
 const PORT = process.env.PORT || 3000;
@@ -49,46 +53,55 @@ function cookieToken(req) {
   return c ? c.slice(5) : null;
 }
 
-// Guess throttling. Keyed by account and client address so an attack on one
-// account cannot lock the rest of the team out. In memory on purpose: a
-// restart clearing it is an acceptable trade for having no new dependency.
+// Guess throttling, in memory (a restart clearing it beats adding a
+// dependency). Two counters per failure:
+//
+//  - by address: stops one host hammering many accounts.
+//  - by account: the backstop. Behind a proxy the observed address may not be
+//    stable, so an address-only counter can be defeated by rotating it —
+//    which is exactly what happened in production. The account counter holds
+//    no matter what the address looks like.
+//
+// The account counter is the reason a legitimate user could be locked out by
+// someone else guessing their name; 15 minutes is the deliberate ceiling on
+// that, and a real sign-in clears it immediately.
 const MAX_ATTEMPTS = 10;
 const LOCKOUT_MS = 15 * 60 * 1000;
-const attempts = new Map();
+const byAddress = new Map();
+const byAccount = new Map();
 
-function attemptKey(req, username) {
-  return (username || '') + '|' + (req.ip || req.socket.remoteAddress || '');
-}
-function lockedOut(key) {
-  const a = attempts.get(key);
-  if (!a) return false;
-  if (Date.now() - a.first > LOCKOUT_MS) { attempts.delete(key); return false; }
-  return a.count >= MAX_ATTEMPTS;
-}
-function recordFailure(key) {
-  const a = attempts.get(key);
-  if (!a || Date.now() - a.first > LOCKOUT_MS) attempts.set(key, { count: 1, first: Date.now() });
+function bumpFail(map, key) {
+  const a = map.get(key);
+  if (!a || Date.now() - a.first > LOCKOUT_MS) map.set(key, { count: 1, first: Date.now() });
   else a.count++;
+}
+function isLocked(map, key) {
+  const a = map.get(key);
+  if (!a) return false;
+  if (Date.now() - a.first > LOCKOUT_MS) { map.delete(key); return false; }
+  return a.count >= MAX_ATTEMPTS;
 }
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {};
-  const key = attemptKey(req, username || 'admin');
+  const account = username || 'admin';
+  const address = req.ip || req.socket.remoteAddress || '';
 
   // Refuse before checking the password, so a correct guess on attempt 500
   // still gets nowhere.
-  if (lockedOut(key)) {
-    console.warn(`[LOGIN] throttled ${key}`);
+  if (isLocked(byAccount, account) || isLocked(byAddress, address)) {
+    console.warn(`[LOGIN] throttled account=${account} address=${address}`);
     return res.status(429).json({ ok: false, error: 'Too many failed attempts — wait 15 minutes' });
   }
 
-  // username defaults to admin so the old password-only login form still works
-  const user = auth.authenticate(getUsers(), username || 'admin', password || '');
+  const user = auth.authenticate(getUsers(), account, password || '');
   if (!user) {
-    recordFailure(key);
+    bumpFail(byAccount, account);
+    bumpFail(byAddress, address);
     return res.status(401).json({ ok: false, error: 'Wrong username or password' });
   }
-  attempts.delete(key); // a real sign-in clears the record
+  byAccount.delete(account); // a real sign-in clears both records
+  byAddress.delete(address);
   const token = sessions.create(user);
   persistSessions();
   res.setHeader('Set-Cookie', `msfs=${token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax`);

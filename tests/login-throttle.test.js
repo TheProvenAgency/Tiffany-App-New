@@ -48,9 +48,31 @@ test('the throttle refuses even the correct password while locked', async () => 
   assert.match(body.error, /too many/i, 'the refusal should explain itself');
 });
 
+test('guessing from a rotating client address is still cut off', async () => {
+  // Reproduces production: behind Render's edge the observed address is not
+  // stable, so an address-keyed counter never accumulates. The account-level
+  // backstop has to hold on its own.
+  let sawThrottle = false;
+  for (let i = 0; i < 40; i++) {
+    const r = await fetch(base + '/api/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': `203.0.113.${i % 250}` },
+      body: JSON.stringify({ username: 'rotating-target', password: 'guess-' + i })
+    });
+    if (r.status === 429) { sawThrottle = true; break; }
+  }
+  assert.ok(sawThrottle, 'an attacker rotating addresses must still be stopped');
+});
+
 test('a different account is unaffected by another account lockout', async () => {
   // Locking every account because one was attacked would be a denial of
-  // service against the whole team.
-  const r = await login('someone-else', 'whatever');
-  assert.equal(r.status, 401, 'not 429 — this account was never attacked');
+  // service against the whole team. Comes from a fresh address so this isolates
+  // the account dimension — the earlier tests already tripped 127.0.0.1's
+  // address counter, which is its own correct behavior.
+  const r = await fetch(base + '/api/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.7' },
+    body: JSON.stringify({ username: 'someone-else', password: 'whatever' })
+  });
+  assert.equal(r.status, 401, 'not 429 — neither this account nor this address was attacked');
 });
