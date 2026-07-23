@@ -768,6 +768,16 @@ function readProd() {
 }
 function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); return true; } catch (e) { return false; } }
 app.get('/api/production', (req, res) => { res.json({ clients: readProd(), mode: liveMode() ? 'live' : 'demo' }); });
+
+// One lead, for an open drawer to poll cheaply instead of pulling all 3,578.
+app.get('/api/production/:id', (req, res) => {
+  const list = readProd();
+  const lead = Array.isArray(list) ? list.find(c => c.id === req.params.id) : null;
+  if (!lead) return res.status(404).json({ error: 'no such lead' });
+  // Stable shape: a never-edited lead still reports updatedAt, so pollers can
+  // rely on the field existing.
+  res.json({ client: { updatedAt: null, updatedBy: null, ...lead } });
+});
 app.post('/api/production', (req, res) => {
   const c = req.body && req.body.clients;
   if (!Array.isArray(c)) return res.status(400).json({ error: 'clients array required' });
@@ -804,7 +814,16 @@ app.patch('/api/production/:id', (req, res) => {
   const note = allowed.note;
   delete allowed.note;
 
-  const lead = { ...list[idx], ...allowed };
+  // Deep-merge the sub-objects so a partial patch (one document, one round
+  // field) does not replace the whole object and undo a colleague's edit.
+  const lead = { ...list[idx] };
+  for (const k of Object.keys(allowed)) {
+    if (['tu', 'eq', 'ex', 'docs'].includes(k) && allowed[k] && typeof allowed[k] === 'object') {
+      lead[k] = { ...(lead[k] || {}), ...allowed[k] };
+    } else {
+      lead[k] = allowed[k];
+    }
+  }
   if (note && String(note).trim()) {
     const me = getUsers().find(u => u.id === req.user.userId);
     lead.notes = (lead.notes || []).concat([{
@@ -814,6 +833,9 @@ app.patch('/api/production/:id', (req, res) => {
     }]);
   }
 
+  // A monotonic stamp so an open drawer elsewhere can tell the lead moved.
+  lead.updatedAt = new Date().toISOString();
+  lead.updatedBy = (getUsers().find(u => u.id === req.user.userId) || {}).name || null;
   list[idx] = lead;
   writeProd(list);
   res.json({ ok: true, client: lead });

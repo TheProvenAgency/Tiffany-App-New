@@ -118,6 +118,7 @@ test('an admin may reach every route', () => {
 
 test('an employee may reach the Deal Production routes', () => {
   assert.ok(auth.canAccess('employee', 'GET', '/api/production'));
+  assert.ok(auth.canAccess('employee', 'GET', '/api/production/C1000'), 'poll one lead for live refresh');
   assert.ok(auth.canAccess('employee', 'PATCH', '/api/production/C1000'));
   assert.ok(auth.canAccess('employee', 'GET', '/api/me'));
   assert.ok(auth.canAccess('employee', 'POST', '/api/logout'));

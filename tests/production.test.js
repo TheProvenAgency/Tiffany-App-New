@@ -120,6 +120,53 @@ test('simultaneous edits to different leads both survive', async () => {
   assert.equal((await lead('C2')).stage, 'Disputing', 'admin edit survived');
 });
 
+test('two edits to different fields of the SAME lead both survive', async () => {
+  // The real remaining collision: the client sends only what changed, and the
+  // server deep-merges the sub-objects, so ticking a doc and changing a round
+  // on the same lead do not overwrite each other.
+  await req('/api/production/C1', { method: 'PATCH', cookie: employeeCookie, body: { docs: { DL: true } } });
+  await req('/api/production/C1', { method: 'PATCH', cookie: employeeCookie, body: { tu: { st: 'done' } } });
+  const c = await lead('C1');
+  assert.equal(c.docs.DL, true, 'the document tick survived the later round edit');
+  assert.equal(c.tu.st, 'done', 'the round edit applied');
+});
+
+test('a partial doc patch does not wipe the other documents', async () => {
+  await req('/api/production/C2', { method: 'PATCH', cookie: adminCookie, body: { docs: { DL: true, SSC: true } } });
+  await req('/api/production/C2', { method: 'PATCH', cookie: employeeCookie, body: { docs: { POA: true } } });
+  const c = await lead('C2');
+  assert.equal(c.docs.DL, true, 'earlier doc survives');
+  assert.equal(c.docs.SSC, true, 'earlier doc survives');
+  assert.equal(c.docs.POA, true, 'new doc applied');
+});
+
+test('a partial round patch keeps the untouched half of the round', async () => {
+  await req('/api/production/C1', { method: 'PATCH', cookie: employeeCookie, body: { eq: { r: 4 } } });
+  await req('/api/production/C1', { method: 'PATCH', cookie: employeeCookie, body: { eq: { st: 'ready' } } });
+  const c = await lead('C1');
+  assert.equal(c.eq.r, 4, 'the round number set earlier is not lost when status changes');
+  assert.equal(c.eq.st, 'ready');
+});
+
+test('one lead can be fetched on its own for the live refresh', async () => {
+  const r = await req('/api/production/C1', { cookie: employeeCookie });
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.client.id, 'C1');
+  assert.ok('updatedAt' in body.client, 'the lead carries a timestamp so pollers can tell it changed');
+});
+
+test('fetching one missing lead is a 404', async () => {
+  assert.equal((await req('/api/production/NOPE', { cookie: employeeCookie })).status, 404);
+});
+
+test('an edit stamps updatedAt so viewers can detect it', async () => {
+  const before = (await (await req('/api/production/C2', { cookie: adminCookie })).json()).client.updatedAt;
+  await req('/api/production/C2', { method: 'PATCH', cookie: employeeCookie, body: { docs: { FTC: true } } });
+  const after = (await (await req('/api/production/C2', { cookie: adminCookie })).json()).client.updatedAt;
+  assert.notEqual(after, before, 'updatedAt must move when the lead changes');
+});
+
 test('patching a lead that does not exist is a 404', async () => {
   const r = await req('/api/production/NOPE', {
     method: 'PATCH', cookie: employeeCookie, body: { docs: {} }

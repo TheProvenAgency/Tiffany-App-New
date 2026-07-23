@@ -6,6 +6,8 @@ var STAGES=['Onboarding','Ready','In rounds','Completed'];
 var C={blue:'#3563a8',green:'#2e7d54',gold:'#b98a2f',red:'#b3372f',gray:'#b9b3a8',slate:'#6b6256'};
 var CLIENTS=[], loaded=false, saveT=null, charts={};
 var curView='overview', curFilter='all', curSearch='', curPage=1, PAGE=60, openId=null;
+var MYNAME=null, openStamp=null, pollTimer=null;
+fetch('/api/me').then(function(r){return r.json();}).then(function(m){MYNAME=m&&m.name;}).catch(function(){});
 
 /* ---------- styles ---------- */
 var css=''+
@@ -142,22 +144,28 @@ function currentRows(){
 }
 
 /* ---------- server load/save ---------- */
-/* Save one lead at a time. This used to POST all 3,578 records on every edit,
-   so whoever saved last silently erased everyone else's work. */
-var saveTimers={};
-function patchLead(c,extra){
-  var role=document.body.getAttribute('data-role')||'admin';
-  var body={tu:c.tu,eq:c.eq,ex:c.ex,docs:c.docs};
-  if(role==='admin'){body.stage=c.stage;body.va=c.va;}
-  if(extra&&extra.note)body.note=extra.note;
+/* Save one lead at a time, sending ONLY the field that changed. The server
+   deep-merges, so two people on the same lead editing different things no
+   longer overwrite each other. Sending the whole record — as this once did —
+   meant the later save clobbered the earlier one. */
+var saveTimers={}, pending={};
+function patchLead(c,patch){
   return fetch('/api/production/'+encodeURIComponent(c.id),
-    {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
 }
-function save(c,extra){
+function flush(id){
+  var c=byId(id), patch=pending[id];
+  delete pending[id]; delete saveTimers[id];
+  if(c&&patch){ try{patchLead(c,patch);}catch(e){} }
+}
+function save(c,patch){
   if(!c||!c.id)return Promise.resolve();
-  if(extra&&extra.note)return patchLead(c,extra); // notes send immediately
+  if(patch&&patch.note!=null) return patchLead(c,{note:patch.note}); // notes send at once and return the list
+  /* Accumulate changed fields across the debounce window rather than replacing,
+     so a quick doc-tick then round-change sends both. */
+  pending[c.id]=Object.assign(pending[c.id]||{}, patch||{});
   if(saveTimers[c.id])clearTimeout(saveTimers[c.id]);
-  saveTimers[c.id]=setTimeout(function(){ delete saveTimers[c.id]; try{patchLead(c);}catch(e){} },500);
+  saveTimers[c.id]=setTimeout(function(){flush(c.id);},500);
   return Promise.resolve();
 }
 function loadThen(cb){
@@ -272,13 +280,44 @@ window.pvSetPV=function(v){
 
 /* ---------- drawer ---------- */
 function byId(id){for(var i=0;i<CLIENTS.length;i++)if(CLIENTS[i].id===id)return CLIENTS[i];return null;}
-window.pvOpen=function(id){var c=byId(id);if(!c)return;openId=id;
+window.pvOpen=function(id){var c=byId(id);if(!c)return;openId=id;openStamp=c.updatedAt||null;
   document.getElementById('dNm').textContent=c.name;
   document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();
   document.getElementById('dBody').innerHTML=drawerBody(c); bindDrawer(c);
   document.getElementById('pvOverlay').style.display='block'; document.getElementById('pvDrawer').classList.add('open');
+  startPoll();
 };
-window.pvCloseDrawer=function(){document.getElementById('pvDrawer').classList.remove('open');document.getElementById('pvOverlay').style.display='none';openId=null;};
+window.pvCloseDrawer=function(){document.getElementById('pvDrawer').classList.remove('open');document.getElementById('pvOverlay').style.display='none';openId=null;stopPoll();};
+
+/* While a drawer is open, poll just that one lead so a colleague's change shows
+   up without a reload. Deliberately gentle: skip while the user is mid-edit or
+   has a save pending, and never react to our own writes. */
+function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+function startPoll(){stopPoll();pollTimer=setInterval(pollOpenLead,4000);}
+function editingDrawer(){var a=document.activeElement;var dr=document.getElementById('pvDrawer');return a&&dr&&dr.contains(a);}
+function pollOpenLead(){
+  if(!openId){stopPoll();return;}
+  var id=openId;
+  fetch('/api/production/'+encodeURIComponent(id)).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d||!d.client||openId!==id)return;
+    var fresh=d.client;
+    if(!fresh.updatedAt||fresh.updatedAt===openStamp)return;   // nothing new
+    if(fresh.updatedBy&&fresh.updatedBy===MYNAME){openStamp=fresh.updatedAt;return;} // our own save
+    if(editingDrawer()||pending[id])return;                    // don't clobber an edit in progress; catch it next tick
+    var c=byId(id); if(c){for(var k in fresh)c[k]=fresh[k];}    // adopt the colleague's version
+    openStamp=fresh.updatedAt;
+    document.getElementById('dBody').innerHTML=drawerBody(c||fresh); bindDrawer(c||fresh);
+    flashUpdated(fresh.updatedBy);
+    if(curView==='overview')renderOverview();else drawWork();
+  }).catch(function(){});
+}
+function flashUpdated(who){
+  var el=document.getElementById('dMt'); if(!el)return;
+  var prev=el.textContent;
+  el.textContent='↻ Updated by '+(who||'a teammate');
+  el.style.color='var(--gold,#b98a2f)';
+  setTimeout(function(){el.style.color='';var c=byId(openId);if(c)el.textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();else el.textContent=prev;},2500);
+}
 function opts(a,sel){return a.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+o+'</option>';}).join('');}
 function drawerBody(c){
   var need=docsNeeded(c);
@@ -297,12 +336,13 @@ function drawerBody(c){
 }
 function bindDrawer(c){
   var body=document.getElementById('dBody');
-  function commit(){save(c);if(curView==='overview')renderOverview();else drawWork();document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();}
-  document.getElementById('dStage').onchange=function(e){if(c.stage!==e.target.value){c.stage=e.target.value;c.days=0;}commit();document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
-  document.getElementById('dVa').onchange=function(e){c.va=e.target.value;commit();};
-  body.querySelectorAll('input[data-b]').forEach(function(el){el.onchange=function(){c[el.getAttribute('data-b')].r=parseInt(el.value||'0',10);commit();};});
-  body.querySelectorAll('select[data-b]').forEach(function(el){el.onchange=function(){c[el.getAttribute('data-b')].st=el.value;commit();};});
-  body.querySelectorAll('input[data-doc]').forEach(function(el){el.onchange=function(){if(!c.docs)c.docs={};c.docs[el.getAttribute('data-doc')]=el.checked;commit();document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};});
+  /* Each handler saves only what it touched, so the server merge stays clean. */
+  function commit(patch){save(c,patch);if(curView==='overview')renderOverview();else drawWork();document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();}
+  document.getElementById('dStage').onchange=function(e){if(c.stage!==e.target.value){c.stage=e.target.value;c.days=0;}commit({stage:c.stage,days:c.days});document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
+  document.getElementById('dVa').onchange=function(e){c.va=e.target.value;commit({va:c.va});};
+  body.querySelectorAll('input[data-b]').forEach(function(el){el.onchange=function(){var k=el.getAttribute('data-b');c[k].r=parseInt(el.value||'0',10);var p={};p[k]={r:c[k].r};commit(p);};});
+  body.querySelectorAll('select[data-b]').forEach(function(el){el.onchange=function(){var k=el.getAttribute('data-b');c[k].st=el.value;var p={};p[k]={st:c[k].st};commit(p);};});
+  body.querySelectorAll('input[data-doc]').forEach(function(el){el.onchange=function(){if(!c.docs)c.docs={};var d=el.getAttribute('data-doc');c.docs[d]=el.checked;var dp={};dp[d]=el.checked;commit({docs:dp});document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};});
   /* The server stamps the author from the session, so take the notes list back
      from its response rather than guessing the name here. */
   document.getElementById('dAddNote').onclick=function(){
