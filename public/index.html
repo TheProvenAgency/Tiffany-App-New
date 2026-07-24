@@ -855,12 +855,18 @@ async function toggleUser(id,disabled){
   if(!r.ok){$('r_user').textContent='✗ '+(d.error||'failed');$('r_user').className='testres bad';}
   loadUsers();
 }
-async function saveSettings(){
+/* Save just the connection fields. Skips a field still showing the masked
+   placeholder so a real stored key is never overwritten with dots. Returns the
+   server's response (which carries live/demo mode). */
+async function saveConnFields(){
   const body={};
   for(const k of ['ghlToken','ghlLocationId','metaPageToken','fbPageId','igUserId','webhookSecret']){
     const v=$('s_'+k).value.trim();if(v&&!v.includes('••••'))body[k]=v;
   }
-  const r=await(await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  return (await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+}
+async function saveSettings(){
+  const r=await saveConnFields();
   let msg='Saved — mode: '+r.mode.toUpperCase(), ok=true;
 
   /* The password now belongs to your account, not to the app. Changing it
@@ -877,9 +883,14 @@ async function saveSettings(){
   loadDashboard();
 }
 async function testGhl(){
-  $('r_ghl').textContent='Testing…';$('r_ghl').className='testres';
+  $('r_ghl').textContent='Saving & testing…';$('r_ghl').className='testres';
+  await saveConnFields(); // test what's in the fields, not just what was saved before
   const r=await fetch('/api/test/ghl',{method:'POST'});const d=await r.json();
-  $('r_ghl').textContent=d.ok?('Connected ✓ '+(d.totalContacts??'')+' contacts'):('✗ '+(d.error||'failed'));
+  let msg=d.ok?('Connected ✓ '+(d.totalContacts??'')+' contacts'):('✗ '+(d.error||'failed'));
+  if(!d.ok&&d.hints&&d.hints.length)msg+=' — '+d.hints.join(' '); // local guardrails: field mix-ups
+  if(!d.ok&&d.detail)msg+=' — GHL said: '+d.detail; // raw reason from GHL: scope vs location
+  if(!d.ok&&d.tokenShape){const s=d.tokenShape;msg+=` [stored token: ${s.length} chars, starts "${s.prefix}"${s.hasWhitespace?', HAS SPACES':''}${s.looksMasked?', MASKED — not the real token':''}]`;}
+  $('r_ghl').textContent=msg;
   $('r_ghl').className='testres '+(d.ok?'ok':'bad');
 }
 async function testMeta(){

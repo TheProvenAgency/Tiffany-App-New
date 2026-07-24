@@ -8,6 +8,7 @@ const fs = require('fs');
 const store = require('./lib/store');
 const auth = require('./lib/auth');
 const ghl = require('./lib/ghl');
+const ghlcreds = require('./lib/ghlcreds');
 const meta = require('./lib/meta');
 const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
@@ -623,13 +624,31 @@ app.post('/api/config', (req, res) => {
   const allowed = ['ghlToken', 'ghlLocationId', 'metaPageToken', 'fbPageId', 'igUserId', 'igHandle', 'fbPageUrl', 'webhookSecret', 'appPassword'];
   const patch = {};
   for (const k of allowed) if (typeof req.body[k] === 'string' && req.body[k] !== '' && !req.body[k].includes('••••')) patch[k] = req.body[k].trim();
+  // Let the user paste the whole sub-account URL into the Location ID field.
+  if (patch.ghlLocationId) patch.ghlLocationId = ghlcreds.extractLocationId(patch.ghlLocationId);
   store.setConfig(patch);
   store.clearCache();
   res.json({ ok: true, mode: liveMode() ? 'live' : 'demo' });
 });
 app.post('/api/test/ghl', async (req, res) => {
-  try { res.json(await ghl.testConnection(store.getConfig())); }
-  catch (e) { res.status(400).json({ ok: false, error: e.message }); }
+  const cfg = store.getConfig();
+  // Safe shape of the stored token — no secret revealed, just enough to tell a
+  // truncated / regenerated / masked-and-saved token apart from a real one.
+  const t = String(cfg.ghlToken || '');
+  const tokenShape = { length: t.length, prefix: t.slice(0, 4), hasWhitespace: /\s/.test(t), looksMasked: t.includes('•') };
+
+  // Catch the field mix-ups locally, before troubling GoHighLevel with a call
+  // whose failure it will only describe vaguely.
+  const tokenCheck = ghlcreds.classifyToken(cfg.ghlToken);
+  const locCheck = ghlcreds.classifyLocationId(cfg.ghlLocationId);
+  if (!tokenCheck.ok || !locCheck.ok) {
+    return res.status(400).json({ ok: false, error: 'Fix these before testing', hints: [tokenCheck, locCheck].filter(x => !x.ok).map(x => x.message), tokenShape });
+  }
+
+  try { res.json({ ...(await ghl.testConnection(cfg)), tokenShape }); }
+  // Surface GoHighLevel's own reason (scope/location) — this is an admin
+  // diagnostic, so the raw detail is what makes it useful.
+  catch (e) { res.status(400).json({ ok: false, error: e.message, status: e.status, detail: e.detail, tokenShape }); }
 });
 app.post('/api/test/meta', async (req, res) => {
   try { res.json({ ok: true, ...(await meta.getFollowers(store.getConfig())) }); }
