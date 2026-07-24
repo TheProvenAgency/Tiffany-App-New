@@ -23,9 +23,21 @@ Railway/Fly.io work the same way. To run locally instead: `npm install && npm st
 ### GoHighLevel (clients, active/inactive, packages, rounds, payments, SMS)
 GHL is the hub — the Fanbasis→GHL Zap from the operations audit already pushes Total Spent, Last Payment Date, # Payments, and `status:active` into GHL, and every contact carries `status:` / `deal:` / `round:` tags.
 
-1. In the GHL **sub-account**: Settings → **Private Integrations** → New.
-2. Scopes: `contacts.readonly`, `contacts.write` (status write-back), `conversations.readonly`, `conversations/message.readonly`, `conversations/message.write` (send SMS from the app), `opportunities.readonly`.
-3. Copy the token (starts `pit-`) + the **Location ID** (Settings → Business Profile) into the app's Settings and hit **Test GHL connection**.
+1. In the GHL **sub-account** (not agency level): Settings → **Private Integrations** → **Create new**.
+2. Tick these scopes **at creation** — you cannot always add them later, and the app fails without the first one:
+   - `contacts.readonly` ← required; the connection test reads contacts
+   - `contacts.write` (status write-back), `conversations.readonly`, `conversations/message.readonly`, `conversations/message.write` (send SMS), `opportunities.readonly`
+3. Copy the token the moment it's shown — it starts `pit-` and is **40 characters** (`pit-` + a 36-char UUID). Come back later and only the integration's *name/ID* is visible, not the token.
+4. **Location ID**: the easiest, error-proof source is the sub-account URL — `…/v2/location/<THIS>/…`. You can paste the **whole URL** into the app's Location ID field; it extracts the id (~20 chars) for you.
+5. Paste token + Location ID into ⚙ Settings → **Test GHL connection** (it saves automatically before testing).
+
+**Uses GHL's v2 API only** (`services.leadconnectorhq.com`). A v1 API key (a long `eyJ…` JWT from Business Profile) will not work — it must be a `pit-` Private Integration token.
+
+The Test button names the real problem instead of guessing. Common results:
+- *"not authorized for this scope"* → the integration is missing `contacts.readonly`
+- *"Invalid JWT"* → that's a v1 key; use the `pit-` token
+- *"looks like a TOKEN, not a Location ID"* → the token got pasted into the Location field
+- *"token looks incomplete"* → truncated copy; recopy the whole 40-char token
 
 ### Instagram + Facebook followers
 1. [developers.facebook.com](https://developers.facebook.com) → create an app → add the **Facebook Login / Graph API** product.
