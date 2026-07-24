@@ -97,6 +97,24 @@ test('destroying a session invalidates its token', () => {
   assert.equal(s.resolve(token), null);
 });
 
+test('a session older than the max age is rejected', () => {
+  // The cookie says 30 days; the server must agree, or a leaked token lives
+  // forever.
+  const s = auth.createSessions({ old: { userId: 'u1', role: 'admin', createdAt: 0 } }, { maxAgeMs: 1000 });
+  assert.equal(s.resolve('old'), null);
+});
+
+test('a fresh session within the max age still resolves', () => {
+  const s = auth.createSessions(null, { maxAgeMs: 60 * 1000 });
+  const token = s.create({ id: 'u1', role: 'admin' });
+  assert.ok(s.resolve(token));
+});
+
+test('expired sessions are pruned when the store loads', () => {
+  const s = auth.createSessions({ old: { userId: 'u1', role: 'admin', createdAt: 0 } }, { maxAgeMs: 1000 });
+  assert.equal(Object.keys(s.serialize()).length, 0);
+});
+
 test('destroying all sessions for a user revokes them everywhere', () => {
   const s = auth.createSessions();
   const a = s.create({ id: 'u1', role: 'employee' });
