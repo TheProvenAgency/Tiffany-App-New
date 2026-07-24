@@ -195,6 +195,7 @@ section.view{display:none} section.view.on{display:block}
   </div>
   <div class="sec">Account</div>
   <div class="nav">
+    <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'">← Back to Proven Agency</button>
     <button onclick="openSettings()">✧ Settings</button>
     <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())">→ Sign out</button>
   </div>

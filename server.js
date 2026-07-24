@@ -117,10 +117,30 @@ app.post('/api/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// Admin-only auto-login from the Proven Agency dashboard's link-out route.
+// GET (not POST) because it arrives as a browser redirect, not a fetch --
+// the token itself is single-use-window (60s) and signed, so a GET is safe
+// here the same way a password-reset-by-email link is.
+app.get('/api/sso', (req, res) => {
+  const secret = process.env.SSO_SHARED_SECRET;
+  const payload = auth.verifySsoToken(req.query.token, secret);
+  if (!payload) {
+    console.warn('[SSO] rejected token (missing, expired, or bad signature)');
+    return res.status(401).send('This sign-in link is invalid or expired. Go back to the Proven Agency dashboard and click Tiffany again.');
+  }
+  const { users, user } = auth.findOrCreateSsoUser(getUsers(), payload);
+  store.setConfig({ users });
+  const token = sessions.create(user, { viaSso: true });
+  persistSessions();
+  res.setHeader('Set-Cookie', `msfs=${token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax`);
+  console.log(`[SSO] ${payload.email} signed in via Proven Agency link-out`);
+  res.redirect('/');
+});
+
 // webhooks + login page are public; everything else needs a session, and the
 // session's role decides what it may reach. Deny by default.
 app.use((req, res, next) => {
-  const open = req.path.startsWith('/webhooks/') || req.path === '/api/login' || req.path === '/login.html' || req.path === '/favicon.ico';
+  const open = req.path.startsWith('/webhooks/') || req.path === '/api/login' || req.path === '/api/sso' || req.path === '/login.html' || req.path === '/favicon.ico';
   if (open) return next();
 
   const session = sessions.resolve(cookieToken(req));
@@ -139,7 +159,7 @@ app.use((req, res, next) => {
 
 app.get('/api/me', (req, res) => {
   const u = getUsers().find(x => x.id === req.user.userId);
-  res.json({ id: req.user.userId, name: u ? u.name : 'User', username: u ? u.username : null, role: req.user.role });
+  res.json({ id: req.user.userId, name: u ? u.name : 'User', username: u ? u.username : null, role: req.user.role, viaSso: !!req.user.viaSso });
 });
 
 // user management (admin only — employees are blocked by canAccess)

@@ -53,6 +53,14 @@
     .then(function (me) {
       document.body.setAttribute('data-role', me.role);
 
+      // Shown only for a session that arrived via the Proven Agency's
+      // admin-only SSO link-out -- Tiffany and her employees log in here
+      // directly and have nowhere to "go back" to, so they never see it.
+      if (me.viaSso) {
+        var back = document.getElementById('backToProvenBtn');
+        if (back) back.style.display = '';
+      }
+
       if (me.role === 'admin') {
         // Loaded only for admins: the file has balances hardcoded in it, and
         // employees get 403 for it, which would log a console error.
