@@ -303,6 +303,11 @@ section.view{display:none} section.view.on{display:block}
           <div id="attention" style="margin-top:6px"></div>
         </div>
         <div class="card" style="margin-top:14px">
+          <h3 class="cardtitle">◎ MyFreeScoreNow — affiliate gap</h3>
+          <div class="cardsub">Clients not enrolled under her affiliate link</div>
+          <div id="affiliateGap" style="margin-top:10px"></div>
+        </div>
+        <div class="card" style="margin-top:14px">
           <h3 class="cardtitle">✦ Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
           <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
           <div class="dstat" style="margin-top:12px">
@@ -553,7 +558,28 @@ const GREEN='#2e7d54',RED='#b3372f',BLUE='#3563a8',GOLD='#b98a2f',GRAY='#b9b3a8'
 function grad(ctx,color,h){const g=ctx.createLinearGradient(0,0,0,h||190);g.addColorStop(0,color+'33');g.addColorStop(1,color+'00');return g;}
 
 /* ================= dashboard ================= */
+/* MyFreeScoreNow affiliate gap — admin card. Honest empty state until the Zap
+   is posting members. */
+async function renderAffiliateGap(){
+  const el=$('affiliateGap'); if(!el) return;
+  try{
+    const d=await(await fetch('/api/affiliate-gap')).json();
+    if(!d||!d.counts){el.innerHTML='<div class="cardsub">Unavailable.</div>';return;}
+    if(!d.syncedAt){
+      el.innerHTML='<div class="cardsub">No members synced yet. Add a Zapier Zap (MyFreeScoreNow → Fetch Active Members List → Webhooks POST) pointing at <code>/webhooks/mfsn</code> — see ⚙ Settings for the URL.</div>';
+      return;
+    }
+    const c=d.counts;
+    const list=(d.notEnrolled||[]).slice(0,12).map(x=>`<div class="src"><span>${escUser(x.name||x.email||x.id)}</span>${x.email?'<span class="cardsub">'+escUser(x.email)+'</span>':''}</div>`).join('');
+    el.innerHTML=`<div class="dstat" style="margin-bottom:10px">
+        <div><div class="l">Not enrolled</div><div class="v">${c.notEnrolled.toLocaleString()}</div></div>
+        <div><div class="l">Enrolled</div><div class="v">${c.enrolled.toLocaleString()}</div></div>
+        <div><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div></div>
+      </div>${c.notEnrolled?('<div class="cardsub" style="margin-bottom:6px">Chase these (first 12):</div>'+list):'<div class="cardsub">Everyone is enrolled. 🎉</div>'}`;
+  }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
+}
 async function loadDashboard(){
+  renderAffiliateGap();
   const qs=new URLSearchParams({granularity});if(from)qs.set('from',from);if(to)qs.set('to',to);
   const r=await fetch('/api/dashboard?'+qs);if(r.status===401){location.href='/login.html';return;}
   const d=await r.json();const k=d.kpis;
