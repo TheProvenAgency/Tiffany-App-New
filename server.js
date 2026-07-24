@@ -9,6 +9,7 @@ const store = require('./lib/store');
 const auth = require('./lib/auth');
 const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
+const affiliate = require('./lib/affiliate');
 const meta = require('./lib/meta');
 const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
@@ -737,6 +738,26 @@ app.post('/webhooks/sms', (req, res) => {
   res.json({ ok: true, id: ev.id });
 });
 
+// MyFreeScoreNow enrolled members, from a scheduled Zapier "Fetch Active
+// Members List" Zap. A `members` array is a full snapshot and REPLACES the set
+// (so members who dropped off disappear); a single member is upserted.
+app.post('/webhooks/mfsn', (req, res) => {
+  if (!checkSecret(req, res)) return;
+  const b = req.body || {};
+  const incoming = Array.isArray(b) ? b : (Array.isArray(b.members) ? b.members : null);
+  let members;
+  if (incoming) {
+    members = affiliate.normalizeMembers(incoming); // full snapshot: replace
+  } else if (b.email || b.name) {
+    members = affiliate.normalizeMembers(store.getMfsnMembers().concat([{ email: b.email, name: b.name }])); // upsert one
+  } else {
+    return res.status(400).json({ error: 'send a members array or a single {email,name}' });
+  }
+  store.setMfsnMembers(members);
+  store.setMfsnSyncedAt(new Date().toISOString());
+  res.json({ ok: true, count: members.length });
+});
+
 // ------------------------- daily snapshot job -------------------------
 async function takeSnapshot() {
   try {
@@ -786,6 +807,21 @@ function readProd() {
   } catch (e) { return null; }
 }
 function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); return true; } catch (e) { return false; } }
+// Which clients are NOT enrolled under her MyFreeScoreNow affiliate link.
+// Admin-only (not in the employee allowlist, so denied by default).
+app.get('/api/affiliate-gap', async (req, res) => {
+  try {
+    const clients = await getClients();
+    const gap = affiliate.affiliateGap(clients, store.getMfsnMembers());
+    res.json({
+      counts: gap.counts,
+      notEnrolled: gap.notEnrolled.map(c => ({ id: c.id, name: c.name, email: c.email || null, phone: c.phone || null })),
+      syncedAt: store.getMfsnSyncedAt(),
+      mode: liveMode() ? 'live' : 'demo'
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/production', (req, res) => { res.json({ clients: readProd(), mode: liveMode() ? 'live' : 'demo' }); });
 
 // One lead, for an open drawer to poll cheaply instead of pulling all 3,578.

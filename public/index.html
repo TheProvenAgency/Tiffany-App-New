@@ -494,6 +494,7 @@ section.view{display:none} section.view.on{display:block}
     <input id="s_webhookSecret" placeholder="any-random-string">
     <div class="hookurl" id="hookFan"></div>
     <div class="hookurl" id="hookFox"></div>
+    <div class="hookurl" id="hookMfsn"></div>
     <label style="margin-top:20px">Your password</label>
     <input id="s_appPassword" type="text" placeholder="change your own login password">
 
@@ -823,6 +824,7 @@ async function openSettings(){
   const base=location.origin;
   $('hookFan').textContent='Fanbasis → POST '+base+'/webhooks/fanbasis?secret=…';
   $('hookFox').textContent='DisputeFox → POST '+base+'/webhooks/disputefox?secret=…';
+  $('hookMfsn').textContent='MyFreeScoreNow (Zapier: Fetch Active Members List) → POST '+base+'/webhooks/mfsn?secret=…';
   loadUsers();
   $('overlay').classList.add('show');
 }
