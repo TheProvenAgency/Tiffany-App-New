@@ -254,6 +254,69 @@ app.post('/api/support-tickets', async (req, res) => {
   res.json({ ok: true, id: ticket.id, forwarded });
 });
 
+// "All Ticket Requests" -- both roles see the full shared team queue
+// (everyone's tickets, not just their own), synced live from Proven
+// Agency's dashboard rather than from the local audit copy above, since
+// that copy predates any reply/status a ticket may have picked up there.
+// `unread` is computed per requesting user from lib/store.js's
+// last-viewed map, so the same GET can drive both the list and the nav
+// badge count without a second request.
+app.get('/api/support-tickets', async (req, res) => {
+  const secret = process.env.TICKETS_SHARED_SECRET;
+  if (!secret) return res.status(502).json({ error: 'TICKETS_SHARED_SECRET not configured' });
+  try {
+    const resp = await fetch(`${PROVEN_DASHBOARD_URL}/api/support-tickets?source=msfs-dashboard`, {
+      headers: { 'x-tickets-secret': secret }
+    });
+    if (!resp.ok) return res.status(502).json({ error: `HTTP ${resp.status}` });
+    const data = await resp.json();
+    const views = store.getTicketViews()[req.user.userId] || {};
+    const tickets = (data.tickets || []).map(t => {
+      const notes = (t.support_ticket_notes || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const lastActivity = t.updated_at || t.created_at;
+      const lastViewed = views[t.id];
+      const unread = !lastViewed || new Date(lastActivity) > new Date(lastViewed);
+      return { ...t, notes, unread };
+    });
+    res.json({ ok: true, tickets });
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// Marks a ticket as seen by the current user, clearing its unread badge.
+app.post('/api/support-tickets/:id/view', (req, res) => {
+  store.markTicketViewed(req.user.userId, req.params.id);
+  res.json({ ok: true });
+});
+
+// A reply from this dashboard, relayed to Proven Agency's thread on the
+// same ticket -- see support_ticket_notes in the proven-agency-dashboard
+// repo. Counts as having viewed the ticket too, so replying also clears
+// the unread badge.
+app.post('/api/support-tickets/:id/notes', async (req, res) => {
+  const message = String((req.body || {}).message || '').trim();
+  if (!message) return res.status(400).json({ error: 'message is required' });
+  const secret = process.env.TICKETS_SHARED_SECRET;
+  if (!secret) return res.status(502).json({ error: 'TICKETS_SHARED_SECRET not configured' });
+
+  const me = getUsers().find(u => u.id === req.user.userId);
+  const authorName = me ? me.name : null;
+  try {
+    const resp = await fetch(`${PROVEN_DASHBOARD_URL}/api/support-tickets/${encodeURIComponent(req.params.id)}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-tickets-secret': secret },
+      body: JSON.stringify({ message, authorName })
+    });
+    if (!resp.ok) return res.status(502).json({ error: `HTTP ${resp.status}` });
+    const d = await resp.json();
+    store.markTicketViewed(req.user.userId, req.params.id);
+    res.json({ ok: true, id: d.id });
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ------------------------- read-only guard -------------------------

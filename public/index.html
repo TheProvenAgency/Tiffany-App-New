@@ -197,6 +197,7 @@ section.view{display:none} section.view.on{display:block}
   <div class="nav">
     <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'">← Back to Proven Agency</button>
     <button onclick="openSettings()">✧ Settings</button>
+    <button onclick="showView('tickets')">🎫 Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
     <button onclick="openSupportTicket()">✉ Submit a Support Ticket</button>
     <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())">→ Sign out</button>
   </div>
@@ -453,6 +454,15 @@ section.view{display:none} section.view.on{display:block}
       </div>
     </div>
   </section>
+
+  <!-- ================= TICKET REQUESTS ================= -->
+  <section class="view" id="view-tickets">
+    <div class="card">
+      <h3 class="cardtitle">🎫 Support Ticket Requests</h3>
+      <div class="cardsub">Everything submitted to The Proven Agency from this dashboard, and their replies.</div>
+      <div id="ticketList" style="margin-top:10px"></div>
+    </div>
+  </section>
 </main>
 
 <!-- ============ CLIENT DRAWER ============ -->
@@ -537,6 +547,22 @@ section.view{display:none} section.view.on{display:block}
       <button class="btn primary" onclick="submitSupportTicket()">Submit</button>
       <button class="btn ghost" onclick="closeSupportTicket()">Close</button>
       <span class="testres" id="r_ticket"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TICKET THREAD (admin + employee) ============ -->
+<div class="overlay" id="ticketThreadOverlay">
+  <div class="modal" style="max-width:560px">
+    <h2 id="th_subject">—</h2>
+    <div class="dmeta" id="th_meta" style="color:var(--muted);font-size:12.5px;margin:4px 0 14px"></div>
+    <div id="th_notes" style="max-height:360px;overflow-y:auto;margin-bottom:14px"></div>
+    <label>Reply</label>
+    <textarea id="th_reply" rows="3" placeholder="Add a reply…" style="width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
+    <div class="dactions" style="margin-top:14px">
+      <button class="btn primary" onclick="sendTicketReply()">Send</button>
+      <button class="btn ghost" onclick="closeTicketThread()">Close</button>
+      <span class="testres" id="r_th_reply"></span>
     </div>
   </div>
 </div>
@@ -708,13 +734,13 @@ async function loadFeed(){
 function goClients(status){showView('clients');$('fStatus').value=(status==='active'||status==='inactive')?status:'';page=1;loadClients();}
 
 /* ================= views ================= */
-const TITLES={dash:'Dashboard',pipeline:'Pipeline',clients:'Clients',react:'Reactivation',tasks:'Follow-Ups',social:'Social'};
+const TITLES={dash:'Dashboard',pipeline:'Pipeline',clients:'Clients',react:'Reactivation',tasks:'Follow-Ups',social:'Social',tickets:'Ticket Requests'};
 function showView(v){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
   $('pageTitle').textContent=TITLES[v]||'Dashboard';
   if(v==='pipeline')loadPipeline();if(v==='react')loadReact();if(v==='tasks')loadTasks();
-  if(v==='clients')loadClients();if(v==='social')loadSocial();
+  if(v==='clients')loadClients();if(v==='social')loadSocial();if(v==='tickets')loadTickets();
 }
 $('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){showView('clients');$('q').value=$('globalSearch').value;page=1;loadClients();}});
 
@@ -955,6 +981,81 @@ async function submitSupportTicket(){
   }
 }
 
+/* ================= ticket requests -- shared team queue (admin + employee) ================= */
+let ticketsCache=[], curTicketId=null;
+const TICKET_STATUS_CLASS={Open:'badge-warn','In Progress':'badge-warn',Resolved:'badge-ok'};
+async function loadTickets(){
+  const listEl=$('ticketList');
+  try{
+    const r=await fetch('/api/support-tickets');
+    const d=await r.json();
+    if(!r.ok){ if(listEl)listEl.innerHTML='<div class="cardsub">Could not load tickets — '+(d.error||'unknown error')+'.</div>'; updateTicketBadge(); return; }
+    ticketsCache=d.tickets||[];
+    renderTicketList();
+    updateTicketBadge();
+  }catch(e){ if(listEl)listEl.innerHTML='<div class="cardsub">Could not load tickets.</div>'; }
+}
+function renderTicketList(){
+  const el=$('ticketList'); if(!el)return;
+  if(!ticketsCache.length){el.innerHTML='<div class="cardsub">No tickets submitted yet.</div>';return;}
+  el.innerHTML=ticketsCache.map(t=>{
+    const lastNote=t.notes&&t.notes.length?t.notes[t.notes.length-1]:null;
+    const preview=lastNote?lastNote.message:t.message;
+    const previewText=escUser((preview||'').slice(0,100))+((preview||'').length>100?'…':'');
+    return `<div class="att" style="cursor:pointer;align-items:flex-start" onclick="openTicketThread('${t.id}')">
+      <div class="ico">${t.unread?'🔴':'✉'}</div>
+      <div style="flex:1;min-width:0">
+        <b>${escUser(t.subject)}</b>
+        <span class="badge-soft ${TICKET_STATUS_CLASS[t.status]||'badge-warn'}" style="margin-left:6px">${escUser(t.status)}</span>
+        <span style="display:block;color:var(--muted);font-size:11.5px;margin-top:3px">${previewText}</span>
+        <span style="display:block;color:var(--muted);font-size:10.5px;margin-top:2px">${escUser(t.submitted_by_name||'—')} · ${new Date(t.updated_at||t.created_at).toLocaleString()}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function updateTicketBadge(){
+  const b=$('ticketBadge'); if(!b)return;
+  const n=ticketsCache.filter(t=>t.unread).length;
+  if(n>0){b.textContent=n;b.style.display='';}else{b.style.display='none';}
+}
+async function openTicketThread(id){
+  const t=ticketsCache.find(x=>x.id===id); if(!t)return;
+  curTicketId=id;
+  $('th_subject').textContent=t.subject;
+  $('th_meta').textContent=`${t.status} · submitted by ${t.submitted_by_name||'—'} · ${new Date(t.created_at).toLocaleString()}`;
+  const notes=[{message:t.message,author_source:'client',author_name:t.submitted_by_name,created_at:t.created_at}].concat(t.notes||[]);
+  $('th_notes').innerHTML=notes.map(n=>{
+    const fromProven=n.author_source==='proven_agency';
+    return `<div class="noterow" style="${fromProven?'background:var(--blue-soft)':''}">
+      <b>${escUser(n.author_name||(fromProven?'The Proven Agency':'—'))}</b>
+      <div style="margin-top:3px;white-space:pre-wrap">${escUser(n.message)}</div>
+      <div class="mut">${new Date(n.created_at).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+  $('th_reply').value=''; $('r_th_reply').textContent='';$('r_th_reply').className='testres';
+  $('ticketThreadOverlay').classList.add('show');
+  try{
+    await fetch('/api/support-tickets/'+id+'/view',{method:'POST'});
+    t.unread=false; updateTicketBadge(); renderTicketList();
+  }catch(e){}
+}
+function closeTicketThread(){ $('ticketThreadOverlay').classList.remove('show'); curTicketId=null; }
+async function sendTicketReply(){
+  const message=$('th_reply').value.trim();
+  if(!message||!curTicketId)return;
+  $('r_th_reply').textContent='Sending…';$('r_th_reply').className='testres';
+  const r=await fetch('/api/support-tickets/'+curTicketId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})});
+  const d=await r.json();
+  if(r.ok){
+    $('r_th_reply').textContent='Sent ✓';$('r_th_reply').className='testres ok';
+    const keepId=curTicketId;
+    await loadTickets();
+    openTicketThread(keepId);
+  }else{
+    $('r_th_reply').textContent='✗ '+(d.error||'failed');$('r_th_reply').className='testres bad';
+  }
+}
+
 async function testGhl(){
   $('r_ghl').textContent='Saving & testing…';$('r_ghl').className='testres';
   await saveConnFields(); // test what's in the fields, not just what was saved before
@@ -997,8 +1098,9 @@ function renderTopPosts(){
 
 /* ================= boot ================= */
 [from,to]=presetRange(preset);granularity=pickGran(from,to);
-renderFilters();loadDashboard();loadTasks();renderTopPosts();
+renderFilters();loadDashboard();loadTasks();renderTopPosts();loadTickets();
 setInterval(loadDashboard,5*60*1000);
+setInterval(loadTickets,2*60*1000);
 </script>
 <script src="/production.js" defer></script><script src="/role.js" defer></script>
 </body>
