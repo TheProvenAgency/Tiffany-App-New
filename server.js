@@ -197,6 +197,63 @@ app.patch('/api/users/:id', (req, res) => {
   store.setConfig({ users: list });
   res.json({ ok: true });
 });
+
+// ------------------------- support tickets -------------------------
+// Both admin and employee can submit (see EMPLOYEE_API in lib/auth.js) --
+// this is how Tiffany's team flags something for Proven Agency to work on
+// without needing a login over there. Saved locally first (so a
+// submission is never lost even if the forward below fails), then
+// forwarded to Proven Agency's own dashboard so it shows up where the
+// agency actually works -- same shared-secret pattern as the SSO
+// link-out, just in the opposite direction.
+const PROVEN_DASHBOARD_URL = process.env.PROVEN_DASHBOARD_URL || 'https://proven-agency-dashboard.vercel.app';
+
+app.post('/api/support-tickets', async (req, res) => {
+  const subject = String((req.body || {}).subject || '').trim();
+  const message = String((req.body || {}).message || '').trim();
+  if (!subject || !message) return res.status(400).json({ error: 'subject and message are required' });
+
+  const me = getUsers().find(u => u.id === req.user.userId);
+  const submittedByName = me ? me.name : null;
+  const submittedByUsername = me ? me.username : null;
+  const submittedByRole = req.user.role;
+
+  let forwarded = false;
+  let forwardError = null;
+  const secret = process.env.TICKETS_SHARED_SECRET;
+  if (secret) {
+    try {
+      const resp = await fetch(`${PROVEN_DASHBOARD_URL}/api/support-tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-tickets-secret': secret },
+        body: JSON.stringify({ source: 'msfs-dashboard', subject, message, submittedByName, submittedByUsername, submittedByRole })
+      });
+      if (resp.ok) {
+        forwarded = true;
+      } else {
+        forwardError = `HTTP ${resp.status}`;
+        console.warn(`[SUPPORT-TICKET] forward failed: HTTP ${resp.status}`);
+      }
+    } catch (e) {
+      forwardError = e.message;
+      console.warn(`[SUPPORT-TICKET] forward failed: ${e.message}`);
+    }
+  } else {
+    forwardError = 'TICKETS_SHARED_SECRET not configured';
+    console.warn('[SUPPORT-TICKET] TICKETS_SHARED_SECRET not configured -- saved locally only');
+  }
+
+  // Saved after the forward attempt completes, so the local audit copy's
+  // forwarded/forwardError fields reflect what actually happened rather
+  // than a value that could never be updated once written.
+  const ticket = store.addTicket({
+    subject, message, submittedByName, submittedByUsername, submittedByRole,
+    forwarded, forwardError
+  });
+
+  res.json({ ok: true, id: ticket.id, forwarded });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ------------------------- read-only guard -------------------------

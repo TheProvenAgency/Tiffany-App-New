@@ -197,6 +197,7 @@ section.view{display:none} section.view.on{display:block}
   <div class="nav">
     <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'">← Back to Proven Agency</button>
     <button onclick="openSettings()">✧ Settings</button>
+    <button onclick="openSupportTicket()">✉ Submit a Support Ticket</button>
     <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())">→ Sign out</button>
   </div>
   <div class="spacer"></div>
@@ -519,6 +520,23 @@ section.view{display:none} section.view.on{display:block}
       <button class="btn primary" onclick="saveSettings()">Save</button>
       <button class="btn ghost" onclick="document.getElementById('overlay').classList.remove('show')">Close</button>
       <span class="testres" id="r_save"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SUPPORT TICKET (admin + employee) ============ -->
+<div class="overlay" id="ticketOverlay">
+  <div class="modal">
+    <h2>Submit a support ticket</h2>
+    <p class="hint">Sends straight to The Proven Agency's dashboard for us to work on.</p>
+    <label>Subject</label>
+    <input id="t_subject" placeholder="What's this about?">
+    <label style="margin-top:14px">Details</label>
+    <textarea id="t_message" rows="5" placeholder="Tell us what's going on…" style="width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
+    <div class="dactions" style="margin-top:20px">
+      <button class="btn primary" onclick="submitSupportTicket()">Submit</button>
+      <button class="btn ghost" onclick="closeSupportTicket()">Close</button>
+      <span class="testres" id="r_ticket"></span>
     </div>
   </div>
 </div>
@@ -916,6 +934,27 @@ async function saveSettings(){
   $('r_save').textContent=msg;$('r_save').className='testres '+(ok?'ok':'bad');
   loadDashboard();
 }
+
+/* ================= support ticket (admin + employee) ================= */
+function openSupportTicket(){
+  $('t_subject').value='';$('t_message').value='';
+  $('r_ticket').textContent='';$('r_ticket').className='testres';
+  $('ticketOverlay').classList.add('show');
+}
+function closeSupportTicket(){ $('ticketOverlay').classList.remove('show'); }
+async function submitSupportTicket(){
+  const subject=$('t_subject').value.trim(), message=$('t_message').value.trim();
+  if(!subject||!message){$('r_ticket').textContent='Subject and details are required';$('r_ticket').className='testres bad';return;}
+  const r=await fetch('/api/support-tickets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject,message})});
+  const d=await r.json();
+  if(r.ok){
+    $('r_ticket').textContent='Sent ✓';$('r_ticket').className='testres ok';
+    setTimeout(closeSupportTicket,900);
+  }else{
+    $('r_ticket').textContent='✗ '+(d.error||'failed');$('r_ticket').className='testres bad';
+  }
+}
+
 async function testGhl(){
   $('r_ghl').textContent='Saving & testing…';$('r_ghl').className='testres';
   await saveConnFields(); // test what's in the fields, not just what was saved before
