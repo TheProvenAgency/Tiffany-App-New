@@ -1018,9 +1018,11 @@ function updateTicketBadge(){
   const n=ticketsCache.filter(t=>t.unread).length;
   if(n>0){b.textContent=n;b.style.display='';}else{b.style.display='none';}
 }
-async function openTicketThread(id){
-  const t=ticketsCache.find(x=>x.id===id); if(!t)return;
-  curTicketId=id;
+let ticketThreadTimer=null;
+// Renders the thread body only (subject/meta/messages) -- never touches
+// the reply textarea, so a live refresh while someone is mid-reply never
+// wipes what they've typed.
+function renderThread(t){
   $('th_subject').textContent=t.subject;
   $('th_meta').textContent=`${t.status} · submitted by ${t.submitted_by_name||'—'} · ${new Date(t.created_at).toLocaleString()}`;
   const notes=[{message:t.message,author_source:'client',author_name:t.submitted_by_name,created_at:t.created_at}].concat(t.notes||[]);
@@ -1032,14 +1034,32 @@ async function openTicketThread(id){
       <div class="mut">${new Date(n.created_at).toLocaleString()}</div>
     </div>`;
   }).join('');
+}
+async function openTicketThread(id){
+  const t=ticketsCache.find(x=>x.id===id); if(!t)return;
+  curTicketId=id;
+  renderThread(t);
   $('th_reply').value=''; $('r_th_reply').textContent='';$('r_th_reply').className='testres';
   $('ticketThreadOverlay').classList.add('show');
   try{
     await fetch('/api/support-tickets/'+id+'/view',{method:'POST'});
     t.unread=false; updateTicketBadge(); renderTicketList();
   }catch(e){}
+  // Live thread: poll every few seconds while it's open so a reply from
+  // Proven Agency's side shows up on its own -- nobody has to reopen or
+  // refresh the page to see it.
+  clearInterval(ticketThreadTimer);
+  ticketThreadTimer=setInterval(async()=>{
+    if(!curTicketId)return;
+    await loadTickets({silent:true});
+    const fresh=ticketsCache.find(x=>x.id===curTicketId);
+    if(fresh)renderThread(fresh);
+  },4000);
 }
-function closeTicketThread(){ $('ticketThreadOverlay').classList.remove('show'); curTicketId=null; }
+function closeTicketThread(){
+  $('ticketThreadOverlay').classList.remove('show'); curTicketId=null;
+  clearInterval(ticketThreadTimer); ticketThreadTimer=null;
+}
 async function sendTicketReply(){
   const message=$('th_reply').value.trim();
   if(!message||!curTicketId)return;
@@ -1048,9 +1068,11 @@ async function sendTicketReply(){
   const d=await r.json();
   if(r.ok){
     $('r_th_reply').textContent='Sent ✓';$('r_th_reply').className='testres ok';
+    $('th_reply').value='';
     const keepId=curTicketId;
-    await loadTickets();
-    openTicketThread(keepId);
+    await loadTickets({silent:true});
+    const fresh=ticketsCache.find(x=>x.id===keepId);
+    if(fresh)renderThread(fresh);
   }else{
     $('r_th_reply').textContent='✗ '+(d.error||'failed');$('r_th_reply').className='testres bad';
   }
@@ -1100,7 +1122,11 @@ function renderTopPosts(){
 [from,to]=presetRange(preset);granularity=pickGran(from,to);
 renderFilters();loadDashboard();loadTasks();renderTopPosts();loadTickets();
 setInterval(loadDashboard,5*60*1000);
-setInterval(loadTickets,2*60*1000);
+// Background badge refresh (a thread that's actually open polls much
+// faster -- see openTicketThread). 20s keeps the unread count current
+// without a manual refresh, without hammering the sync endpoint for
+// people who never open Ticket Requests.
+setInterval(loadTickets,20*1000);
 </script>
 <script src="/production.js" defer></script><script src="/role.js" defer></script>
 </body>
