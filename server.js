@@ -842,16 +842,45 @@ app.get('/api/affiliate-gap', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/production', (req, res) => { res.json({ clients: readProd(), mode: liveMode() ? 'live' : 'demo' }); });
+// Which Deal Production clients are (not) enrolled under her MyFreeScoreNow
+// affiliate link, PLUS which MyFreeScoreNow members match no client at all
+// (prospects — on MFSN, not yet a credit-repair client). Computed live off
+// the current roster + synced member list on every call; nothing is
+// persisted here, so it always reflects the latest /webhooks/mfsn sync.
+// Admin-only (not in the employee allowlist, so denied by default).
+app.get('/api/mfsn-gap', (req, res) => {
+  try {
+    const clients = readProd() || [];
+    const gap = affiliate.productionGap(clients, store.getMfsnMembers());
+    res.json({
+      counts: gap.counts,
+      prospects: gap.prospects, // [{email, name}] — on MFSN, no matching client
+      syncedAt: store.getMfsnSyncedAt()
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Merge each client's mfsn tag ('affiliate' | 'needs') in live, computed from
+// the current synced member list -- never written back to production.json,
+// so it can't fight with a colleague's PATCH.
+function withMfsnTags(clients) {
+  if (!Array.isArray(clients)) return clients;
+  const gap = affiliate.productionGap(clients, store.getMfsnMembers());
+  const tagOf = new Map(gap.tagged.map(t => [t.id, t.mfsn]));
+  return clients.map(c => ({ ...c, mfsn: tagOf.get(c.id) || null }));
+}
+
+app.get('/api/production', (req, res) => { res.json({ clients: withMfsnTags(readProd()), mode: liveMode() ? 'live' : 'demo' }); });
 
 // One lead, for an open drawer to poll cheaply instead of pulling all 3,578.
 app.get('/api/production/:id', (req, res) => {
   const list = readProd();
   const lead = Array.isArray(list) ? list.find(c => c.id === req.params.id) : null;
   if (!lead) return res.status(404).json({ error: 'no such lead' });
+  const [tagged] = Array.isArray(list) ? withMfsnTags([lead]) : [lead];
   // Stable shape: a never-edited lead still reports updatedAt, so pollers can
   // rely on the field existing.
-  res.json({ client: { updatedAt: null, updatedBy: null, ...lead } });
+  res.json({ client: { updatedAt: null, updatedBy: null, ...tagged } });
 });
 app.post('/api/production', (req, res) => {
   const c = req.body && req.body.clients;

@@ -50,6 +50,8 @@ var css=''+
 '#view-production .stg-rounds{background:#eef4ef;color:#2e7d54}#view-production .stg-done{background:var(--green-soft);color:#1f6a45}'+
 '#view-production .pv-next{font-weight:600;white-space:nowrap}#view-production .pv-next.attn{color:var(--red)}'+
 '#view-production .pv-doc{font-size:11px;font-weight:700}#view-production .doc-ok{color:#2e7d54}#view-production .doc-part{color:var(--gold)}#view-production .doc-no{color:var(--red)}'+
+'#view-production .pv-mfsn{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}'+
+'#view-production .mfsn-yes{background:var(--green-soft);color:#1f6a45}#view-production .mfsn-no{background:var(--gold-soft);color:#8a6516}'+
 '#view-production .pv-days{font-size:11.5px;color:var(--muted);white-space:nowrap}'+
 '#view-production .pv-pager{display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--muted)}'+
 '#view-production .pv-pager button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;color:var(--ink);font-size:12px}'+
@@ -91,7 +93,7 @@ var sectionHTML=''+
  '<div class="pv-chips" id="pvChips"></div>'+
  '<div class="pv-bar"><div class="pv-tools"><input id="pvSearch" placeholder="Search a client or package…"><span class="pv-count" id="pvCount"></span></div></div>'+
  '<div id="pvQueue"><div class="pv-tablewrap"><table class="pv-table"><thead><tr>'+
-   '<th>Client</th><th>Package</th><th>Stage</th><th>In stage</th><th class="ctr">TransUnion</th><th class="ctr">Equifax</th><th class="ctr">Experian</th><th class="ctr">Docs</th><th>Assigned</th><th>Next action</th>'+
+   '<th>Client</th><th>Package</th><th>Stage</th><th>In stage</th><th class="ctr">TransUnion</th><th class="ctr">Equifax</th><th class="ctr">Experian</th><th class="ctr">Docs</th><th>Assigned</th><th>MFSN</th><th>Next action</th>'+
    '</tr></thead><tbody id="pvBody"></tbody></table></div><div class="pv-pager" id="pvPager"></div></div>'+
  '<div id="pvBoardView" style="display:none"><div class="pv-board" id="pvBoard"></div></div>'+
 '</div>'+
@@ -118,8 +120,18 @@ var FILTERS=[
  {id:'docs',label:'Docs incomplete',dot:C.gold,f:function(c){return docCount(c)<DOCS.length&&c.stage!=='Onboarding';}},
  {id:'rounds',label:'In rounds',dot:C.green,f:function(c){return c.stage==='In rounds';}},
  {id:'onb',label:'Onboarding',dot:'#7a7461',f:function(c){return c.stage==='Onboarding';}},
- {id:'done',label:'Completed',dot:'#1f6a45',f:function(c){return c.stage==='Completed';}}
+ {id:'done',label:'Completed',dot:'#1f6a45',f:function(c){return c.stage==='Completed';}},
+{id:'needsAffiliate',label:'Needs affiliate',dot:C.gold,f:function(c){return c.mfsn==='needs';}}
 ];
+/* c.mfsn is computed server-side (see /api/production in server.js) by
+   matching name against the synced MyFreeScoreNow roster -- 'affiliate' (paying
+   her), 'needs' (her client, not enrolled under her link), or null/undefined
+   before any MFSN sync has happened yet. */
+function mfsnPill(c){
+if(c.mfsn==='affiliate')return '<span class="pv-mfsn mfsn-yes">Affiliate</span>';
+if(c.mfsn==='needs')return '<span class="pv-mfsn mfsn-no">Needs affiliate</span>';
+return '<span class="pv-days">-</span>';
+}
 function bpill(b){
   if(b.st==='done')return '<span class="pill2 pv-done">R'+b.r+' ✓</span>';
   if(b.st==='ready')return '<span class="pill2 pv-ready">R'+b.r+' ready</span>';
@@ -185,22 +197,26 @@ function renderOverview(){
   var attn=0,docsInc=0,pkg={};
   var cats=['Not started','R1','R2','R3','R4','R5','R6+','Ready','Login'];
   var bur={TU:{},EQ:{},EX:{}}; cats.forEach(function(k){bur.TU[k]=0;bur.EQ[k]=0;bur.EX[k]=0;});
+  var mfsnAffiliate=0, mfsnNeeds=0;
   CLIENTS.forEach(function(c){
     st[c.stage]=(st[c.stage]||0)+1;
     if(anyLogin(c))attn++;
     if(docCount(c)<DOCS.length&&c.stage!=='Onboarding')docsInc++;
     if(c.pkg)pkg[c.pkg]=(pkg[c.pkg]||0)+1;
+    if(c.mfsn==='affiliate')mfsnAffiliate++; else if(c.mfsn==='needs')mfsnNeeds++;
     bur.TU[bucketOf(c.tu)]++; bur.EQ[bucketOf(c.eq)]++; bur.EX[bucketOf(c.ex)]++;
   });
   var topPkg=Object.keys(pkg).map(function(k){return[k,pkg[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
   ov.innerHTML=''+
-   '<div class="pv-kpis">'+
+   '<div class="pv-kpis" style="grid-template-columns:repeat(8,1fr)">'+
     '<div class="pv-kpi"><div class="l">Total clients</div><div class="v">'+fmt(CLIENTS.length)+'</div></div>'+
     '<div class="pv-kpi good"><div class="l">In rounds</div><div class="v">'+fmt(st['In rounds'])+'</div></div>'+
     '<div class="pv-kpi"><div class="l">Completed</div><div class="v">'+fmt(st.Completed)+'</div></div>'+
     '<div class="pv-kpi"><div class="l">Onboarding</div><div class="v">'+fmt(st.Onboarding)+'</div></div>'+
     '<div class="pv-kpi alert"><div class="l">Login blocked</div><div class="v">'+fmt(attn)+'</div></div>'+
     '<div class="pv-kpi"><div class="l">Docs incomplete</div><div class="v">'+fmt(docsInc)+'</div></div>'+
+    '<div class="pv-kpi good"><div class="l">MFSN affiliate</div><div class="v">'+fmt(mfsnAffiliate)+'</div></div>'+
+    '<div class="pv-kpi alert"><div class="l">Needs affiliate</div><div class="v">'+fmt(mfsnNeeds)+'</div></div>'+
    '</div>'+
    '<div class="pv-grid2">'+
     '<div class="pv-card"><h3>Dispute rounds by bureau</h3><p class="cap">Where each bureau stands across the whole book.</p><div class="pv-wrap"><canvas id="pvChBur"></canvas></div></div>'+
@@ -241,8 +257,8 @@ function drawWork(){
     document.getElementById('pvBody').innerHTML=slice.length?slice.map(function(c){var na=nextAction(c);return '<tr onclick="pvOpen(\''+c.id+'\')">'+
       '<td class="pv-name">'+esc(c.name)+'</td><td class="pv-pkg">'+esc(c.pkg)+'</td><td>'+stagePill(c.stage)+'</td><td class="pv-days">'+(c.days||0)+'d</td>'+
       '<td class="ctr">'+bpill(c.tu)+'</td><td class="ctr">'+bpill(c.eq)+'</td><td class="ctr">'+bpill(c.ex)+'</td>'+
-      '<td class="ctr">'+docCell(c)+'</td><td>'+esc(c.va||'—')+'</td><td class="pv-next'+(na.a?' attn':'')+'">'+na.t+'</td></tr>';
-    }).join(''):'<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted)">No clients in this queue.</td></tr>';
+      '<td class="ctr">'+docCell(c)+'</td><td>'+esc(c.va||'—')+'</td><td>'+mfsnPill(c)+'</td><td class="pv-next'+(na.a?' attn':'')+'">'+na.t+'</td></tr>';
+    }).join(''):'<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted)">No clients in this queue.</td></tr>';
     var from=rows.length?((curPage-1)*PAGE+1):0, to=Math.min(curPage*PAGE,rows.length);
     document.getElementById('pvPager').innerHTML='<button id="pvPrev"'+(curPage<=1?' disabled':'')+'>‹ Prev</button><span>'+fmt(from)+'–'+fmt(to)+' of '+fmt(rows.length)+'</span><button id="pvNext"'+(curPage>=pages?' disabled':'')+'>Next ›</button>';
     var pv=document.getElementById('pvPrev'),nx=document.getElementById('pvNext');
