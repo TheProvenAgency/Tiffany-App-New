@@ -836,6 +836,7 @@ app.get('/api/affiliate-gap', async (req, res) => {
     res.json({
       counts: gap.counts,
       notEnrolled: gap.notEnrolled.map(c => ({ id: c.id, name: c.name, email: c.email || null, phone: c.phone || null })),
+      prospects: gap.prospects, // [{email, name}] on MFSN, matching no GHL contact by email or name
       syncedAt: store.getMfsnSyncedAt(),
       mode: liveMode() ? 'live' : 'demo'
     });

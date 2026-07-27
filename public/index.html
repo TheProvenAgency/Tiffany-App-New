@@ -564,7 +564,7 @@ function grad(ctx,color,h){const g=ctx.createLinearGradient(0,0,0,h||190);g.addC
 async function renderAffiliateGap(){
   const el=$('affiliateGap'); if(!el) return;
   try{
-    const d=await(await fetch('/api/mfsn-gap')).json();
+    const d=await(await fetch('/api/affiliate-gap')).json();
     if(!d||!d.counts){el.innerHTML='<div class="cardsub">Unavailable.</div>';return;}
     if(!d.syncedAt){
       el.innerHTML='<div class="cardsub">No members synced yet. Add a Zapier Zap (MyFreeScoreNow → Fetch Active Members List → Webhooks POST) pointing at <code>/webhooks/mfsn</code> — see ⚙ Settings for the URL.</div>';
@@ -572,12 +572,13 @@ async function renderAffiliateGap(){
     }
     const c=d.counts;
     const prospects=(d.prospects||[]).slice(0,12).map(x=>`<div class="src"><span>${escUser(x.name||x.email||'—')}</span>${x.email?'<span class="cardsub">'+escUser(x.email)+'</span>':''}</div>`).join('');
-    const syncedNote='Synced '+new Date(d.syncedAt).toLocaleString()+' · matched by name against the Deal Production roster (approximate — verify before assuming a "needs affiliate" is right).';
+    const modeNote=d.mode==='live'?'matched against her real GoHighLevel client list by email (exact).':'GHL not connected — showing demo clients.';
+    const syncedNote='Synced '+new Date(d.syncedAt).toLocaleString()+' · '+modeNote;
     el.innerHTML=`<div class="dstat" style="margin-bottom:10px">
-        <div><div class="l">Getting paid (affiliate)</div><div class="v">${c.affiliate.toLocaleString()}</div></div>
-        <div><div class="l">Needs affiliate</div><div class="v">${c.needs.toLocaleString()}</div></div>
+        <div><div class="l">Getting paid (affiliate)</div><div class="v">${c.enrolled.toLocaleString()}</div></div>
+        <div><div class="l">Needs affiliate</div><div class="v">${c.notEnrolled.toLocaleString()}</div></div>
         <div><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div></div>
-        <div><div class="l">On MFSN, not a client</div><div class="v">${c.prospects.toLocaleString()}</div></div>
+        <div><div class="l">On MFSN, not a client</div><div class="v">${(c.prospects||0).toLocaleString()}</div></div>
       </div>
       <div class="cardsub" style="margin-bottom:6px">${syncedNote}</div>
       ${c.prospects?('<div class="cardsub" style="margin-bottom:6px"><b>Prospects to reach out to</b> (first 12):</div>'+prospects):''}`;
