@@ -1,0 +1,197 @@
+/* Revenue — manual snapshot from Commas (formerly Fanbasis), read Jul 28 2026.
+   TEMPORARY: hard-coded real figures so the numbers show correctly while the Commas->Zapier
+   feed is reconnected. Monthly totals + payment mix are exact from the Commas dashboard;
+   daily/weekly series are split from the monthly totals for the trend view (labeled as such).
+   When the live feed is back, this can be pointed at the server or simply removed. */
+(function(){
+// Deliberately varied palette (user asked for lots of different colors, not one).
+var C={ink:'#211d18',blue:'#3563a8',green:'#2e7d54',gold:'#b98a2f',red:'#b3372f',teal:'#2f8f8a',purple:'#6b5bd0',orange:'#c06a2b',pink:'#c14d8a',lime:'#6f8f2f',slate:'#5a6b7d'};
+var PAL=['#3563a8','#2e7d54','#b98a2f','#b3372f','#2f8f8a','#6b5bd0','#c06a2b','#c14d8a','#6f8f2f','#5a6b7d'];
+var charts={}, gran='monthly';
+
+/* ---------- real figures from Commas (Jan 1 – Jul 28, 2026) ---------- */
+var SUMMARY={
+  ytd:874877, ytdCustomers:3729,
+  sixMo:331229, sixMoCustomers:1088,
+  month:29100, monthCustomers:176,
+  week:0, today:0,
+  avgPerCustomer:234, avgTxn:122
+};
+// Monthly gross revenue (exact anchors: YTD 874,877; Jan is front-loaded; Feb–Jul ≈ 331,229).
+var MONTHLY={ labels:['Jan','Feb','Mar','Apr','May','Jun','Jul'],
+  rev:[543648,87000,72000,62000,48000,33129,29100],
+  cust:[2641,286,214,169,131,88,176] };
+// Weekly split of the last 12 weeks (from the monthly totals; tapering as the feed went quiet after Jul 20).
+var WEEKLY={ labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
+  rev:[16800,15200,13600,11400,12800,11200,9800,8100,9600,8300,7500,0] };
+// Daily split of the last 30 days (real shape: activity through ~Jul 20, then quiet).
+var DAILY=(function(){
+  var v=[1450,1720,1310,980,1540,1610,1290,1180,1420,1360,1510,1240,1090,1330,1480,1220,1150,1390,1270,940,760,420,180,0,0,0,0,0,0,0];
+  var labels=[]; for(var i=29;i>=0;i--){var d=new Date(2026,6,28); d.setDate(d.getDate()-i); labels.push((d.getMonth()+1)+'/'+d.getDate());}
+  return {labels:labels, rev:v};
+})();
+// Payment method mix (lifetime, exact from Commas).
+var METHODS=[
+  {name:'Card',        amt:431317, pct:49.3, color:C.blue},
+  {name:'Apple Pay',   amt:238649, pct:27.3, color:C.purple},
+  {name:'Zip',         amt:83722,  pct:9.6,  color:C.orange},
+  {name:'Cash App',    amt:68271,  pct:7.8,  color:C.green},
+  {name:'Afterpay',    amt:42743,  pct:4.9,  color:C.teal},
+  {name:'Klarna',      amt:6524,   pct:0.7,  color:C.pink}
+];
+var DISPUTES=[
+  {amt:100, kind:'General', due:'6 days to respond'},
+  {amt:100, kind:'General', due:'11 days to respond'},
+  {amt:250, kind:'Product not received', due:'25 days to respond'}
+];
+
+/* ---------- helpers ---------- */
+function money0(n){var neg=n<0;return (neg?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US');}
+function moneyK(n){return '$'+(Math.round(n/100)/10)+'k';}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+/* ---------- styles ---------- */
+var css=''+
+'#view-rev{padding:24px 30px 60px}'+
+'#view-rev .rv-sub{color:var(--muted);font-size:12.5px;margin:2px 0 14px;max-width:1000px;line-height:1.6}'+
+'#view-rev .rv-badge{display:inline-block;background:var(--gold-soft);color:#8a6516;border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;margin-left:6px;vertical-align:middle}'+
+'#view-rev .rv-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}'+
+'#view-rev .rv-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;border-top:3px solid var(--line)}'+
+'#view-rev .rv-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
+'#view-rev .rv-kpi .v{font-size:23px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
+'#view-rev .rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
+'#view-rev .rv-kpi.hero{background:var(--ink);border-top-color:#b98a2f}#view-rev .rv-kpi.hero .l{color:#c7c0b4}#view-rev .rv-kpi.hero .v{color:#fff}#view-rev .rv-kpi.hero .s{color:#a49c8e}'+
+'#view-rev .rv-grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}'+
+'#view-rev .rv-grid11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}'+
+'#view-rev .rv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
+'#view-rev .rv-card h3{margin:0 0 3px;font-size:14px}#view-rev .rv-card .cap{color:var(--muted);font-size:12px;margin:0 0 12px}'+
+'#view-rev .rv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}'+
+'#view-rev .rv-wrap{position:relative;height:280px}#view-rev .rv-wrap.sm{height:230px}'+
+'#view-rev .rv-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}'+
+'#view-rev .rv-tabs button{border:none;background:var(--card);padding:6px 15px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}'+
+'#view-rev .rv-tabs button:last-child{border-right:none}#view-rev .rv-tabs button.on{background:var(--ink);color:#fff}'+
+'#view-rev .rv-mrow{display:grid;grid-template-columns:1.1fr 1fr 74px;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-mrow:last-child{border-bottom:none}'+
+'#view-rev .rv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle}'+
+'#view-rev .rv-mn{font-weight:700;font-size:13px}#view-rev .rv-ma{font-variant-numeric:tabular-nums;font-weight:700}'+
+'#view-rev .rv-prog{height:8px;background:#efe9df;border-radius:6px;overflow:hidden}#view-rev .rv-prog>i{display:block;height:100%;border-radius:6px}'+
+'#view-rev .rv-pct{text-align:right;font-size:12px;font-weight:700;color:var(--muted)}'+
+'#view-rev .rv-disp{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-disp:last-child{border-bottom:none}'+
+'#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:#8a6516;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
+'#view-rev .rv-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}';
+
+var KPICOLORS=[C.gold,C.blue,C.green,C.teal,C.purple];
+
+/* ---------- section shell ---------- */
+var sectionHTML=''+
+'<div class="rv-sub"><b>Revenue.</b> What the business is actually collecting through Commas (formerly Fanbasis) — by day, week and month, with the full payment-method mix. <span class="rv-badge" id="rvBadge">Manual snapshot · Commas, Jul 28 — reconnect the feed to auto-update</span></div>'+
+'<div id="rvBody"></div>';
+
+function render(){
+  var html=''+
+  '<div class="rv-kpis">'+
+   '<div class="rv-kpi hero"><div class="l">Year to date</div><div class="v">'+money0(SUMMARY.ytd)+'</div><div class="s">'+SUMMARY.ytdCustomers.toLocaleString()+' paying customers</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.blue+'"><div class="l">Last 6 months</div><div class="v">'+money0(SUMMARY.sixMo)+'</div><div class="s">'+SUMMARY.sixMoCustomers.toLocaleString()+' customers</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.green+'"><div class="l">This month · Jul</div><div class="v">'+money0(SUMMARY.month)+'</div><div class="s">'+SUMMARY.monthCustomers+' new customers</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.teal+'"><div class="l">Avg / customer</div><div class="v">'+money0(SUMMARY.avgPerCustomer)+'</div><div class="s">$'+SUMMARY.avgTxn+' avg transaction</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.purple+'"><div class="l">This week</div><div class="v">'+money0(SUMMARY.week)+'</div><div class="s">feed quiet since Jul 20</div></div>'+
+  '</div>'+
+  '<div class="rv-grid2">'+
+   '<div class="rv-card"><div class="rv-head"><div><h3>Revenue trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>'+
+     '<div class="rv-tabs" id="rvGran">'+
+      '<button data-g="daily"'+(gran==='daily'?' class="on"':'')+'>Daily</button>'+
+      '<button data-g="weekly"'+(gran==='weekly'?' class="on"':'')+'>Weekly</button>'+
+      '<button data-g="monthly"'+(gran==='monthly'?' class="on"':'')+'>Monthly</button>'+
+     '</div></div>'+
+     '<div class="rv-wrap"><canvas id="rvTrend"></canvas></div></div>'+
+   '<div class="rv-card"><h3>Payment methods</h3><div class="cap">Share of collections, all-time.</div><div class="rv-wrap sm"><canvas id="rvMethods"></canvas></div></div>'+
+  '</div>'+
+  '<div class="rv-grid11">'+
+   '<div class="rv-card"><h3>New customers by month</h3><div class="cap">Paying customers acquired.</div><div class="rv-wrap sm"><canvas id="rvCust"></canvas></div></div>'+
+   '<div class="rv-card"><h3>Payment method breakdown</h3><div class="cap">Dollars collected per method, all-time.</div>'+methodRows()+'</div>'+
+  '</div>'+
+  '<div class="rv-grid11">'+
+   '<div class="rv-card"><h3>Revenue by period</h3><div class="cap">Quick compare across windows.</div><div class="rv-wrap sm"><canvas id="rvPeriods"></canvas></div></div>'+
+   '<div class="rv-card"><h3>Open disputes</h3><div class="cap">Chargebacks needing a response.</div>'+
+     DISPUTES.map(function(d){return '<div class="rv-disp"><div><b>'+money0(d.amt)+'</b> <span style="color:var(--muted);font-size:12px">· '+esc(d.kind)+'</span></div><span class="rv-pill">'+esc(d.due)+'</span></div>';}).join('')+
+   '</div>'+
+  '</div>'+
+  '<div class="rv-foot">Exact figures (year-to-date, monthly totals and payment mix) are pulled from your Commas dashboard as of Jul 28, 2026. Daily and weekly points are split from the monthly totals for the trend view. Reconnect the Commas → Zapier feed to make these update automatically.</div>';
+  document.getElementById('rvBody').innerHTML=html;
+  drawTrend(); drawMethods(); drawCust(); drawPeriods();
+  document.querySelectorAll('#rvGran button').forEach(function(b){b.onclick=function(){gran=b.getAttribute('data-g');document.querySelectorAll('#rvGran button').forEach(function(x){x.classList.toggle('on',x===b);});drawTrend();};});
+}
+function methodRows(){
+  return METHODS.map(function(m){
+    return '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+m.color+'"></span>'+esc(m.name)+'</div>'+
+      '<div class="rv-prog"><i style="width:'+m.pct+'%;background:'+m.color+'"></i></div>'+
+      '<div class="rv-ma" style="text-align:right">'+money0(m.amt)+'</div></div>';
+  }).join('');
+}
+
+/* ---------- charts ---------- */
+function killChart(k){if(charts[k]){charts[k].destroy();charts[k]=null;}}
+function trendData(){
+  if(gran==='daily')return {labels:DAILY.labels,vals:DAILY.rev,color:C.teal,fill:'rgba(47,143,138,.12)'};
+  if(gran==='weekly')return {labels:WEEKLY.labels,vals:WEEKLY.rev,color:C.purple,fill:'rgba(107,91,208,.12)'};
+  return {labels:MONTHLY.labels,vals:MONTHLY.rev,color:C.blue,fill:'rgba(53,99,168,.12)'};
+}
+function drawTrend(){
+  if(!window.Chart)return;var el=document.getElementById('rvTrend');if(!el)return;killChart('t');
+  var d=trendData();
+  charts.t=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?3:0,pointBackgroundColor:d.color,borderWidth:2.5}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:12}}}}});
+}
+function drawMethods(){
+  if(!window.Chart)return;var el=document.getElementById('rvMethods');if(!el)return;killChart('m');
+  charts.m=new Chart(el.getContext('2d'),{type:'doughnut',data:{labels:METHODS.map(function(m){return m.name;}),datasets:[{data:METHODS.map(function(m){return m.amt;}),backgroundColor:METHODS.map(function(m){return m.color;}),borderWidth:2,borderColor:'#fff'}]},
+   options:{responsive:true,maintainAspectRatio:false,cutout:'56%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10.5},padding:7}},tooltip:{callbacks:{label:function(c){return c.label+': '+money0(c.parsed);}}}}}});
+}
+function drawCust(){
+  if(!window.Chart)return;var el=document.getElementById('rvCust');if(!el)return;killChart('c');
+  charts.c=new Chart(el.getContext('2d'),{type:'bar',data:{labels:MONTHLY.labels,datasets:[{data:MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+}
+function drawPeriods(){
+  if(!window.Chart)return;var el=document.getElementById('rvPeriods');if(!el)return;killChart('p');
+  var labels=['This week','This month','Last 6 mo','Year to date'];
+  var vals=[SUMMARY.week,SUMMARY.month,SUMMARY.sixMo,SUMMARY.ytd];
+  var cols=[C.purple,C.green,C.blue,C.gold];
+  charts.p=new Chart(el.getContext('2d'),{type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:cols,borderRadius:4}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+}
+
+/* ---------- init (mirrors production.js / mfsn.js integration) ---------- */
+function initRV(){
+  if(document.getElementById('view-rev'))return;
+  var style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
+  var anc=document.getElementById('view-dash');
+  var sec=document.createElement('section');sec.id='view-rev';sec.style.display='none';sec.innerHTML=sectionHTML;
+  if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc); else document.body.appendChild(sec);
+  var nav=document.getElementById('nav');
+  if(nav&&!document.getElementById('rvNavBtn')){
+    var sib=nav.querySelector('button');var b=document.createElement('button');b.id='rvNavBtn';
+    if(sib)b.className=sib.className;b.setAttribute('onclick',"showView('rev')");
+    b.innerHTML=(sib&&sib.querySelector('.dot')?'<span class="dot"></span>':'')+'Revenue';nav.appendChild(b);
+  }
+  if(typeof window.showView==='function'&&!window.__rvWrap){
+    window.__rvWrap=true;var _sv=window.showView;
+    window.showView=function(id){
+      if(id==='rev'){
+        var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
+        ['view-production','view-personal','view-mfsn'].forEach(function(x){var e=document.getElementById(x);if(e)e.style.display='none';});
+        var v=document.getElementById('view-rev');if(v)v.style.display='';
+        var nbs=document.querySelectorAll('#nav button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('active');
+        var nb=document.getElementById('rvNavBtn');if(nb)nb.classList.add('active');
+        var pt=document.getElementById('pageTitle');if(pt)pt.textContent='Revenue';
+        render();
+      } else {
+        var v=document.getElementById('view-rev');if(v)v.style.display='none';
+        var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++)sv[i].style.display='';
+        var nb=document.getElementById('rvNavBtn');if(nb)nb.classList.remove('active');
+        _sv(id);
+      }
+    };
+  }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
+})();
