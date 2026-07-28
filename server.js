@@ -596,16 +596,28 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
+// Annotates each client with its effective MyFreeScoreNow affiliate status
+// (mfsnAffiliate: bool, mfsnMatched: raw email/name match, mfsnOverride: a
+// manual call from the client drawer that wins over the computed match --
+// see lib/affiliate.js and store.getAffiliateOverrides()). Single source
+// of truth shared by /api/clients, /api/clients/:id, and /api/affiliate-gap
+// so the list, the filter, and the dashboard card's counts can't disagree.
+function withAffiliateTags(clients) {
+  return affiliate.affiliateGap(clients, store.getMfsnMembers(), store.getAffiliateOverrides()).tagged;
+}
+
 // ------------------------- clients table -------------------------
 app.get('/api/clients', async (req, res) => {
   try {
-    const { q = '', status = '', deal = '', round = '', sort = 'totalSpent', dir = 'desc', page = '1', pageSize = '25' } = req.query;
-    let list = await getClients();
+    const { q = '', status = '', deal = '', round = '', affiliate: affiliateFilter = '', sort = 'totalSpent', dir = 'desc', page = '1', pageSize = '25' } = req.query;
+    let list = withAffiliateTags(await getClients());
     const ql = q.toLowerCase();
     if (ql) list = list.filter(c => (c.name || '').toLowerCase().includes(ql) || (c.email || '').toLowerCase().includes(ql) || (c.phone || '').includes(ql));
     if (status) list = list.filter(c => c.status === status);
     if (deal) list = list.filter(c => c.deal === deal);
     if (round) list = list.filter(c => c.round === round);
+    if (affiliateFilter === 'enrolled') list = list.filter(c => c.mfsnAffiliate);
+    if (affiliateFilter === 'needs') list = list.filter(c => !c.mfsnAffiliate);
     list = [...list].sort((a, b) => {
       const av = a[sort] ?? '', bv = b[sort] ?? '';
       const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
@@ -619,7 +631,7 @@ app.get('/api/clients', async (req, res) => {
 // ------------------------- client detail + management -------------------------
 app.get('/api/clients/:id', async (req, res) => {
   try {
-    const clients = await getClients();
+    const clients = withAffiliateTags(await getClients());
     const c = clients.find(x => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: 'not found' });
     const email = (c.email || '').toLowerCase();
@@ -645,6 +657,25 @@ app.post('/api/clients/:id/notes', (req, res) => {
   res.json(store.addNote(req.params.id, text));
 });
 app.delete('/api/notes/:id', (req, res) => { store.deleteNote(req.params.id); res.json({ ok: true }); });
+
+// Manually mark a client Affiliate / Needs affiliate / back to auto-detect
+// (override: null). Admin-only, same as the rest of the affiliate-gap
+// surface (not in the employee allowlist -- see lib/auth.js). This lives
+// purely in our own store for now; there's no outbound webhook to
+// MyFreeScoreNow yet (the /webhooks/mfsn sync only runs one direction, in
+// from MFSN), so this doesn't push anything back to MFSN itself until
+// Torgy's side supports it -- see task tracking "affiliate gap card" in
+// PROJECT-NOTES for that follow-up.
+app.post('/api/clients/:id/affiliate', async (req, res) => {
+  try {
+    const override = req.body.override === 'affiliate' || req.body.override === 'needs' ? req.body.override : null;
+    store.setAffiliateOverride(req.params.id, override);
+    const clients = withAffiliateTags(await getClients());
+    const c = clients.find(x => x.id === req.params.id);
+    if (!c) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true, mfsnAffiliate: c.mfsnAffiliate, mfsnMatched: c.mfsnMatched, mfsnOverride: c.mfsnOverride });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // set active/inactive — updates GHL tags in live mode
 app.post('/api/clients/:id/status', async (req, res) => {
@@ -952,7 +983,7 @@ function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); re
 app.get('/api/affiliate-gap', async (req, res) => {
   try {
     const clients = await getClients();
-    const gap = affiliate.affiliateGap(clients, store.getMfsnMembers());
+    const gap = affiliate.affiliateGap(clients, store.getMfsnMembers(), store.getAffiliateOverrides());
     res.json({
       counts: gap.counts,
       notEnrolled: gap.notEnrolled.map(c => ({ id: c.id, name: c.name, email: c.email || null, phone: c.phone || null })),

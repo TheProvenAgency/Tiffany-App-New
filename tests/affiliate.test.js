@@ -67,6 +67,41 @@ test('an empty enrolled list means every client is in the gap', () => {
   assert.equal(r.counts.notEnrolled, 2);
 });
 
+test('a manual override to "affiliate" wins over a computed non-match', () => {
+  const r = a.affiliateGap(
+    [{ id: '1', name: 'Nobody', email: 'nobody@example.com' }],
+    [], // not enrolled anywhere
+    { '1': 'affiliate' }
+  );
+  assert.equal(r.counts.enrolled, 1);
+  assert.equal(r.counts.notEnrolled, 0);
+  assert.equal(r.tagged[0].mfsnAffiliate, true);
+  assert.equal(r.tagged[0].mfsnMatched, false);
+  assert.equal(r.tagged[0].mfsnOverride, 'affiliate');
+});
+
+test('a manual override to "needs" wins over a computed match', () => {
+  const r = a.affiliateGap(
+    [{ id: '1', name: 'Someone', email: 'someone@example.com' }],
+    [{ email: 'someone@example.com' }],
+    { '1': 'needs' }
+  );
+  assert.equal(r.counts.enrolled, 0);
+  assert.equal(r.counts.notEnrolled, 1);
+  assert.equal(r.tagged[0].mfsnMatched, true, 'the raw match is still tracked underneath the override');
+});
+
+test('overriding one client to "needs" does not manufacture a false prospect', () => {
+  // The email is still genuinely enrolled -- overriding the client's own
+  // status shouldn't make the matching MFSN member look unmatched.
+  const r = a.affiliateGap(
+    [{ id: '1', name: 'Someone', email: 'someone@example.com' }],
+    [{ email: 'someone@example.com', name: 'Someone' }],
+    { '1': 'needs' }
+  );
+  assert.equal(r.prospects.length, 0);
+});
+
 test('normalizing a member list dedupes and drops blanks', () => {
   const members = a.normalizeMembers([
     { email: 'A@x.com', name: 'Al' },
