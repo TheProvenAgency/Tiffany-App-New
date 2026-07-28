@@ -79,3 +79,24 @@ test('Retry-After is honored when the server sends it', async () => {
   assert.equal(r.totalContacts, 3);
   assert.equal(calls, 2);
 });
+
+test('createContact creates a new contact and normalizes the response', async () => {
+  mock([{ status: 200, body: { contact: { id: 'c1', firstName: 'Jane', lastName: 'Doe', email: 'jane@x.com' } } }]);
+  const r = await ghl.createContact(cfg, { firstName: 'Jane', lastName: 'Doe', email: 'jane@x.com' });
+  assert.equal(r.duplicate, false);
+  assert.equal(r.contact.id, 'c1');
+  assert.equal(r.contact.name, 'Jane Doe');
+});
+
+test('createContact treats a duplicate-contact 400 as a normal outcome, not a failure', async () => {
+  mock([{ status: 400, body: { message: 'duplicate contact', meta: { contactId: 'existing-1' } } }]);
+  const r = await ghl.createContact(cfg, { firstName: 'Jane', email: 'jane@x.com' });
+  assert.equal(r.duplicate, true);
+  assert.equal(r.existingId, 'existing-1');
+  assert.match(r.message, /duplicate/i);
+});
+
+test('createContact still throws on an unrelated 400 with no contactId', async () => {
+  mock([{ status: 400, body: { message: 'missing required field' } }]);
+  await assert.rejects(() => ghl.createContact(cfg, { firstName: 'Jane' }));
+});

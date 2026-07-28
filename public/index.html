@@ -353,6 +353,7 @@ section.view{display:none} section.view.on{display:block}
         <select id="fDeal"><option value="">All packages</option></select>
         <select id="fRound"><option value="">All rounds</option></select>
         <select id="fAffiliate"><option value="">All clients (no MyFreeScoreNow filter)</option><option value="affiliate">Affiliate</option><option value="not_affiliate">Not affiliate (on MFSN)</option><option value="not_on_mfsn">Not on MyFreeScoreNow</option></select>
+        <button class="btn primary" id="addClientBtn" onclick="openAddClient()" style="margin-left:auto">+ Add Client</button>
       </div>
       <div style="overflow-x:auto"><table>
         <thead><tr>
@@ -553,6 +554,26 @@ section.view{display:none} section.view.on{display:block}
       <button class="btn primary" onclick="submitSupportTicket()">Submit</button>
       <button class="btn ghost" onclick="closeSupportTicket()">Close</button>
       <span class="testres" id="r_ticket"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADD CLIENT (admin only — creates a real GoHighLevel contact) ============ -->
+<div class="overlay" id="addClientOverlay">
+  <div class="modal" style="max-width:480px">
+    <h2>Add a client</h2>
+    <p class="hint">Creates a real contact in GoHighLevel — everywhere else in this app (Deal Production, SMS, tags) reads from GHL, so this is the one place a brand-new client starts.</p>
+    <label>Full name</label>
+    <input id="ac_name" placeholder="Jane Doe">
+    <label style="margin-top:14px">Email</label>
+    <input id="ac_email" placeholder="jane@example.com">
+    <label style="margin-top:14px">Phone</label>
+    <input id="ac_phone" placeholder="+1 555 123 4567">
+    <p class="hint" style="margin-top:8px">At least one of email or phone is required — GoHighLevel needs one to identify the contact.</p>
+    <div class="dactions" style="margin-top:20px">
+      <button class="btn primary" onclick="submitAddClient()">Create</button>
+      <button class="btn ghost" onclick="closeAddClient()">Close</button>
+      <span class="testres" id="r_addClient"></span>
     </div>
   </div>
 </div>
@@ -821,6 +842,31 @@ document.querySelectorAll('th[data-s]').forEach(th=>th.addEventListener('click',
 }));
 let qTimer;$('q').addEventListener('input',()=>{clearTimeout(qTimer);qTimer=setTimeout(()=>{page=1;loadClients();},300)});
 ['fStatus','fDeal','fRound','fAffiliate'].forEach(id=>$(id).addEventListener('change',()=>{page=1;loadClients();}));
+
+/* ================= add client (admin only) ================= */
+function openAddClient(){
+  $('ac_name').value='';$('ac_email').value='';$('ac_phone').value='';
+  $('r_addClient').textContent='';$('r_addClient').className='testres';
+  $('addClientOverlay').classList.add('show');
+}
+function closeAddClient(){ $('addClientOverlay').classList.remove('show'); }
+async function submitAddClient(){
+  const name=$('ac_name').value.trim(), email=$('ac_email').value.trim(), phone=$('ac_phone').value.trim();
+  if(!name){$('r_addClient').textContent='Name is required';$('r_addClient').className='testres bad';return;}
+  if(!email&&!phone){$('r_addClient').textContent='Email or phone is required';$('r_addClient').className='testres bad';return;}
+  const r=await fetch('/api/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,phone})});
+  const d=await r.json();
+  if(r.ok&&d.duplicate){
+    $('r_addClient').textContent='Already in GoHighLevel — no new contact created';
+    $('r_addClient').className='testres bad';
+  }else if(r.ok){
+    $('r_addClient').textContent='Created in GoHighLevel ✓';$('r_addClient').className='testres ok';
+    page=1;loadClients();
+    setTimeout(closeAddClient,900);
+  }else{
+    $('r_addClient').textContent='✗ '+(d.error||'failed');$('r_addClient').className='testres bad';
+  }
+}
 
 /* ================= reactivation ================= */
 async function loadReact(){

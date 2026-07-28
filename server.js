@@ -712,6 +712,36 @@ app.post('/api/clients/:id/sms', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Create a new client. Admin-only (not in EMPLOYEE_API -- see lib/auth.js).
+// In live mode this creates a real contact in GoHighLevel (ghl.createContact);
+// GHL treats a matching email/phone as a duplicate rather than erroring, so
+// that comes back here as {duplicate:true, existingId} instead of a failure.
+// In demo mode it just pushes into the in-memory demo roster.
+app.post('/api/clients', async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    const email = (req.body.email || '').trim() || null;
+    const phone = (req.body.phone || '').trim() || null;
+    if (!name) return res.status(400).json({ error: 'name required' });
+    if (!email && !phone) return res.status(400).json({ error: 'email or phone required (GoHighLevel needs one to create a contact)' });
+    if (READ_ONLY && liveMode()) return refuseWrite(res, 'createClient', `${name} (${email || phone})`);
+
+    if (liveMode()) {
+      const parts = name.split(/\s+/);
+      const firstName = parts[0];
+      const lastName = parts.slice(1).join(' ') || undefined;
+      const r = await ghl.createContact(store.getConfig(), { firstName, lastName, email, phone });
+      store.clearCache();
+      if (r.duplicate) return res.json({ ok: true, duplicate: true, existingId: r.existingId, message: r.message });
+      return res.json({ ok: true, duplicate: false, id: r.contact.id });
+    }
+
+    const c = { id: 'demo-' + Date.now(), name, email, phone, createdAt: new Date().toISOString(), tags: ['status:active'], status: 'active', round: null, deal: null, totalSpent: 0, lastPaymentDate: null, numberOfPayments: 0 };
+    demoData().clients.push(c);
+    res.json({ ok: true, duplicate: false, id: c.id, demo: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // tasks / follow-ups
 app.get('/api/tasks', (req, res) => {
   const t = store.getTasks().sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'));

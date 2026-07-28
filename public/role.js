@@ -27,6 +27,12 @@
     Array.prototype.forEach.call(document.querySelectorAll('.filters'), function (f) {
       if (!f.closest('#view-production')) f.style.display = 'none';
     });
+
+    // Creating a client also creates a real GoHighLevel contact — server
+    // rejects it from an employee (POST /api/clients is not in
+    // EMPLOYEE_API), so don't show a button that would only fail.
+    var addClient = document.getElementById('addClientBtn');
+    if (addClient) addClient.style.display = 'none';
   }
 
   // production.js injects its own nav button, so wait for it to appear.

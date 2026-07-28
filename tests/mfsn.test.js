@@ -102,6 +102,25 @@ test('the sheet-sync endpoint is admin-only and defaults to a dry run', async ()
   assert.ok(d.sheetRowCount >= 1);
 });
 
+test('creating a client is admin-only, validates input, and demo mode adds it without touching GoHighLevel', async () => {
+  assert.equal((await req('/api/clients', { method: 'POST', cookie: employeeCookie, body: { name: 'X', email: 'x@x.com' } })).status, 403);
+
+  const noName = await req('/api/clients', { method: 'POST', cookie: adminCookie, body: { email: 'x@x.com' } });
+  assert.equal(noName.status, 400);
+
+  const noContact = await req('/api/clients', { method: 'POST', cookie: adminCookie, body: { name: 'No Contact Info' } });
+  assert.equal(noContact.status, 400);
+
+  const r = await req('/api/clients', { method: 'POST', cookie: adminCookie, body: { name: 'New Demo Client', email: 'newdemo@x.com' } });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  assert.equal(d.demo, true, 'no GHL keys configured in this test app, so it falls back to the demo roster');
+
+  const list = await (await req('/api/clients?q=New%20Demo%20Client', { cookie: adminCookie })).json();
+  assert.ok(list.clients.some(c => c.email === 'newdemo@x.com'), 'the new client shows up in the Clients list right away');
+});
+
 test('reconcile reports what it added and what it could not match, and running it twice is idempotent', async () => {
   const first = await (await req('/api/production/reconcile', { method: 'POST', cookie: adminCookie })).json();
   assert.ok('addedCount' in first && 'notInGhlCount' in first);

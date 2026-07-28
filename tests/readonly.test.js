@@ -1,6 +1,7 @@
 // READ_ONLY protects Tiffany's real GoHighLevel account while developing
-// locally against live credentials. Only two routes can write to GHL:
-// status write-back (tag changes) and sending an SMS to a real client.
+// locally against live credentials. Three routes can write to GHL: status
+// write-back (tag changes), sending an SMS to a real client, and creating a
+// new client (a real GHL contact).
 const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -67,6 +68,15 @@ test('the refusal is visible, never a silent success', async () => {
     method: 'POST', cookie: adminCookie, body: { status: 'active' }
   });
   assert.notEqual(r.status, 200);
+});
+
+test('creating a new client against live GoHighLevel is refused', async () => {
+  const r = await req('/api/clients', {
+    method: 'POST', cookie: adminCookie, body: { name: 'Fake Client', email: 'fake@x.com' }
+  });
+  assert.equal(r.status, 403);
+  const body = await r.json();
+  assert.match(body.error, /read-only/i);
 });
 
 test('reads and local-only writes are unaffected', async () => {
