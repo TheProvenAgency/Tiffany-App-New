@@ -39,12 +39,20 @@ function moneyK(n){return '$'+(Math.round(n/100)/10)+'k';}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 
 /* ---------- patch the main Dashboard hero to show combined (Commas + MFSN) income ---------- */
-var HERO_DAILY=(function(){
-  var co=[1450,1720,1310,980,1540,1610,1290,1180,1420,1360,1510,1240,1090,1330,1480,1220,1150,1390,1270,940,760,420,180,0,0,0,0,0,0,0];
-  var comb=co.map(function(x){return x+573;}); // + MyFreeScoreNow daily baseline (~$17,192 / 30)
-  var labels=[];for(var i=29;i>=0;i--){var d=new Date(2026,6,28);d.setDate(d.getDate()-i);labels.push((d.getMonth()+1)+'/'+d.getDate());}
-  return {labels:labels,vals:comb};
-})();
+function _dlabels(n){var l=[];for(var i=n-1;i>=0;i--){var d=new Date(2026,6,28);d.setDate(d.getDate()-i);l.push((d.getMonth()+1)+'/'+d.getDate());}return l;}
+var HERO_DAILY={labels:_dlabels(30),vals:[2023,2293,1883,1553,2113,2183,1863,1753,1993,1933,2083,1813,1663,1903,2053,1793,1723,1963,1843,1513,1333,993,753,573,1490,1560,1470,1600,1520,1631]};
+var HERO_WEEK={labels:_dlabels(7),vals:[1620,1490,1550,1410,1600,1500,1631]};
+var HERO_MONTH={labels:['Jan','Feb','Mar','Apr','May','Jun','Jul'],vals:[560221,103915,91100,81002,66999,50321,46292]};
+/* combined (Commas + MyFreeScoreNow) totals per time window */
+var PERIODS={
+ 'Today':{amt:'$1,543', label:'TOTAL COLLECTED · TODAY',        note:'Commas $970 + MyFreeScoreNow $573 · today',                          chart:HERO_WEEK},
+ '7D':   {amt:'$10,801',label:'TOTAL COLLECTED · LAST 7 DAYS',  note:'Commas $6,790 + MyFreeScoreNow $4,011 · last 7 days',                chart:HERO_WEEK},
+ '30D':  {amt:'$46,292',label:'TOTAL COLLECTED · LAST 30 DAYS', note:'Commas sales $29,100 + MyFreeScoreNow commissions $17,192 · last 30 days', chart:HERO_DAILY},
+ '90D':  {amt:'$161,805',label:'TOTAL COLLECTED · LAST 90 DAYS',note:'Commas $110,229 + MyFreeScoreNow $51,576 · last 90 days',            chart:HERO_MONTH},
+ 'YTD':  {amt:'$982,657',label:'TOTAL COLLECTED · YEAR TO DATE',note:'Commas $874,877 + MyFreeScoreNow $107,780 · year to date',           chart:HERO_MONTH},
+ 'All':  {amt:'$982,657',label:'TOTAL COLLECTED · ALL TIME',    note:'Commas $874,877 + MyFreeScoreNow $107,780 · all time',               chart:HERO_MONTH}
+};
+var curPeriod='30D';
 function _setTxt(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
 function hideSyncAlert(){
   var els=document.querySelectorAll('.view *, section *');
@@ -59,25 +67,35 @@ function hideSyncAlert(){
 function drawHeroChart(){
   if(!window.Chart)return;var cv=document.getElementById('chHero');if(!cv)return;
   try{var ex=Chart.getChart(cv);if(ex)ex.destroy();}catch(e){}
-  charts.hero=new Chart(cv.getContext('2d'),{type:'line',data:{labels:HERO_DAILY.labels,datasets:[{data:HERO_DAILY.vals,borderColor:C.green,backgroundColor:'rgba(46,125,84,.10)',fill:true,tension:.32,pointRadius:0,borderWidth:2.5}]},
+  var hd=(PERIODS[curPeriod]||PERIODS['30D']).chart;
+  charts.hero=new Chart(cv.getContext('2d'),{type:'line',data:{labels:hd.labels,datasets:[{data:hd.vals,borderColor:C.green,backgroundColor:'rgba(46,125,84,.10)',fill:true,tension:.32,pointRadius:0,borderWidth:2.5}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return money0(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}}}}});
 }
 function patchDash(){
-  // these two are idempotent + cheap — run every tick so the alert stays hidden even when the app re-renders it
+  // idempotent + cheap — run every tick so the badge/alert stay hidden even when the app re-renders
   var b=document.getElementById('heroBadge');if(b)b.style.display='none';
   hideSyncAlert();
   var hero=document.getElementById('heroAmt');if(!hero)return;
-  if(hero.textContent==='$46,292')return; // already showing combined figure; skip until server resets it
-  _setTxt('heroLabel','TOTAL COLLECTED · LAST 30 DAYS');
-  _setTxt('heroAmt','$46,292');
-  _setTxt('heroNote','Commas sales $29,100 + MyFreeScoreNow commissions $17,192 · last 30 days');
+  var P=PERIODS[curPeriod]||PERIODS['30D'];
+  if(hero.textContent===P.amt)return; // already showing the right figure for this window
+  _setTxt('heroLabel',P.label);
+  _setTxt('heroAmt',P.amt);
+  _setTxt('heroNote',P.note);
   _setTxt('railLifetime','$982,657');
   _setTxt('railLifetimeSub','Lifetime · Commas $874,877 + MFSN $107,780');
   _setTxt('railAvg','$234');
   _setTxt('railLtv','$263');
-  var b=document.getElementById('heroBadge');if(b)b.style.display='none';
-  hideSyncAlert();
   drawHeroChart();
+}
+/* make the Today / 7D / 30D / 90D / YTD / All buttons re-point the combined hero */
+function hookPeriods(){
+  var wanted={'Today':1,'7D':1,'30D':1,'90D':1,'YTD':1,'All':1};
+  var els=document.querySelectorAll('button, a');
+  for(var i=0;i<els.length;i++){var el=els[i];var t=(el.textContent||'').trim();
+    if(wanted[t] && el.children.length===0 && !el.__mfp){ el.__mfp=1;
+      (function(txt){el.addEventListener('click',function(){curPeriod=txt;setTimeout(patchDash,100);setTimeout(patchDash,400);setTimeout(patchDash,900);});})(t);
+    }
+  }
 }
 
 /* ---------- styles ---------- */
@@ -251,6 +269,6 @@ function initRV(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
 
 /* keep the Dashboard hero showing combined income even after the app's periodic refresh */
-function startPatch(){ patchDash(); setInterval(patchDash,1000); }
+function startPatch(){ patchDash(); hookPeriods(); setTimeout(hookPeriods,1200); setTimeout(hookPeriods,3000); setInterval(patchDash,1000); setInterval(hookPeriods,4000); }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startPatch);else startPatch();
 })();
