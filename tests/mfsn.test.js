@@ -92,6 +92,16 @@ test('the Deal Production reconcile endpoint is admin-only', async () => {
   assert.equal(r.status, 200);
 });
 
+test('the sheet-sync endpoint is admin-only and defaults to a dry run', async () => {
+  const csv = 'h\n,Yes,,Test Sheet Client,Pkg,ready,-,-,note here\n';
+  assert.equal((await req('/api/production/sheet-sync', { method: 'POST', cookie: employeeCookie, body: { csv } })).status, 403);
+  const r = await req('/api/production/sheet-sync', { method: 'POST', cookie: adminCookie, body: { csv } });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.apply, false, 'apply defaults to false so nothing is written unless explicitly requested');
+  assert.ok(d.sheetRowCount >= 1);
+});
+
 test('reconcile reports what it added and what it could not match, and running it twice is idempotent', async () => {
   const first = await (await req('/api/production/reconcile', { method: 'POST', cookie: adminCookie })).json();
   assert.ok('addedCount' in first && 'notInGhlCount' in first);

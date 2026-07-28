@@ -10,6 +10,7 @@ const auth = require('./lib/auth');
 const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
 const affiliate = require('./lib/affiliate');
+const sheet = require('./lib/sheet');
 const meta = require('./lib/meta');
 const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
@@ -1079,6 +1080,62 @@ function makeProdRecordFromGhl(c) {
 // match in GHL -- is only reported, never acted on: the sheet import has no
 // email or phone, so there is nothing usable to create a GHL contact from.
 // Admin-only (not in the employee allowlist).
+// Reconciles Tiffany's Google Sheet (Credit Repair tab, pasted as CSV) into
+// Deal Production. The sheet is the source of truth for package/TU/EQ/EX/
+// notes -- see lib/sheet.js for the exact matching and diff rules. Manual,
+// one-time: an admin uploads the CSV export, this returns a full diff with
+// apply defaulting to false (dry run) so the numbers can be sanity-checked
+// before anything is written. Admin-only (not in the employee allowlist).
+app.post('/api/production/sheet-sync', async (req, res) => {
+  try {
+    const csv = req.body && req.body.csv;
+    if (typeof csv !== 'string' || !csv.trim()) return res.status(400).json({ error: 'csv text required' });
+    const apply = req.body.apply === true;
+
+    const rows = sheet.parseCsv(csv);
+    const sheetRows = sheet.normalizeSheetRows(rows);
+    const clients = await getClients();
+    const prod = readProd() || [];
+    const { updates, toCreate, unmatched, duplicateNames } = sheet.reconcileSheet(sheetRows, clients, prod);
+
+    if (apply) {
+      const byId = new Map(prod.map(c => [c.id, c]));
+      for (const u of updates) {
+        const rec = byId.get(u.id);
+        if (!rec) continue;
+        Object.assign(rec, u.patch);
+        if (u.sheetNote) {
+          rec.notes = rec.notes || [];
+          rec.notes.push({ when: new Date().toISOString().slice(0, 10), who: 'Sheet', text: u.sheetNote });
+        }
+      }
+      const created = toCreate.map(c => ({
+        id: 'S' + c.ghlId, ghlId: c.ghlId, name: c.name, email: c.email, phone: c.phone,
+        pkg: c.pkg, stage: c.stage, days: 0,
+        tu: { r: c.tu.r, st: c.tu.st }, eq: { r: c.eq.r, st: c.eq.st }, ex: { r: c.ex.r, st: c.ex.st },
+        docs: { SSC: false, DL: false, POA: false, FTC: false, 'Data breach': false, Affidavit: false, 'Perm. purpose': false, 'Experian letter': false },
+        va: '—',
+        notes: [{ when: new Date().toISOString().slice(0, 10), who: 'Sheet', text: c.notes || 'Added from the Credit Repair sheet — not previously tracked in Deal Production.' }]
+      }));
+      writeProd(prod.concat(created));
+    }
+
+    res.json({
+      ok: true,
+      apply,
+      sheetRowCount: sheetRows.length,
+      updatesCount: updates.length,
+      updates: updates.map(u => ({ id: u.id, patch: u.patch, matchedGhl: u.matchedGhl })),
+      toCreateCount: toCreate.length,
+      toCreate: toCreate.map(c => ({ ghlId: c.ghlId, name: c.name, email: c.email, pkg: c.pkg, stage: c.stage })),
+      unmatchedCount: unmatched.length,
+      unmatched: unmatched.map(r => ({ name: r.name, pkg: r.pkg })),
+      duplicateNameCount: duplicateNames.length,
+      duplicateNames: duplicateNames.map(r => r.name)
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/production/reconcile', async (req, res) => {
   try {
     const clients = await getClients();
