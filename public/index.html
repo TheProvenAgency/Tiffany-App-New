@@ -119,6 +119,7 @@ tr:hover td{background:#faf8f3}
 .pill.active{background:var(--green-soft);color:var(--green)}
 .pill.inactive{background:var(--red-soft);color:var(--red)}
 .pill.unknown{background:#efece4;color:var(--muted)}
+.pill.warn{background:var(--gold-soft);color:var(--gold)}
 .tbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .tbar input,.tbar select{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--ink)}
 .tbar input{flex:1;min-width:180px}
@@ -351,7 +352,7 @@ section.view{display:none} section.view.on{display:block}
         <select id="fStatus"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
         <select id="fDeal"><option value="">All packages</option></select>
         <select id="fRound"><option value="">All rounds</option></select>
-        <select id="fAffiliate"><option value="">All (MyFreeScoreNow)</option><option value="enrolled">Affiliate</option><option value="needs">Needs affiliate</option></select>
+        <select id="fAffiliate"><option value="">All (MyFreeScoreNow)</option><option value="affiliate">Affiliate</option><option value="not_affiliate">Not affiliate (on MFSN)</option><option value="not_on_mfsn">Not on MyFreeScoreNow</option></select>
       </div>
       <div style="overflow-x:auto"><table>
         <thead><tr>
@@ -590,6 +591,10 @@ let from=null,to=null,granularity='day',preset='30d',page=1,sort='totalSpent',di
 const $=id=>document.getElementById(id);
 const fmt$=n=>'$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
 const fmtN=n=>n==null?'—':Number(n).toLocaleString();
+// MyFreeScoreNow status pill, shared by the Clients table and the client drawer.
+const MFSN_LABEL={affiliate:'Affiliate',not_affiliate:'Not affiliate',not_on_mfsn:'Not on MFSN'};
+const MFSN_CLASS={affiliate:'active',not_affiliate:'warn',not_on_mfsn:'unknown'};
+function mfsnPill(status){return `<span class="pill ${MFSN_CLASS[status]||'unknown'}">${MFSN_LABEL[status]||'—'}</span>`;}
 const iso=d=>d.toISOString().slice(0,10);
 const PRESETS=[['today','Today'],['7d','7D'],['30d','30D'],['90d','90D'],['ytd','YTD'],['all','All']];
 function presetRange(p){
@@ -637,12 +642,15 @@ async function renderAffiliateGap(){
     const prospects=lastAffiliateProspects.slice(0,12).map(x=>`<div class="src"><span>${escUser(x.name||x.email||'—')}</span>${x.email?'<span class="cardsub">'+escUser(x.email)+'</span>':''}</div>`).join('');
     const modeNote=d.mode==='live'?'matched against her real GoHighLevel client list by email (exact).':'GHL not connected — showing demo clients.';
     const syncedNote='Synced '+new Date(d.syncedAt).toLocaleString()+' · '+modeNote;
-    // Each box is a drill-down: the first three route into the Clients
+    // Each box is a drill-down: the first four route into the Clients
     // table pre-filtered; "On MFSN, not a client" has no client record to
     // route to, so it opens a modal listing the full prospect list instead.
     el.innerHTML=`<div class="dstat" style="margin-bottom:10px">
-        <div style="cursor:pointer" onclick="goClientsAffiliate('enrolled')"><div class="l">Getting paid (affiliate)</div><div class="v">${c.enrolled.toLocaleString()}</div></div>
-        <div style="cursor:pointer" onclick="goClientsAffiliate('needs')"><div class="l">Needs affiliate</div><div class="v">${c.notEnrolled.toLocaleString()}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v">${c.affiliate.toLocaleString()}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div></div>
+      </div>
+      <div class="dstat" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
         <div style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div></div>
         <div style="cursor:pointer" onclick="openProspectsModal()"><div class="l">On MFSN, not a client</div><div class="v">${(c.prospects||0).toLocaleString()}</div></div>
       </div>
@@ -806,7 +814,7 @@ async function loadClients(){
     <td><b>${fmt$(c.totalSpent)}</b></td><td>${c.numberOfPayments||0}</td>
     <td>${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</td>
     <td>${c.createdAt?c.createdAt.slice(0,10):'—'}</td>
-    <td><span class="pill ${c.mfsnAffiliate?'active':'inactive'}">${c.mfsnAffiliate?'Affiliate':'Needs'}</span></td></tr>`).join('');
+    <td>${mfsnPill(c.mfsnStatus)}</td></tr>`).join('');
 }
 document.querySelectorAll('th[data-s]').forEach(th=>th.addEventListener('click',()=>{
   const s=th.dataset.s;if(sort===s)dir=dir==='asc'?'desc':'asc';else{sort=s;dir='desc';}page=1;loadClients();
@@ -893,11 +901,12 @@ async function openClient(id){
   $('dActions').innerHTML=c.status==='active'
     ?`<button class="btn ghost" onclick="setStatusUI('inactive')">Mark inactive</button>`
     :`<button class="btn primary" onclick="setStatusUI('active')">Mark active (reactivated)</button>`;
-  $('dAffiliate').innerHTML=`<span class="pill ${c.mfsnAffiliate?'active':'inactive'}">${c.mfsnAffiliate?'Affiliate':'Needs affiliate'}</span>
+  $('dAffiliate').innerHTML=`${mfsnPill(c.mfsnStatus)}
     <span class="cardsub" style="margin-left:8px">${c.mfsnOverride?'manually set':(c.mfsnMatched?'matched by email/name against her MyFreeScoreNow list':'no match found on her MyFreeScoreNow list')}</span>
     <div class="dactions" style="margin-top:10px">
-      ${!c.mfsnAffiliate?'<button class="btn ghost" onclick="setAffiliateUI(\'affiliate\')">Mark Affiliate</button>':''}
-      ${c.mfsnAffiliate?'<button class="btn ghost" onclick="setAffiliateUI(\'needs\')">Mark Needs affiliate</button>':''}
+      ${c.mfsnStatus!=='affiliate'?'<button class="btn ghost" onclick="setAffiliateUI(\'affiliate\')">Mark Affiliate</button>':''}
+      ${c.mfsnStatus!=='not_affiliate'?'<button class="btn ghost" onclick="setAffiliateUI(\'not_affiliate\')">Mark Not affiliate</button>':''}
+      ${c.mfsnStatus!=='not_on_mfsn'?'<button class="btn ghost" onclick="setAffiliateUI(\'not_on_mfsn\')">Mark Not on MFSN</button>':''}
       ${c.mfsnOverride?'<button class="btn ghost" onclick="setAffiliateUI(null)">Reset to auto-detect</button>':''}
     </div>`;
   $('dNotes').innerHTML=d.notes.length?d.notes.map(n=>`<div class="noterow">${n.text}<div class="mut">${new Date(n.at).toLocaleString()}
@@ -916,7 +925,7 @@ async function setStatusUI(status){
   await fetch('/api/clients/'+curClient.id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
   openClient(curClient.id);loadDashboard();
 }
-// override: 'affiliate' | 'needs' | null (null clears back to auto-detect).
+// override: 'affiliate' | 'not_affiliate' | 'not_on_mfsn' | null (null clears back to auto-detect).
 // Refreshes the dashboard too so the affiliate-gap card's counts reflect
 // the change immediately -- this doesn't push anything to MyFreeScoreNow
 // itself yet (there's no outbound sync built there), just our own record.

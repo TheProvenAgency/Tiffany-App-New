@@ -68,13 +68,14 @@ test('the affiliate-gap API is admin-only', async () => {
   assert.equal((await req('/api/affiliate-gap', { cookie: adminCookie })).status, 200);
 });
 
-test('the gap API returns counts and a not-enrolled list', async () => {
+test('the gap API returns tri-state counts and the not-affiliate/not-on-mfsn lists', async () => {
   await req('/webhooks/mfsn', { method: 'POST', body: { members: [{ email: 'a@x.com' }] } });
   const r = await req('/api/affiliate-gap', { cookie: adminCookie });
   const d = await r.json();
   assert.ok(d.counts, 'has counts');
-  assert.ok('total' in d.counts && 'enrolled' in d.counts && 'notEnrolled' in d.counts);
-  assert.ok(Array.isArray(d.notEnrolled));
+  assert.ok('total' in d.counts && 'affiliate' in d.counts && 'notAffiliate' in d.counts && 'notOnMfsn' in d.counts);
+  assert.ok(Array.isArray(d.notAffiliate));
+  assert.ok(Array.isArray(d.notOnMfsn));
 });
 
 test('the webhook rejects a wrong secret once a secret is set', async () => {
