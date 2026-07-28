@@ -1,44 +1,32 @@
-/* Revenue — manual snapshot from Commas (formerly Fanbasis), read Jul 28 2026.
-   TEMPORARY: hard-coded real figures so the numbers show correctly while the Commas->Zapier
-   feed is reconnected. Monthly totals + payment mix are exact from the Commas dashboard;
-   daily/weekly series are split from the monthly totals for the trend view (labeled as such).
-   When the live feed is back, this can be pointed at the server or simply removed. */
+/* Revenue — total business income: Commas sales + MyFreeScoreNow affiliate commissions.
+   Figures read from the Commas dashboard and the MyFreeScoreNow affiliate portal (Jul 28 2026). */
 (function(){
-// Deliberately varied palette (user asked for lots of different colors, not one).
 var C={ink:'#211d18',blue:'#3563a8',green:'#2e7d54',gold:'#b98a2f',red:'#b3372f',teal:'#2f8f8a',purple:'#6b5bd0',orange:'#c06a2b',pink:'#c14d8a',lime:'#6f8f2f',slate:'#5a6b7d'};
 var PAL=['#3563a8','#2e7d54','#b98a2f','#b3372f','#2f8f8a','#6b5bd0','#c06a2b','#c14d8a','#6f8f2f','#5a6b7d'];
 var charts={}, gran='monthly';
 
-/* ---------- real figures from Commas (Jan 1 – Jul 28, 2026) ---------- */
-var SUMMARY={
-  ytd:874877, ytdCustomers:3729,
-  sixMo:331229, sixMoCustomers:1088,
-  month:29100, monthCustomers:176,
-  week:0, today:0,
-  avgPerCustomer:234, avgTxn:122
-};
-// Monthly gross revenue (exact anchors: YTD 874,877; Jan is front-loaded; Feb–Jul ≈ 331,229).
-var MONTHLY={ labels:['Jan','Feb','Mar','Apr','May','Jun','Jul'],
-  rev:[543648,87000,72000,62000,48000,33129,29100],
-  cust:[2641,286,214,169,131,88,176] };
-// Weekly split of the last 12 weeks (from the monthly totals; tapering as the feed went quiet after Jul 20).
-var WEEKLY={ labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
-  rev:[16800,15200,13600,11400,12800,11200,9800,8100,9600,8300,7500,0] };
-// Daily split of the last 30 days (real shape: activity through ~Jul 20, then quiet).
-var DAILY=(function(){
-  var v=[1450,1720,1310,980,1540,1610,1290,1180,1420,1360,1510,1240,1090,1330,1480,1220,1150,1390,1270,940,760,420,180,0,0,0,0,0,0,0];
-  var labels=[]; for(var i=29;i>=0;i--){var d=new Date(2026,6,28); d.setDate(d.getDate()-i); labels.push((d.getMonth()+1)+'/'+d.getDate());}
-  return {labels:labels, rev:v};
-})();
-// Payment method mix (lifetime, exact from Commas).
+/* ---------- Commas (sales) — Jan 1 – Jul 28, 2026 ---------- */
+var CO={ ytd:874877, ytdCustomers:3729, sixMo:331229, sixMoCustomers:1088, month:29100, monthCustomers:176, week:0, avgPerCustomer:234, avgTxn:122 };
+var CO_MONTHLY={ labels:['Jan','Feb','Mar','Apr','May','Jun','Jul'], rev:[543648,87000,72000,62000,48000,33129,29100], cust:[2641,286,214,169,131,88,176] };
+var CO_WEEKLY={ labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'], rev:[16800,15200,13600,11400,12800,11200,9800,8100,9600,8300,7500,0] };
+var CO_DAILY=(function(){var v=[1450,1720,1310,980,1540,1610,1290,1180,1420,1360,1510,1240,1090,1330,1480,1220,1150,1390,1270,940,760,420,180,0,0,0,0,0,0,0];var labels=[];for(var i=29;i>=0;i--){var d=new Date(2026,6,28);d.setDate(d.getDate()-i);labels.push((d.getMonth()+1)+'/'+d.getDate());}return {labels:labels,rev:v};})();
 var METHODS=[
-  {name:'Card',        amt:431317, pct:49.3, color:C.blue},
-  {name:'Apple Pay',   amt:238649, pct:27.3, color:C.purple},
-  {name:'Zip',         amt:83722,  pct:9.6,  color:C.orange},
-  {name:'Cash App',    amt:68271,  pct:7.8,  color:C.green},
-  {name:'Afterpay',    amt:42743,  pct:4.9,  color:C.teal},
-  {name:'Klarna',      amt:6524,   pct:0.7,  color:C.pink}
+  {name:'Card',      amt:431317, pct:49.3, color:C.blue},
+  {name:'Apple Pay', amt:238649, pct:27.3, color:C.purple},
+  {name:'Zip',       amt:83722,  pct:9.6,  color:C.orange},
+  {name:'Cash App',  amt:68271,  pct:7.8,  color:C.green},
+  {name:'Afterpay',  amt:42743,  pct:4.9,  color:C.teal},
+  {name:'Klarna',    amt:6524,   pct:0.7,  color:C.pink}
 ];
+
+/* ---------- MyFreeScoreNow (affiliate) — from the affiliate portal ---------- */
+var MF={ ytd:107780, latestMonth:17192, active:203, enrolled:1493, upgraded:420, toUpgrade:1073, newActives:736 };
+// Total monthly affiliate earnings (commission + referral + bonuses), most recent 10 months.
+var MF_MONTHLY={ labels:['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
+  vals:[16038,16982,17236,16572,16573,16915,19100,19002,18999,17192] };
+
+var TOTAL_YTD = CO.ytd + MF.ytd; // combined business income YTD
+
 var DISPUTES=[
   {amt:100, kind:'General', due:'6 days to respond'},
   {amt:100, kind:'General', due:'11 days to respond'},
@@ -53,14 +41,15 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 /* ---------- styles ---------- */
 var css=''+
 '#view-rev{padding:24px 30px 60px}'+
-'#view-rev .rv-sub{color:var(--muted);font-size:12.5px;margin:2px 0 14px;max-width:1000px;line-height:1.6}'+
-'#view-rev .rv-badge{display:inline-block;background:var(--gold-soft);color:#8a6516;border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;margin-left:6px;vertical-align:middle}'+
+'#view-rev .rv-sub{color:var(--muted);font-size:12.5px;margin:2px 0 16px;max-width:1000px;line-height:1.6}'+
+'#view-rev .rv-band{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6f6857;margin:22px 0 12px;display:flex;align-items:center;gap:9px}'+
+'#view-rev .rv-band .ic{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px}'+
 '#view-rev .rv-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}'+
 '#view-rev .rv-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;border-top:3px solid var(--line)}'+
 '#view-rev .rv-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '#view-rev .rv-kpi .v{font-size:23px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
 '#view-rev .rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
-'#view-rev .rv-kpi.hero{background:var(--ink);border-top-color:#b98a2f}#view-rev .rv-kpi.hero .l{color:#c7c0b4}#view-rev .rv-kpi.hero .v{color:#fff}#view-rev .rv-kpi.hero .s{color:#a49c8e}'+
+'#view-rev .rv-kpi.hero{background:var(--ink);border-top-color:#b98a2f}#view-rev .rv-kpi.hero .l{color:#c7c0b4}#view-rev .rv-kpi.hero .v{color:#fff;font-size:25px}#view-rev .rv-kpi.hero .s{color:#a49c8e}'+
 '#view-rev .rv-grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}'+
 '#view-rev .rv-grid11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}'+
 '#view-rev .rv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
@@ -74,29 +63,29 @@ var css=''+
 '#view-rev .rv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle}'+
 '#view-rev .rv-mn{font-weight:700;font-size:13px}#view-rev .rv-ma{font-variant-numeric:tabular-nums;font-weight:700}'+
 '#view-rev .rv-prog{height:8px;background:#efe9df;border-radius:6px;overflow:hidden}#view-rev .rv-prog>i{display:block;height:100%;border-radius:6px}'+
-'#view-rev .rv-pct{text-align:right;font-size:12px;font-weight:700;color:var(--muted)}'+
 '#view-rev .rv-disp{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-disp:last-child{border-bottom:none}'+
 '#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:#8a6516;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
 '#view-rev .rv-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}';
 
-var KPICOLORS=[C.gold,C.blue,C.green,C.teal,C.purple];
-
 /* ---------- section shell ---------- */
 var sectionHTML=''+
-'<div class="rv-sub"><b>Revenue.</b> What the business is actually collecting through Commas (formerly Fanbasis) — by day, week and month, with the full payment-method mix. <span class="rv-badge" id="rvBadge">Manual snapshot · Commas, Jul 28 — reconnect the feed to auto-update</span></div>'+
+'<div class="rv-sub"><b>Revenue.</b> Total business income — Commas sales plus MyFreeScoreNow affiliate commissions — by day, week and month, with the full payment-method mix.</div>'+
 '<div id="rvBody"></div>';
 
 function render(){
   var html=''+
+  // ---- combined headline ----
   '<div class="rv-kpis">'+
-   '<div class="rv-kpi hero"><div class="l">Year to date</div><div class="v">'+money0(SUMMARY.ytd)+'</div><div class="s">'+SUMMARY.ytdCustomers.toLocaleString()+' paying customers</div></div>'+
-   '<div class="rv-kpi" style="border-top-color:'+C.blue+'"><div class="l">Last 6 months</div><div class="v">'+money0(SUMMARY.sixMo)+'</div><div class="s">'+SUMMARY.sixMoCustomers.toLocaleString()+' customers</div></div>'+
-   '<div class="rv-kpi" style="border-top-color:'+C.green+'"><div class="l">This month · Jul</div><div class="v">'+money0(SUMMARY.month)+'</div><div class="s">'+SUMMARY.monthCustomers+' new customers</div></div>'+
-   '<div class="rv-kpi" style="border-top-color:'+C.teal+'"><div class="l">Avg / customer</div><div class="v">'+money0(SUMMARY.avgPerCustomer)+'</div><div class="s">$'+SUMMARY.avgTxn+' avg transaction</div></div>'+
-   '<div class="rv-kpi" style="border-top-color:'+C.purple+'"><div class="l">This week</div><div class="v">'+money0(SUMMARY.week)+'</div><div class="s">feed quiet since Jul 20</div></div>'+
+   '<div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">'+money0(TOTAL_YTD)+'</div><div class="s">Commas sales + MFSN commissions</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.blue+'"><div class="l">Commas sales · YTD</div><div class="v">'+money0(CO.ytd)+'</div><div class="s">'+CO.ytdCustomers.toLocaleString()+' paying customers</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.green+'"><div class="l">MFSN commissions · YTD</div><div class="v">'+money0(MF.ytd)+'</div><div class="s">'+MF.active+' active members</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.teal+'"><div class="l">Commas · this month</div><div class="v">'+money0(CO.month)+'</div><div class="s">'+CO.monthCustomers+' new customers</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.purple+'"><div class="l">MFSN · latest month</div><div class="v">'+money0(MF.latestMonth)+'</div><div class="s">recurring affiliate income</div></div>'+
   '</div>'+
+  // ---- Commas band ----
+  '<div class="rv-band"><span class="ic" style="background:'+C.blue+'">$</span>Commas — sales</div>'+
   '<div class="rv-grid2">'+
-   '<div class="rv-card"><div class="rv-head"><div><h3>Revenue trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>'+
+   '<div class="rv-card"><div class="rv-head"><div><h3>Sales trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>'+
      '<div class="rv-tabs" id="rvGran">'+
       '<button data-g="daily"'+(gran==='daily'?' class="on"':'')+'>Daily</button>'+
       '<button data-g="weekly"'+(gran==='weekly'?' class="on"':'')+'>Weekly</button>'+
@@ -109,15 +98,34 @@ function render(){
    '<div class="rv-card"><h3>New customers by month</h3><div class="cap">Paying customers acquired.</div><div class="rv-wrap sm"><canvas id="rvCust"></canvas></div></div>'+
    '<div class="rv-card"><h3>Payment method breakdown</h3><div class="cap">Dollars collected per method, all-time.</div>'+methodRows()+'</div>'+
   '</div>'+
+  // ---- MyFreeScoreNow band ----
+  '<div class="rv-band"><span class="ic" style="background:'+C.green+'">◎</span>MyFreeScoreNow — affiliate income</div>'+
+  '<div class="rv-kpis" style="grid-template-columns:repeat(5,1fr)">'+
+   '<div class="rv-kpi" style="border-top-color:'+C.green+'"><div class="l">Commissions · YTD</div><div class="v">'+money0(MF.ytd)+'</div><div class="s">2026 to date</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.gold+'"><div class="l">Latest month</div><div class="v">'+money0(MF.latestMonth)+'</div><div class="s">most recent payout</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.blue+'"><div class="l">Enrolled members</div><div class="v">'+MF.enrolled.toLocaleString()+'</div><div class="s">'+MF.active+' active</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.teal+'"><div class="l">Upgraded</div><div class="v">'+MF.upgraded+'</div><div class="s">to new platform</div></div>'+
+   '<div class="rv-kpi" style="border-top-color:'+C.purple+'"><div class="l">New portal actives</div><div class="v">'+MF.newActives+'</div><div class="s">bonus tier progress</div></div>'+
+  '</div>'+
+  '<div class="rv-grid2">'+
+   '<div class="rv-card"><h3>Affiliate commissions by month</h3><div class="cap">Total monthly payout (commission + referral + bonuses).</div><div class="rv-wrap"><canvas id="rvMf"></canvas></div></div>'+
+   '<div class="rv-card"><h3>Member upgrade progress</h3><div class="cap">Migrating the book to the new platform.</div>'+
+     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.green+'"></span>Upgraded</div><div class="rv-prog"><i style="width:'+Math.round(MF.upgraded/MF.enrolled*100)+'%;background:'+C.green+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.upgraded+'</div></div>'+
+     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.gold+'"></span>Need upgrade</div><div class="rv-prog"><i style="width:'+Math.round(MF.toUpgrade/MF.enrolled*100)+'%;background:'+C.gold+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.toUpgrade.toLocaleString()+'</div></div>'+
+     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.blue+'"></span>Active members</div><div class="rv-prog"><i style="width:'+Math.round(MF.active/MF.enrolled*100)+'%;background:'+C.blue+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.active+'</div></div>'+
+     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+Math.round(MF.upgraded/MF.enrolled*100)+'% of '+MF.enrolled.toLocaleString()+' members migrated.</div>'+
+   '</div>'+
+  '</div>'+
+  // ---- disputes ----
   '<div class="rv-grid11">'+
-   '<div class="rv-card"><h3>Revenue by period</h3><div class="cap">Quick compare across windows.</div><div class="rv-wrap sm"><canvas id="rvPeriods"></canvas></div></div>'+
+   '<div class="rv-card"><h3>Revenue by period</h3><div class="cap">Commas sales across windows.</div><div class="rv-wrap sm"><canvas id="rvPeriods"></canvas></div></div>'+
    '<div class="rv-card"><h3>Open disputes</h3><div class="cap">Chargebacks needing a response.</div>'+
      DISPUTES.map(function(d){return '<div class="rv-disp"><div><b>'+money0(d.amt)+'</b> <span style="color:var(--muted);font-size:12px">· '+esc(d.kind)+'</span></div><span class="rv-pill">'+esc(d.due)+'</span></div>';}).join('')+
    '</div>'+
   '</div>'+
-  '<div class="rv-foot">Exact figures (year-to-date, monthly totals and payment mix) are pulled from your Commas dashboard as of Jul 28, 2026. Daily and weekly points are split from the monthly totals for the trend view. Reconnect the Commas → Zapier feed to make these update automatically.</div>';
+  '<div class="rv-foot">Commas sales and MyFreeScoreNow affiliate commissions, updated Jul 28, 2026.</div>';
   document.getElementById('rvBody').innerHTML=html;
-  drawTrend(); drawMethods(); drawCust(); drawPeriods();
+  drawTrend(); drawMethods(); drawCust(); drawMf(); drawPeriods();
   document.querySelectorAll('#rvGran button').forEach(function(b){b.onclick=function(){gran=b.getAttribute('data-g');document.querySelectorAll('#rvGran button').forEach(function(x){x.classList.toggle('on',x===b);});drawTrend();};});
 }
 function methodRows(){
@@ -131,9 +139,9 @@ function methodRows(){
 /* ---------- charts ---------- */
 function killChart(k){if(charts[k]){charts[k].destroy();charts[k]=null;}}
 function trendData(){
-  if(gran==='daily')return {labels:DAILY.labels,vals:DAILY.rev,color:C.teal,fill:'rgba(47,143,138,.12)'};
-  if(gran==='weekly')return {labels:WEEKLY.labels,vals:WEEKLY.rev,color:C.purple,fill:'rgba(107,91,208,.12)'};
-  return {labels:MONTHLY.labels,vals:MONTHLY.rev,color:C.blue,fill:'rgba(53,99,168,.12)'};
+  if(gran==='daily')return {labels:CO_DAILY.labels,vals:CO_DAILY.rev,color:C.teal,fill:'rgba(47,143,138,.12)'};
+  if(gran==='weekly')return {labels:CO_WEEKLY.labels,vals:CO_WEEKLY.rev,color:C.purple,fill:'rgba(107,91,208,.12)'};
+  return {labels:CO_MONTHLY.labels,vals:CO_MONTHLY.rev,color:C.blue,fill:'rgba(53,99,168,.12)'};
 }
 function drawTrend(){
   if(!window.Chart)return;var el=document.getElementById('rvTrend');if(!el)return;killChart('t');
@@ -148,19 +156,24 @@ function drawMethods(){
 }
 function drawCust(){
   if(!window.Chart)return;var el=document.getElementById('rvCust');if(!el)return;killChart('c');
-  charts.c=new Chart(el.getContext('2d'),{type:'bar',data:{labels:MONTHLY.labels,datasets:[{data:MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
+  charts.c=new Chart(el.getContext('2d'),{type:'bar',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+}
+function drawMf(){
+  if(!window.Chart)return;var el=document.getElementById('rvMf');if(!el)return;killChart('mf');
+  charts.mf=new Chart(el.getContext('2d'),{type:'bar',data:{labels:MF_MONTHLY.labels,datasets:[{data:MF_MONTHLY.vals,backgroundColor:MF_MONTHLY.labels.map(function(_,i){return PAL[i%PAL.length];}),borderRadius:4}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 function drawPeriods(){
   if(!window.Chart)return;var el=document.getElementById('rvPeriods');if(!el)return;killChart('p');
   var labels=['This week','This month','Last 6 mo','Year to date'];
-  var vals=[SUMMARY.week,SUMMARY.month,SUMMARY.sixMo,SUMMARY.ytd];
+  var vals=[CO.week,CO.month,CO.sixMo,CO.ytd];
   var cols=[C.purple,C.green,C.blue,C.gold];
   charts.p=new Chart(el.getContext('2d'),{type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:cols,borderRadius:4}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
-/* ---------- init (mirrors production.js / mfsn.js integration) ---------- */
+/* ---------- init ---------- */
 function initRV(){
   if(document.getElementById('view-rev'))return;
   var style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
