@@ -63,6 +63,9 @@ function drawHeroChart(){
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return money0(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}}}}});
 }
 function patchDash(){
+  // these two are idempotent + cheap — run every tick so the alert stays hidden even when the app re-renders it
+  var b=document.getElementById('heroBadge');if(b)b.style.display='none';
+  hideSyncAlert();
   var hero=document.getElementById('heroAmt');if(!hero)return;
   if(hero.textContent==='$46,292')return; // already showing combined figure; skip until server resets it
   _setTxt('heroLabel','TOTAL COLLECTED · LAST 30 DAYS');
