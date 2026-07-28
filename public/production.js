@@ -165,7 +165,7 @@ function fmt(n){return n.toLocaleString();}
 
 function currentRows(){
   var fl=FILTERS.filter(function(x){return x.id===curFilter;})[0]||FILTERS[0];
-  return CLIENTS.filter(fl.f).filter(function(c){return !curSearch||((c.name||'')+' '+(c.pkg||'')).toLowerCase().indexOf(curSearch)>=0;});
+  return CLIENTS.filter(fl.f).filter(function(c){return !curSearch||((c.name||'')+' '+(c.pkg||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase().indexOf(curSearch)>=0;});
 }
 
 /* ---------- server load/save ---------- */

@@ -78,17 +78,20 @@ test('reconcileSheet: an existing record matched by ghlId gets a diff patch for 
   assert.deepEqual(updates[0].patch.ex, { r: 2, st: 'ready' });
 });
 
-test('reconcileSheet: a legacy "First L." record matches by first-name + last-initial and gets backfilled with ghlId', () => {
+test('reconcileSheet: a legacy "First L." record matches by first-name + last-initial and gets backfilled with ghlId, full name, email, and phone', () => {
   const sheetRows = sheet.normalizeSheetRows([
     ['h'],
     ['', 'Yes', '', 'Brittany Carpenter', 'Pkg', 'Resolved', 'Resolved', 'Resolved', '']
   ]);
-  const ghlClients = [{ id: 'g9', name: 'Brittany Carpenter', email: 'b@x.com' }];
+  const ghlClients = [{ id: 'g9', name: 'Brittany Carpenter', email: 'b@x.com', phone: '+15551234567' }];
   const prod = [{ id: 'C1000', name: 'Brittany C.', pkg: 'Pkg', stage: 'Completed', tu: { r: 6, st: 'done' }, eq: { r: 6, st: 'done' }, ex: { r: 6, st: 'done' } }];
   const { updates } = sheet.reconcileSheet(sheetRows, ghlClients, prod);
   assert.equal(updates.length, 1);
   assert.equal(updates[0].id, 'C1000');
   assert.equal(updates[0].patch.ghlId, 'g9');
+  assert.equal(updates[0].patch.name, 'Brittany Carpenter', 'the redacted "First L." name is upgraded to the real full name once GHL confirms identity');
+  assert.equal(updates[0].patch.email, 'b@x.com');
+  assert.equal(updates[0].patch.phone, '+15551234567');
 });
 
 test('reconcileSheet: a sheet row matched to GHL with no existing record is queued to create', () => {
