@@ -9,8 +9,10 @@ var curView='overview', curFilter='all', curSearch='', curPage=1, PAGE=60, openI
 var MYNAME=null, openStamp=null, pollTimer=null;
 fetch('/api/me').then(function(r){return r.json();}).then(function(m){
   MYNAME=m&&m.name;
-  var btn=document.getElementById('pvReconcileBtn');
-  if(btn&&m&&m.role==='admin')btn.style.display='';
+  if(m&&m.role==='admin'){
+    var btn=document.getElementById('pvReconcileBtn'); if(btn)btn.style.display='';
+    var sbtn=document.getElementById('pvSheetBtn'); if(sbtn)sbtn.style.display='';
+  }
 }).catch(function(){});
 
 /* ---------- styles ---------- */
@@ -92,8 +94,13 @@ var css=''+
 var sectionHTML=''+
 '<div class="pv-sub"><b>The client work desk.</b> Every credit-repair client and where they stand across all three bureaus. <b>Overview</b> for the numbers, <b>Queue</b> to work the list, <b>Pipeline</b> to see the board. Open any client to update status, documents, and notes — saved for the whole team.</div>'+
 '<div class="pv-bar" style="margin-bottom:14px"><div class="pv-tabs" style="margin-bottom:0"><button id="pvTabOv" class="on" data-v="overview">Overview</button><button id="pvTabQ" data-v="queue">Queue</button><button id="pvTabP" data-v="board">Pipeline</button></div>'+
- '<button id="pvReconcileBtn" class="addbtn" style="display:none;margin-top:0">Sync new clients from GoHighLevel</button></div>'+
+ '<div style="display:flex;gap:8px">'+
+ '<button id="pvReconcileBtn" class="addbtn" style="display:none;margin-top:0">Sync new clients from GoHighLevel</button>'+
+ '<button id="pvSheetBtn" class="addbtn" style="display:none;margin-top:0;background:var(--card);color:var(--ink);border:1px solid var(--line)">Sync from Credit Repair sheet</button>'+
+ '<input id="pvSheetFile" type="file" accept=".csv" style="display:none">'+
+ '</div></div>'+
  '<div id="pvReconcileResult" class="pv-card" style="display:none;margin-bottom:14px"></div>'+
+ '<div id="pvSheetResult" class="pv-card" style="display:none;margin-bottom:14px"></div>'+
 '<div id="pvOverview"></div>'+
 '<div id="pvWork" style="display:none">'+
  '<div class="pv-chips" id="pvChips"></div>'+
@@ -217,6 +224,50 @@ function runReconcile(){
     btn.disabled=false; btn.textContent=origText;
     out.style.display=''; out.innerHTML='<div class="cardsub">Sync failed — check your connection and try again.</div>';
   });
+}
+
+/* ---------- Credit Repair sheet sync (admin only) ---------- */
+// Tiffany's live Google Sheet is the source of truth for package/TU/EQ/EX/
+// notes -- always runs as a dry run first (apply:false) so the diff can be
+// reviewed before anything is written; a second click with apply:true
+// commits it. See lib/sheet.js for the matching/parsing rules.
+var lastSheetCsv=null;
+function runSheetSync(csvText, apply){
+  var btn=document.getElementById('pvSheetBtn'), out=document.getElementById('pvSheetResult');
+  if(!btn)return;
+  lastSheetCsv=csvText;
+  btn.disabled=true; var origText=btn.textContent; btn.textContent=apply?'Applying…':'Reading sheet…';
+  fetch('/api/production/sheet-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:csvText,apply:!!apply})})
+    .then(function(r){return r.json();}).then(function(d){
+      btn.disabled=false; btn.textContent=origText;
+      if(!d||d.error){ out.style.display=''; out.innerHTML='<div class="cardsub">Sheet sync failed'+(d&&d.error?': '+esc(d.error):'')+'.</div>'; return; }
+      out.style.display='';
+      var updateRows=(d.updates||[]).slice(0,15).map(function(u){
+        var fields=Object.keys(u.patch).join(', ');
+        return '<div class="cardsub">'+esc(u.id)+' — '+esc(fields)+(u.matchedGhl?'':' <span style="color:var(--gold)">(no live GHL match)</span>')+'</div>';
+      }).join('');
+      var createRows=(d.toCreate||[]).slice(0,15).map(function(c){return '<div class="cardsub">'+esc(c.name)+' · '+esc(c.pkg||'—')+'</div>';}).join('');
+      var unmatchedRows=(d.unmatched||[]).slice(0,15).map(function(r){return '<div class="cardsub">'+esc(r.name)+'</div>';}).join('');
+      var dupRows=(d.duplicateNames||[]).slice(0,15).map(function(n){return '<div class="cardsub">'+esc(n)+'</div>';}).join('');
+      out.innerHTML='<h3>Credit Repair sheet sync'+(d.apply?' — applied':' — preview')+'</h3>'+
+        '<p class="cap" style="margin-bottom:10px">Read '+fmt(d.sheetRowCount)+' sheet rows. '+
+          fmt(d.updatesCount)+' existing client'+(d.updatesCount===1?'':'s')+' would be updated to match the sheet, '+
+          fmt(d.toCreateCount)+' new client'+(d.toCreateCount===1?'':'s')+' would be added, '+
+          fmt(d.unmatchedCount)+' sheet row'+(d.unmatchedCount===1?'':'s')+' matched no current GoHighLevel contact (not created — no email/phone to go on), and '+
+          fmt(d.duplicateNameCount)+' had an ambiguous duplicate name on the sheet itself (skipped).'+'</p>'+
+        (d.apply?'<p class="cap" style="color:var(--green);font-weight:700;margin-bottom:10px">Applied — Deal Production now reflects the sheet.</p>':
+          '<button class="addbtn" id="pvSheetApplyBtn" style="margin-top:0">Apply this sync</button>')+
+        (updateRows?'<div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:14px 0 6px">Updates ('+fmt(d.updatesCount)+(d.updatesCount>15?', first 15':'')+')</div>'+updateRows:'')+
+        (createRows?'<div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:14px 0 6px">New from sheet ('+fmt(d.toCreateCount)+(d.toCreateCount>15?', first 15':'')+')</div>'+createRows:'')+
+        (unmatchedRows?'<div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:14px 0 6px">Not matched to GoHighLevel ('+fmt(d.unmatchedCount)+(d.unmatchedCount>15?', first 15':'')+')</div>'+unmatchedRows:'')+
+        (dupRows?'<div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:14px 0 6px">Ambiguous duplicate names on the sheet ('+fmt(d.duplicateNameCount)+(d.duplicateNameCount>15?', first 15':'')+')</div>'+dupRows:'');
+      var ap=document.getElementById('pvSheetApplyBtn');
+      if(ap)ap.onclick=function(){runSheetSync(lastSheetCsv,true);};
+      if(d.apply&&(d.updatesCount||d.toCreateCount))loadThen(function(){renderOverview();drawWork();});
+    }).catch(function(){
+      btn.disabled=false; btn.textContent=origText;
+      out.style.display=''; out.innerHTML='<div class="cardsub">Sheet sync failed — check your connection and try again.</div>';
+    });
 }
 
 /* ---------- overview (charts) ---------- */
@@ -417,6 +468,14 @@ function initProd(){
   document.getElementById('pvTabQ').onclick=function(){pvSetPV('queue');};
   document.getElementById('pvTabP').onclick=function(){pvSetPV('board');};
   document.getElementById('pvReconcileBtn').onclick=runReconcile;
+  document.getElementById('pvSheetBtn').onclick=function(){document.getElementById('pvSheetFile').click();};
+  document.getElementById('pvSheetFile').onchange=function(e){
+    var f=e.target.files&&e.target.files[0]; if(!f)return;
+    var reader=new FileReader();
+    reader.onload=function(){ runSheetSync(reader.result,false); };
+    reader.readAsText(f);
+    e.target.value='';
+  };
   var nav=document.getElementById('nav');
   if(nav&&!document.getElementById('pvNavBtn')){
     var sib=nav.querySelector('button');var b=document.createElement('button');b.id='pvNavBtn';
