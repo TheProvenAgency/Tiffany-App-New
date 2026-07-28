@@ -89,7 +89,10 @@ var css=''+
 '#pvDrawer .notes{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}#pvDrawer .note{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px}'+
 '#pvDrawer .note .m{font-size:10.5px;color:var(--muted);margin-bottom:3px}#pvDrawer .note .t{font-size:12.5px;line-height:1.4}'+
 '#pvDrawer textarea{width:100%;min-height:64px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;font-family:inherit;background:var(--card);color:var(--ink);box-sizing:border-box}'+
-'#pvDrawer .addbtn{margin-top:7px;background:var(--ink);color:#fff;border:none;border-radius:8px;padding:8px 15px;font-weight:700;font-size:12.5px;cursor:pointer}';
+'#pvDrawer .addbtn{margin-top:7px;background:var(--ink);color:#fff;border:none;border-radius:8px;padding:8px 15px;font-weight:700;font-size:12.5px;cursor:pointer}'+
+'#pvDrawer .cfpb{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}#pvDrawer .cfpbrow{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}'+
+'#pvDrawer .cfpbrow b{flex:0 0 auto}#pvDrawer .cfpbrow .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}'+
+'#pvDrawer .cfpbtoggle{background:none;border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--muted)}';
 
 var sectionHTML=''+
 '<div class="pv-sub"><b>The client work desk.</b> Every credit-repair client and where they stand across all three bureaus. <b>Overview</b> for the numbers, <b>Queue</b> to work the list, <b>Pipeline</b> to see the board. Open any client to update status, documents, and notes — saved for the whole team.</div>'+
@@ -419,6 +422,24 @@ function flashUpdated(who){
   setTimeout(function(){el.style.color='';var c=byId(openId);if(c)el.textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();else el.textContent=prev;},2500);
 }
 function opts(a,sel){return a.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+o+'</option>';}).join('');}
+// Password display defaults to masked -- these are live CFPB portal logins,
+// and the drawer can be open on a shared screen. "Show" reveals every round
+// at once rather than one at a time, since a teammate filing a complaint
+// usually needs to compare across rounds.
+var cfpbRevealed=false;
+function cfpbHTML(c){
+  var rows=c.cfpb||[];
+  if(!rows.length)return '';
+  var body=rows.map(function(r){
+    var pw=r.pw?(cfpbRevealed?esc(r.pw):'••••••••'):'—';
+    return '<div class="cfpbrow"><b>Round '+r.round+'</b>'+
+      (r.date?'<span>'+esc(r.date)+'</span>':'')+
+      (r.email?'<span class="mono">'+esc(r.email)+'</span>':'')+
+      '<span class="mono">'+pw+'</span></div>';
+  }).join('');
+  return '<div class="sec">CFPB portal logins <button class="cfpbtoggle" id="dCfpbToggle" type="button">'+(cfpbRevealed?'Hide passwords':'Show passwords')+'</button></div>'+
+   '<div class="cfpb">'+body+'</div>';
+}
 function drawerBody(c){
   var need=docsNeeded(c);
   var brow=function(key,label){var b=c[key];return '<div class="brow"><b>'+label+'</b><input type="number" min="0" max="9" value="'+b.r+'" data-b="'+key+'"><select data-b="'+key+'" data-k="st"><option value="none"'+(b.st==='none'?' selected':'')+'>— not started</option><option value="ready"'+(b.st==='ready'?' selected':'')+'>Ready</option><option value="done"'+(b.st==='done'?' selected':'')+'>Round done</option><option value="login"'+(b.st==='login'?' selected':'')+'>⛔ Login issue</option></select></div>';};
@@ -428,6 +449,7 @@ function drawerBody(c){
    '<div class="fld"><label>Stage</label><select id="dStage">'+opts(STAGES,c.stage)+'</select></div>'+
    '<div class="fld"><label>Assigned</label><select id="dVa">'+opts(VAS,c.va||'—')+'</select></div>'+
    '<div class="sec">Dispute rounds by bureau</div>'+brow('tu','TransUnion')+brow('eq','Equifax')+brow('ex','Experian')+
+   cfpbHTML(c)+
    '<div class="sec">Documents ('+docCount(c)+'/'+DOCS.length+')</div><div class="docs">'+docsHtml+'</div>'+
    (need.length?'<div class="need"><b>Still needed:</b> '+need.join(', ')+'</div>':'<div class="need" style="background:var(--green-soft);color:#1f6a45"><b>All documents collected.</b></div>')+
    '<div class="sec">Notes</div><div class="notes" id="dNotes">'+notesHtml+'</div>'+
@@ -440,6 +462,8 @@ function bindDrawer(c){
   function commit(patch){save(c,patch);if(curView==='overview')renderOverview();else drawWork();document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();}
   document.getElementById('dStage').onchange=function(e){if(c.stage!==e.target.value){c.stage=e.target.value;c.days=0;}commit({stage:c.stage,days:c.days});document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
   document.getElementById('dVa').onchange=function(e){c.va=e.target.value;commit({va:c.va});};
+  var cfpbToggle=document.getElementById('dCfpbToggle');
+  if(cfpbToggle)cfpbToggle.onclick=function(){cfpbRevealed=!cfpbRevealed;document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
   body.querySelectorAll('input[data-b]').forEach(function(el){el.onchange=function(){var k=el.getAttribute('data-b');c[k].r=parseInt(el.value||'0',10);var p={};p[k]={r:c[k].r};commit(p);};});
   body.querySelectorAll('select[data-b]').forEach(function(el){el.onchange=function(){var k=el.getAttribute('data-b');c[k].st=el.value;var p={};p[k]={st:c[k].st};commit(p);};});
   body.querySelectorAll('input[data-doc]').forEach(function(el){el.onchange=function(){if(!c.docs)c.docs={};var d=el.getAttribute('data-doc');c.docs[d]=el.checked;var dp={};dp[d]=el.checked;commit({docs:dp});document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};});

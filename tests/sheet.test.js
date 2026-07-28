@@ -50,6 +50,58 @@ test('parseBureauCell: an unrecognized status (cancelled, refunded, stray text) 
   assert.equal(r.raw, 'CANCELLED');
 });
 
+// Builds a row array with the real sheet's column layout: 0-8 are the fixed
+// columns (blank, blank, blank, NAME, PACKAGE, TU, EQ, EX, Notes), then
+// round triples (date, email, pw) starting at column 9.
+function rowWithCfpb(fixed, rounds) {
+  const row = ['', '', '', ...fixed];
+  for (const r of rounds) { row.push(r.date || '', r.email || '', r.pw || ''); }
+  return row;
+}
+
+test('parseCfpbRounds reads only the rounds that have data, in order', () => {
+  const row = rowWithCfpb(['Jane Doe', 'Pkg', 'x', 'x', 'x', ''], [
+    { date: '7/1/26', email: 'r1@cfpb.com', pw: 'pw1' },
+    {}, // round 2 fully blank -- skipped
+    { date: '7/15/26', email: 'r3@cfpb.com', pw: 'pw3' }
+  ]);
+  const rounds = sheet.parseCfpbRounds(row);
+  assert.deepEqual(rounds, [
+    { round: 1, date: '7/1/26', email: 'r1@cfpb.com', pw: 'pw1' },
+    { round: 3, date: '7/15/26', email: 'r3@cfpb.com', pw: 'pw3' }
+  ]);
+});
+
+test('parseCfpbRounds returns nothing for a row with no CFPB columns filled in', () => {
+  const row = ['', '', '', 'Jane Doe', 'Pkg', 'x', 'x', 'x', ''];
+  assert.deepEqual(sheet.parseCfpbRounds(row), []);
+});
+
+test('reconcileSheet: CFPB logins are sheet-wins, same as package/round status', () => {
+  const row = rowWithCfpb(['Jane Doe', 'Pkg', 'Round 2 Done', 'Round 2 Done', 'Round 2 Done', ''], [
+    { date: '7/1/26', email: 'r1@cfpb.com', pw: 'pw1' }
+  ]);
+  const sheetRows = sheet.normalizeSheetRows([['h'], row]);
+  const ghlClients = [{ id: 'g1', name: 'Jane Doe', email: 'jane@x.com' }];
+  const prod = [{ id: 'P1', ghlId: 'g1', name: 'Jane Doe', pkg: 'Pkg', stage: 'In rounds', tu: { r: 2, st: 'done' }, eq: { r: 2, st: 'done' }, ex: { r: 2, st: 'done' }, cfpb: [] }];
+  const { updates } = sheet.reconcileSheet(sheetRows, ghlClients, prod);
+  assert.equal(updates.length, 1);
+  assert.deepEqual(updates[0].patch.cfpb, [{ round: 1, date: '7/1/26', email: 'r1@cfpb.com', pw: 'pw1' }]);
+});
+
+test('reconcileSheet: an unchanged CFPB login produces no patch entry for it', () => {
+  const row = rowWithCfpb(['Jane Doe', 'New Pkg', 'x', 'x', 'x', ''], [
+    { date: '7/1/26', email: 'r1@cfpb.com', pw: 'pw1' }
+  ]);
+  const sheetRows = sheet.normalizeSheetRows([['h'], row]);
+  const ghlClients = [{ id: 'g1', name: 'Jane Doe', email: 'jane@x.com' }];
+  const prod = [{ id: 'P1', ghlId: 'g1', name: 'Jane Doe', pkg: 'Old Pkg', stage: 'Onboarding', tu: { r: 0, st: 'none' }, eq: { r: 0, st: 'none' }, ex: { r: 0, st: 'none' }, cfpb: [{ round: 1, date: '7/1/26', email: 'r1@cfpb.com', pw: 'pw1' }] }];
+  const { updates } = sheet.reconcileSheet(sheetRows, ghlClients, prod);
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].patch.pkg, 'New Pkg');
+  assert.equal(updates[0].patch.cfpb, undefined, 'identical CFPB data should not be re-patched');
+});
+
 test('deriveStage: any login beats ready and done', () => {
   assert.equal(sheet.deriveStage({ st: 'login' }, { st: 'done' }, { st: 'ready' }), 'In rounds');
 });

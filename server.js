@@ -1145,6 +1145,7 @@ app.post('/api/production/sheet-sync', async (req, res) => {
         tu: { r: c.tu.r, st: c.tu.st }, eq: { r: c.eq.r, st: c.eq.st }, ex: { r: c.ex.r, st: c.ex.st },
         docs: { SSC: false, DL: false, POA: false, FTC: false, 'Data breach': false, Affidavit: false, 'Perm. purpose': false, 'Experian letter': false },
         va: '—',
+        cfpb: c.cfpb || [],
         notes: [{ when: new Date().toISOString().slice(0, 10), who: 'Sheet', text: c.notes || 'Added from the Credit Repair sheet — not previously tracked in Deal Production.' }]
       }));
       writeProd(prod.concat(created));
