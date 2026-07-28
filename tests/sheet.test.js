@@ -170,6 +170,62 @@ test('reconcileSheet: a sheet row matching neither GHL nor an existing record is
   assert.equal(unmatched[0].name, 'Nobody Anywhere');
 });
 
+test('bestGhlMatch: prefers the contact with real email/phone over a blank placeholder', () => {
+  const blank = { id: 'g1', name: 'Brittany Carpenter' };
+  const real = { id: 'g2', name: 'Brittany Carpenter', email: 'brittcarp23@gmail.com', phone: '+12054936830' };
+  assert.equal(sheet.bestGhlMatch([blank, real]), real);
+  assert.equal(sheet.bestGhlMatch([real, blank]), real, 'order should not matter');
+});
+
+test('bestGhlMatch: falls back to the first contact when none have contact info', () => {
+  const a = { id: 'g1', name: 'John Smith' };
+  const b = { id: 'g2', name: 'John Smith' };
+  assert.equal(sheet.bestGhlMatch([a, b]), a);
+});
+
+test('bestGhlMatch: returns null when two contacts both have real info -- too ambiguous to guess', () => {
+  const a = { id: 'g1', name: 'Audrey Pickett', email: 'a@x.com', phone: '+15550001111' };
+  const b = { id: 'g2', name: 'Audrey Pickett', email: 'a@x.com', phone: '+15552223333' };
+  assert.equal(sheet.bestGhlMatch([a, b]), null);
+});
+
+test('bestGhlMatch: empty or missing candidate list is null', () => {
+  assert.equal(sheet.bestGhlMatch([]), null);
+  assert.equal(sheet.bestGhlMatch(undefined), null);
+});
+
+test('reconcileSheet: when GHL has a blank placeholder and a real contact under the same name, the real one is matched -- not whichever came first', () => {
+  const sheetRows = sheet.normalizeSheetRows([
+    ['h'],
+    ['', 'Yes', '', 'Brittany Carpenter', 'Pkg', 'Resolved', 'Resolved', 'Resolved', '']
+  ]);
+  // Blank placeholder listed FIRST, same as the real production data shape that caused the bug.
+  const ghlClients = [
+    { id: 'placeholder', name: 'Brittany Carpenter' },
+    { id: 'real', name: 'Brittany Carpenter', email: 'brittcarp23@gmail.com', phone: '+12054936830' }
+  ];
+  const { toCreate } = sheet.reconcileSheet(sheetRows, ghlClients, []);
+  assert.equal(toCreate.length, 1);
+  assert.equal(toCreate[0].ghlId, 'real', 'must link to the contact with real info, not the first one in the list');
+  assert.equal(toCreate[0].email, 'brittcarp23@gmail.com');
+  assert.equal(toCreate[0].phone, '+12054936830');
+});
+
+test('reconcileSheet: when a name has two GHL contacts that both carry real info, the row is left unmatched rather than guessed', () => {
+  const sheetRows = sheet.normalizeSheetRows([
+    ['h'],
+    ['', 'Yes', '', 'Audrey Pickett', 'Pkg', 'ready', '-', '-', '']
+  ]);
+  const ghlClients = [
+    { id: 'g1', name: 'Audrey Pickett', email: 'a@x.com', phone: '+15550001111' },
+    { id: 'g2', name: 'Audrey Pickett', email: 'a@x.com', phone: '+15552223333' }
+  ];
+  const { toCreate, unmatched } = sheet.reconcileSheet(sheetRows, ghlClients, []);
+  assert.equal(toCreate.length, 0);
+  assert.equal(unmatched.length, 1);
+  assert.equal(unmatched[0].name, 'Audrey Pickett');
+});
+
 test('reconcileSheet: two sheet rows with the same name are both skipped as ambiguous', () => {
   const sheetRows = sheet.normalizeSheetRows([
     ['h'],
