@@ -699,6 +699,31 @@ app.post('/api/clients/:id/status', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Add/remove arbitrary GHL tags on a contact. Used to fix contacts whose
+// tags fell out of sync with reality -- e.g. a contact still marked
+// status:lead in GHL after Deal Production shows the client well into
+// actual rounds (or completed). Admin-only, same write-gating as the rest
+// of this section (READ_ONLY blocks it in live mode, same as setStatus/sms).
+app.post('/api/clients/:id/tags', async (req, res) => {
+  try {
+    const add = Array.isArray(req.body.add) ? req.body.add.filter(Boolean) : [];
+    const remove = Array.isArray(req.body.remove) ? req.body.remove.filter(Boolean) : [];
+    if (!add.length && !remove.length) return res.status(400).json({ error: 'add or remove required' });
+    if (READ_ONLY && liveMode()) return refuseWrite(res, 'setTags', `${req.params.id} +[${add}] -[${remove}]`);
+    if (liveMode()) {
+      if (add.length) await ghl.addTags(store.getConfig(), req.params.id, add);
+      if (remove.length) await ghl.removeTags(store.getConfig(), req.params.id, remove).catch(() => {});
+      store.clearCache();
+    } else {
+      const c = demoData().clients.find(x => x.id === req.params.id);
+      if (c) {
+        c.tags = (c.tags || []).filter(t => !remove.includes(t)).concat(add.filter(t => !(c.tags || []).includes(t)));
+      }
+    }
+    res.json({ ok: true, added: add, removed: remove });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // send SMS via GHL (live mode only)
 app.post('/api/clients/:id/sms', async (req, res) => {
   try {
