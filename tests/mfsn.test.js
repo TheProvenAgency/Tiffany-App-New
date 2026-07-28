@@ -85,3 +85,20 @@ test('the webhook rejects a wrong secret once a secret is set', async () => {
   const good = await req('/webhooks/mfsn?secret=s3cret', { method: 'POST', body: { members: [{ email: 'a@x.com' }] } });
   assert.equal(good.status, 200);
 });
+
+test('the Deal Production reconcile endpoint is admin-only', async () => {
+  assert.equal((await req('/api/production/reconcile', { method: 'POST', cookie: employeeCookie })).status, 403);
+  const r = await req('/api/production/reconcile', { method: 'POST', cookie: adminCookie });
+  assert.equal(r.status, 200);
+});
+
+test('reconcile reports what it added and what it could not match, and running it twice is idempotent', async () => {
+  const first = await (await req('/api/production/reconcile', { method: 'POST', cookie: adminCookie })).json();
+  assert.ok('addedCount' in first && 'notInGhlCount' in first);
+  assert.ok(Array.isArray(first.added) && Array.isArray(first.notInGhl));
+
+  // Every client this run added should be recognized on a second run (by the
+  // ghlId it was tagged with), so a second reconcile adds nothing new.
+  const second = await (await req('/api/production/reconcile', { method: 'POST', cookie: adminCookie })).json();
+  assert.equal(second.addedCount, 0, 'a client just added should not be re-added on the next run');
+});

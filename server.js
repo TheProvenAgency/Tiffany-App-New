@@ -1051,6 +1051,51 @@ app.post('/api/production', (req, res) => {
   res.json({ ok: true, count: c.length });
 });
 
+// Build a fresh Deal Production record for a GHL client that has never been
+// tracked here before. ghlId is stored so a later reconcile run recognizes
+// this record on sight (exact match) instead of falling back to the coarser
+// name-key match the old sheet-only records rely on.
+function makeProdRecordFromGhl(c) {
+  return {
+    id: 'G' + c.id, // prefixed so it can never collide with the sheet's C#### ids
+    ghlId: c.id,
+    name: c.name,
+    email: c.email || null,
+    phone: c.phone || null,
+    pkg: c.deal || null,
+    stage: c.round ? 'In rounds' : 'Onboarding',
+    days: 0,
+    tu: { r: 0, st: 'none' }, eq: { r: 0, st: 'none' }, ex: { r: 0, st: 'none' },
+    docs: { SSC: false, DL: false, POA: false, FTC: false, 'Data breach': false, Affidavit: false, 'Perm. purpose': false, 'Experian letter': false },
+    va: '—',
+    notes: [{ when: new Date().toISOString().slice(0, 10), who: 'System', text: 'Auto-added from GoHighLevel — client not previously tracked in Deal Production. Verify package, stage, and documents.' }]
+  };
+}
+
+// Reconciles the live GHL client list against the Deal Production roster
+// (see lib/affiliate.js reconcileProduction for the matching rules). Any GHL
+// credit-repair client with no existing Deal Production record gets one
+// created here. The reverse direction -- a Deal Production client with no
+// match in GHL -- is only reported, never acted on: the sheet import has no
+// email or phone, so there is nothing usable to create a GHL contact from.
+// Admin-only (not in the employee allowlist).
+app.post('/api/production/reconcile', async (req, res) => {
+  try {
+    const clients = await getClients();
+    const prod = readProd() || [];
+    const { toAdd, notInGhl } = affiliate.reconcileProduction(clients, prod);
+    const newRecords = toAdd.map(makeProdRecordFromGhl);
+    if (newRecords.length) writeProd(prod.concat(newRecords));
+    res.json({
+      ok: true,
+      addedCount: newRecords.length,
+      added: newRecords.map(r => ({ id: r.id, name: r.name, email: r.email })),
+      notInGhlCount: notInGhl.length,
+      notInGhl: notInGhl.map(c => ({ id: c.id, name: c.name }))
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Update one lead. The UI used to POST all 3,578 records on every keystroke,
 // so whoever saved last silently erased everyone else's work. Patching a single
 // record means two people on different leads never collide.

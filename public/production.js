@@ -7,7 +7,11 @@ var C={blue:'#3563a8',green:'#2e7d54',gold:'#b98a2f',red:'#b3372f',gray:'#b9b3a8
 var CLIENTS=[], loaded=false, saveT=null, charts={};
 var curView='overview', curFilter='all', curSearch='', curPage=1, PAGE=60, openId=null;
 var MYNAME=null, openStamp=null, pollTimer=null;
-fetch('/api/me').then(function(r){return r.json();}).then(function(m){MYNAME=m&&m.name;}).catch(function(){});
+fetch('/api/me').then(function(r){return r.json();}).then(function(m){
+  MYNAME=m&&m.name;
+  var btn=document.getElementById('pvReconcileBtn');
+  if(btn&&m&&m.role==='admin')btn.style.display='';
+}).catch(function(){});
 
 /* ---------- styles ---------- */
 var css=''+
@@ -87,7 +91,9 @@ var css=''+
 
 var sectionHTML=''+
 '<div class="pv-sub"><b>The client work desk.</b> Every credit-repair client and where they stand across all three bureaus. <b>Overview</b> for the numbers, <b>Queue</b> to work the list, <b>Pipeline</b> to see the board. Open any client to update status, documents, and notes — saved for the whole team.</div>'+
-'<div class="pv-tabs"><button id="pvTabOv" class="on" data-v="overview">Overview</button><button id="pvTabQ" data-v="queue">Queue</button><button id="pvTabP" data-v="board">Pipeline</button></div>'+
+'<div class="pv-bar" style="margin-bottom:14px"><div class="pv-tabs" style="margin-bottom:0"><button id="pvTabOv" class="on" data-v="overview">Overview</button><button id="pvTabQ" data-v="queue">Queue</button><button id="pvTabP" data-v="board">Pipeline</button></div>'+
+ '<button id="pvReconcileBtn" class="addbtn" style="display:none;margin-top:0">Sync new clients from GoHighLevel</button></div>'+
+ '<div id="pvReconcileResult" class="pv-card" style="display:none;margin-bottom:14px"></div>'+
 '<div id="pvOverview"></div>'+
 '<div id="pvWork" style="display:none">'+
  '<div class="pv-chips" id="pvChips"></div>'+
@@ -184,6 +190,33 @@ function loadThen(cb){
   fetch('/api/production').then(function(r){return r.json();}).then(function(d){
     CLIENTS=(d&&Array.isArray(d.clients))?d.clients:[]; loaded=true; cb();
   }).catch(function(){ CLIENTS=[]; loaded=true; cb(); });
+}
+
+/* ---------- GHL <-> Deal Production reconciliation (admin only) ---------- */
+// Adds any GHL credit-repair client with no existing Deal Production record.
+// Also reports (never creates) Deal Production clients matching no current
+// GHL contact — the old sheet import has no email or phone, so there is
+// nothing to create a real GHL contact from; those need a human look.
+function runReconcile(){
+  var btn=document.getElementById('pvReconcileBtn'), out=document.getElementById('pvReconcileResult');
+  if(!btn)return;
+  btn.disabled=true; var origText=btn.textContent; btn.textContent='Syncing…';
+  fetch('/api/production/reconcile',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false; btn.textContent=origText;
+    if(!d||d.error){ out.style.display=''; out.innerHTML='<div class="cardsub">Sync failed'+(d&&d.error?': '+esc(d.error):'')+'.</div>'; return; }
+    var addedRows=(d.added||[]).slice(0,15).map(function(c){return '<div class="cardsub">'+esc(c.name)+(c.email?' · '+esc(c.email):'')+'</div>';}).join('');
+    var missingRows=(d.notInGhl||[]).slice(0,15).map(function(c){return '<div class="cardsub">'+esc(c.name)+'</div>';}).join('');
+    out.style.display='';
+    out.innerHTML='<h3>GoHighLevel sync results</h3>'+
+      '<p class="cap" style="margin-bottom:10px">Added '+fmt(d.addedCount)+' client'+(d.addedCount===1?'':'s')+' from GoHighLevel to Deal Production.'+
+      (d.notInGhlCount?' '+fmt(d.notInGhlCount)+' Deal Production client'+(d.notInGhlCount===1?'':'s')+' could not be matched to a current GoHighLevel contact by name — review these by hand (the old sheet import has no email or phone to match on, so a common name can hide a real match).':'')+'</p>'+
+      (addedRows?'<div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:6px 0">Added ('+fmt(d.addedCount)+(d.addedCount>15?', first 15':'')+')</div>'+addedRows:'')+
+      (missingRows?'<div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:14px 0 6px">Not matched to GoHighLevel ('+fmt(d.notInGhlCount)+(d.notInGhlCount>15?', first 15':'')+')</div>'+missingRows:'');
+    if(d.addedCount)loadThen(function(){renderOverview();drawWork();});
+  }).catch(function(){
+    btn.disabled=false; btn.textContent=origText;
+    out.style.display=''; out.innerHTML='<div class="cardsub">Sync failed — check your connection and try again.</div>';
+  });
 }
 
 /* ---------- overview (charts) ---------- */
@@ -383,6 +416,7 @@ function initProd(){
   document.getElementById('pvTabOv').onclick=function(){pvSetPV('overview');};
   document.getElementById('pvTabQ').onclick=function(){pvSetPV('queue');};
   document.getElementById('pvTabP').onclick=function(){pvSetPV('board');};
+  document.getElementById('pvReconcileBtn').onclick=runReconcile;
   var nav=document.getElementById('nav');
   if(nav&&!document.getElementById('pvNavBtn')){
     var sib=nav.querySelector('button');var b=document.createElement('button');b.id='pvNavBtn';
