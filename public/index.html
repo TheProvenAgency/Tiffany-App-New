@@ -661,10 +661,7 @@ async function renderAffiliateGap(){
     const c=d.counts;
     const rev=d.revenue||{};
     const fmtMoney=n=>n==null?'':'$'+Math.round(n).toLocaleString()+'/mo';
-    lastAffiliateProspects=d.prospects||[];
-    const prospects=lastAffiliateProspects.slice(0,12).map(x=>`<div class="src"><span>${escUser(x.name||x.email||'—')}</span>${x.email?'<span class="cardsub">'+escUser(x.email)+'</span>':''}</div>`).join('');
-    const modeNote=d.mode==='live'?'matched against her real GoHighLevel client list by email (exact).':'GHL not connected — showing demo clients.';
-    const syncedNote='Synced '+new Date(d.syncedAt).toLocaleString()+' · '+modeNote;
+    lastAffiliateProspects=d.prospects||[]; // used by the "On MFSN, not a client" modal
     // Each box is a drill-down: the first four route into the Clients
     // table pre-filtered; "On MFSN, not a client" has no client record to
     // route to, so it opens a modal listing the full prospect list instead.
@@ -676,14 +673,10 @@ async function renderAffiliateGap(){
         <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub">missing ${fmtMoney(rev.notAffiliate)}</div></div>
         <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
-      <div class="dstat" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
+      <div class="dstat" style="grid-template-columns:1fr 1fr">
         <div style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div><div class="cardsub">ceiling ${fmtMoney(rev.total)}</div></div>
         <div style="cursor:pointer" onclick="openProspectsModal()"><div class="l">On MFSN, not a client</div><div class="v">${(c.prospects||0).toLocaleString()}</div></div>
-      </div>
-      <div class="cardsub" style="margin-bottom:6px">${syncedNote}</div>
-      <div class="cardsub" style="margin-bottom:6px">$ figures use MFSN's per-plan commission (${'$'+ (rev.monthlyRate||'').toString().slice(0,5)}/mo blended fallback where a client's specific plan isn't known yet).</div>
-      <div class="cardsub" style="margin-bottom:6px">Any client found on MyFreeScoreNow at all counts as Affiliate — the sync logs into her own MFSN account, so a match there is already real credit for her. "Not affiliate" is a manual flag only (via the client drawer), for the rare case she knows a specific match shouldn't count.</div>
-      ${c.prospects?('<div class="cardsub" style="margin-bottom:6px"><b>Prospects to reach out to</b> (first 12 — <a href="#" onclick="openProspectsModal();return false">see all '+c.prospects+'</a>):</div>'+prospects):''}`;
+      </div>`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
 }
 async function loadDashboard(){
