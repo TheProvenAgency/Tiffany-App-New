@@ -784,8 +784,13 @@ async function renderAffiliateGap(){
     // commission where known, falling back to the blended rate — see
     // lib/affiliate.js affiliateGap() for the full explanation.
     const enrolledPct=c.total?Math.round(c.affiliate/c.total*100):0;
+    // 60% enrolled is the "healthy" bar for now -- below that the ring
+    // reads red so a glance at the card tells you it needs attention,
+    // not just a neutral percentage.
+    const enrolledGoal=60;
+    const enrolledColor=enrolledPct>=enrolledGoal?'var(--green)':'var(--red)';
     el.innerHTML=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
-        <div class="ring" style="--pct:${enrolledPct};--ring-c:var(--green)"><div class="hole"><b>${enrolledPct}%</b><span>enrolled</span></div></div>
+        <div class="ring" style="--pct:${enrolledPct};--ring-c:${enrolledColor}"><div class="hole"><b style="color:${enrolledColor}">${enrolledPct}%</b><span>enrolled</span></div></div>
         <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} clients are enrolled under her affiliate link and generating commission. The rest below are the gap.</div>
       </div>
       <div class="dstat" style="margin-bottom:10px">
