@@ -682,6 +682,7 @@ async function renderAffiliateGap(){
       </div>
       <div class="cardsub" style="margin-bottom:6px">${syncedNote}</div>
       <div class="cardsub" style="margin-bottom:6px">$ figures use MFSN's per-plan commission (${'$'+ (rev.monthlyRate||'').toString().slice(0,5)}/mo blended fallback where a client's specific plan isn't known yet).</div>
+      <div class="cardsub" style="margin-bottom:6px">Any client found on MyFreeScoreNow at all counts as Affiliate — the sync logs into her own MFSN account, so a match there is already real credit for her. "Not affiliate" is a manual flag only (via the client drawer), for the rare case she knows a specific match shouldn't count.</div>
       ${c.prospects?('<div class="cardsub" style="margin-bottom:6px"><b>Prospects to reach out to</b> (first 12 — <a href="#" onclick="openProspectsModal();return false">see all '+c.prospects+'</a>):</div>'+prospects):''}`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
 }

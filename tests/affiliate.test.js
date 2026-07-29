@@ -1,8 +1,9 @@
-// The affiliate gap: tri-state MyFreeScoreNow status per client --
-// 'affiliate' (on MFSN under one of her confirmed enrollment codes),
-// 'not_affiliate' (on MFSN, matched, but no code / a different code), or
-// 'not_on_mfsn' (no match at all). Match by email when we have it (exact),
-// else by normalized name.
+// The affiliate gap: MyFreeScoreNow status per client -- 'affiliate' (any
+// match at all on her own MFSN member list -- see lib/affiliate.js for why
+// a match alone is enough), 'not_on_mfsn' (no match), or 'not_affiliate'
+// (never computed automatically anymore, only reachable via a manual
+// override -- see the override tests below). Match by email when we have
+// it (exact), else by normalized name.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const a = require('../lib/affiliate');
@@ -18,14 +19,14 @@ test('a client matched with her affiliate code counts as affiliate', () => {
   assert.equal(r.tagged[0].mfsnStatus, 'affiliate');
 });
 
-test('a client matched but with no code (or a different code) counts as not_affiliate', () => {
+test('a client matched with no code (or an unrecognized code) still counts as affiliate -- the member list is already scoped to her own MFSN account, so any match is real credit', () => {
   const r = a.affiliateGap(
     [{ id: '1', name: 'Someone', email: 'someone@example.com' }],
     [{ email: 'someone@example.com', name: 'Someone', code: 'NA' }]
   );
-  assert.equal(r.counts.affiliate, 0);
-  assert.equal(r.counts.notAffiliate, 1);
-  assert.equal(r.tagged[0].mfsnStatus, 'not_affiliate');
+  assert.equal(r.counts.affiliate, 1);
+  assert.equal(r.counts.notAffiliate, 0);
+  assert.equal(r.tagged[0].mfsnStatus, 'affiliate');
 });
 
 test('a client with no match at all is not_on_mfsn', () => {
@@ -151,13 +152,25 @@ test('a member row carrying an upgradeLink is matched via code extraction, not j
   assert.equal(r.tagged[0].mfsnStatus, 'affiliate');
 });
 
-test('a member matched by email but genuinely not enrolled under any of her codes is not_affiliate, not not_on_mfsn', () => {
+test('a member matched by email with no recognizable code at all is still affiliate, not not_on_mfsn', () => {
   const r = a.affiliateGap(
     [{ id: '1', name: 'Plain Member', email: 'plain@example.com' }],
     [{ email: 'plain@example.com', upgradeLink: 'NA' }]
   );
-  assert.equal(r.tagged[0].mfsnStatus, 'not_affiliate');
+  assert.equal(r.tagged[0].mfsnStatus, 'affiliate');
   assert.equal(r.tagged[0].mfsnMatched, true);
+});
+
+test('not_affiliate is reachable only via a manual override, never computed automatically', () => {
+  const r = a.affiliateGap(
+    [{ id: '1', name: 'Someone', email: 'someone@example.com' }],
+    [{ email: 'someone@example.com', upgradeLink: 'NA' }],
+    { '1': 'not_affiliate' }
+  );
+  assert.equal(r.tagged[0].mfsnStatus, 'not_affiliate');
+  assert.equal(r.tagged[0].mfsnMatched, true, 'the raw match is still tracked underneath the override');
+  assert.equal(r.counts.affiliate, 0);
+  assert.equal(r.counts.notAffiliate, 1);
 });
 
 // ---- $ figures on the affiliate-gap card (revenue) ----
@@ -199,14 +212,16 @@ test('affiliateGap revenue.total equals affiliate + notAffiliate + notOnMfsn rev
   const r = a.affiliateGap(
     [
       { id: '1', name: 'Affiliate Guy', email: 'aff@example.com' },
-      { id: '2', name: 'Leak Guy', email: 'leak@example.com' },
+      { id: '2', name: 'Overridden Guy', email: 'over@example.com' },
       { id: '3', name: 'No Match Guy', email: 'none@example.com' }
     ],
     [
       { email: 'aff@example.com', code: 'B01B1514', planAmount: 34.95 },
-      { email: 'leak@example.com', upgradeLink: 'NA', planAmount: 29.90 }
-    ]
+      { email: 'over@example.com', upgradeLink: 'NA', planAmount: 29.90 }
+    ],
+    { '2': 'not_affiliate' } // manual override -- the only way notAffiliate exists now
   );
+  assert.equal(r.counts.notAffiliate, 1);
   const expectedTotal = Math.round((r.revenue.affiliate + r.revenue.notAffiliate + r.revenue.notOnMfsn) * 100) / 100;
   assert.equal(r.revenue.total, expectedTotal);
 });
