@@ -119,8 +119,8 @@ h3.cardtitle .sub{display:block}
 .segbar{display:flex;height:14px;border-radius:8px;overflow:hidden;margin:14px 0 12px;background:#eee}
 .segbar div{height:100%}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.tile{border:1px solid var(--line);border-radius:11px;padding:11px 13px;cursor:pointer}
-.tile:hover{border-color:#cfc8b8}
+.tile{border:1px solid var(--line);border-radius:13px;padding:11px 13px;cursor:pointer;transition:transform .15s ease,border-color .15s ease}
+.tile:hover{border-color:#cfc8b8;transform:translateY(-2px)}
 .tile .dot2{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
 .tile b{font-size:19px}
 .tile span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
@@ -173,10 +173,19 @@ section.view{display:none} section.view.on{display:block}
 .drawer .close{position:absolute;top:16px;right:18px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
 .dsec{margin-top:20px}
 .dsec h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
-.dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-.dstat div{background:#faf8f3;border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+/* soft tinted stat tiles -- no hard border, just a color wash so the eye
+   can tell "this is money" (green), "this needs attention" (red/gold),
+   or "this is just a count" (neutral) without reading the label first. */
+.dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.dstat div{background:#f7f4ec;border-radius:14px;padding:12px 14px;transition:transform .15s ease}
+.dstat div[onclick]:hover{transform:translateY(-2px)}
 .dstat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.dstat .v{font-size:16px;font-weight:800;margin-top:2px}
+.dstat .v{font-size:17px;font-weight:800;margin-top:3px}
+.dstat div.tone-green{background:var(--green-soft)}
+.dstat div.tone-red{background:var(--red-soft)}
+.dstat div.tone-gold{background:var(--gold-soft)}
+.dstat div.tone-blue{background:var(--blue-soft)}
+.dstat div.tone-pink{background:var(--pink-soft)}
 .evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0ece2;font-size:12.5px}
 .evrow .mut{color:var(--muted)}
 .noterow{background:#faf8f3;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
@@ -366,9 +375,9 @@ section.view{display:none} section.view.on{display:block}
           <h3 class="cardtitle">✦ Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
           <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
           <div class="dstat" style="margin-top:12px">
-            <div><div class="l">IG followers</div><div class="v">3,656</div></div>
-            <div><div class="l">IG posts</div><div class="v">59</div></div>
-            <div><div class="l">Group members</div><div class="v">15,090</div></div>
+            <div class="tone-pink"><div class="l">IG followers</div><div class="v">3,656</div></div>
+            <div class="tone-pink"><div class="l">IG posts</div><div class="v">59</div></div>
+            <div class="tone-blue"><div class="l">Group members</div><div class="v">15,090</div></div>
           </div>
         </div>
         <div class="card" style="margin-top:14px">
@@ -470,8 +479,8 @@ section.view{display:none} section.view.on{display:block}
           <a class="linklike" href="https://www.instagram.com/msfinancialsolutions_/" target="_blank">@msfinancialsolutions_ ↗</a></h3>
         <div class="cardsub">Static numbers · as seen on profile Jul 14, 2026</div>
         <div class="dstat" style="margin-top:14px">
-          <div><div class="l">Followers</div><div class="v">3,656</div></div>
-          <div><div class="l">Posts</div><div class="v">59</div></div>
+          <div class="tone-pink"><div class="l">Followers</div><div class="v">3,656</div></div>
+          <div class="tone-pink"><div class="l">Posts</div><div class="v">59</div></div>
           <div><div class="l">Following</div><div class="v">2,036</div></div>
         </div>
       </div>
@@ -480,7 +489,7 @@ section.view{display:none} section.view.on{display:block}
           <a class="linklike" href="https://www.facebook.com/groups/302248546068656/" target="_blank">open group ↗</a></h3>
         <div class="cardsub">Her community group — join link for clients</div>
         <div class="dstat" style="margin-top:14px;grid-template-columns:1fr">
-          <div><div class="l">Group</div><div class="v" style="font-size:13px;word-break:break-all">facebook.com/groups/302248546068656</div></div>
+          <div class="tone-blue"><div class="l">Group</div><div class="v" style="font-size:13px;word-break:break-all">facebook.com/groups/302248546068656</div></div>
         </div>
       </div>
     </div>
@@ -780,9 +789,9 @@ async function renderAffiliateGap(){
         <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} clients are enrolled under her affiliate link and generating commission. The rest below are the gap.</div>
       </div>
       <div class="dstat" style="margin-bottom:10px">
-        <div style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v moneypop" style="font-size:20px">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
-        <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
-        <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--gold);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
+        <div class="tone-green" style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v moneypop" style="font-size:20px">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
+        <div class="${rev.notAffiliate?'tone-red':''}" style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
+        <div class="tone-gold" style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--gold);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
       <div class="dstat" style="grid-template-columns:1fr 1fr">
         <div style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div><div class="cardsub">ceiling ${fmtMoney(rev.total)}</div></div>
@@ -826,7 +835,7 @@ async function loadDashboard(){
   const total=k.totalClients||1;
   $('viewAllClients').textContent=`View all ${fmtN(k.totalClients)} →`;
   $('segbar').innerHTML=segs.map(([n,c])=>`<div style="width:${Math.max(1,n/total*100)}%;background:${c}"></div>`).join('');
-  $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="tile" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><b>${fmtN(n)}</b><span>${l}</span></div>`).join('');
+  $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="tile" style="background:${c}14" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><b>${fmtN(n)}</b><span>${l}</span></div>`).join('');
   const activePct=Math.round((k.activeClients||0)/total*100);
   $('activeRing').style.setProperty('--pct',activePct);
   $('activeRingPct').textContent=activePct+'%';
@@ -844,9 +853,9 @@ async function loadDashboard(){
   const prod=(b.byProduct&&b.byProduct.length)?b.byProduct:b.byDeal;
   const m=k.mentorship||{};
   $('mentorStats').innerHTML=`
-    <div><div class="l">Collected · range</div><div class="v money">${fmt$(m.rangeRevenue)}</div></div>
+    <div class="tone-green"><div class="l">Collected · range</div><div class="v money">${fmt$(m.rangeRevenue)}</div></div>
     <div><div class="l">Payments · range</div><div class="v">${fmtN(m.rangeCount)}</div></div>
-    <div><div class="l">Lifetime</div><div class="v money">${fmt$(m.lifetimeRevenue)}</div></div>
+    <div class="tone-green"><div class="l">Lifetime</div><div class="v money">${fmt$(m.lifetimeRevenue)}</div></div>
     <div><div class="l">Active mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
   mkChart('chDeals',{type:'bar',data:{labels:prod.slice(0,7).map(x=>x.key),datasets:[{data:prod.slice(0,7).map(x=>x.revenue),
     backgroundColor:[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa','#93c5fd'],borderRadius:5}]},
@@ -1128,7 +1137,7 @@ async function openClient(id){
     <span class="pill ${c.status}">${c.status}</span>&nbsp; ${c.deal?'package: <b>'+c.deal+'</b>':''} ${c.round?' · round <b>'+c.round+'</b>':''}
     ${c.createdAt?' · joined '+c.createdAt.slice(0,10):''}`;
   $('dStats').innerHTML=`
-    <div><div class="l">Total spent</div><div class="v money">${fmt$(c.totalSpent)}</div></div>
+    <div class="tone-green"><div class="l">Total spent</div><div class="v money">${fmt$(c.totalSpent)}</div></div>
     <div><div class="l"># payments</div><div class="v">${c.numberOfPayments||d.payments.length||0}</div></div>
     <div><div class="l">Last payment</div><div class="v" style="font-size:13px">${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</div></div>`;
   $('dActions').innerHTML=c.status==='active'
