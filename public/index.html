@@ -1126,7 +1126,10 @@ async function loadUsers(){
     $('userList').innerHTML=users.map(u=>
       `<div class="hookurl" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
          <span>${escUser(u.name)} · ${escUser(u.username)} · ${escUser(u.role)}${u.disabled?' · disabled':''}</span>
-         <button class="btn ghost" onclick="toggleUser('${escUser(u.id)}',${u.disabled?'false':'true'})">${u.disabled?'Enable':'Disable'}</button>
+         <span style="display:flex;gap:6px">
+           <button class="btn ghost" onclick="toggleUser('${escUser(u.id)}',${u.disabled?'false':'true'})">${u.disabled?'Enable':'Disable'}</button>
+           <button class="btn ghost" onclick="removeUser('${escUser(u.id)}','${escUser(u.name)}')">Remove</button>
+         </span>
        </div>`).join('')||'<div class="hookurl">No users yet.</div>';
   }catch(e){ $('userList').innerHTML='<div class="hookurl">Could not load the team list.</div>'; }
 }
@@ -1144,6 +1147,14 @@ async function toggleUser(id,disabled){
   const r=await fetch('/api/users/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({disabled})});
   const d=await r.json();
   if(!r.ok){$('r_user').textContent='✗ '+(d.error||'failed');$('r_user').className='testres bad';}
+  loadUsers();
+}
+async function removeUser(id,name){
+  if(!confirm('Remove '+name+'\'s login for good? This can\'t be undone — they\'d need to be re-added from scratch.'))return;
+  const r=await fetch('/api/users/'+id,{method:'DELETE'});
+  const d=await r.json();
+  $('r_user').textContent=r.ok?('Removed '+name):('✗ '+(d.error||'failed'));
+  $('r_user').className='testres '+(r.ok?'ok':'bad');
   loadUsers();
 }
 /* Save just the connection fields. Skips a field still showing the masked

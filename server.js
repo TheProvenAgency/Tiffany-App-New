@@ -227,6 +227,27 @@ app.patch('/api/users/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Permanently remove a team member's login. Same "never lock out the last
+// admin" guard as disabling one (a disabled admin still counts toward
+// nothing here -- we only protect the last *active* admin), plus a
+// dedicated guard against an admin deleting their own account by mistake
+// mid-session (they can still disable themselves via PATCH if that's really
+// what they want, since that keeps the record around to undo).
+app.delete('/api/users/:id', (req, res) => {
+  const list = getUsers();
+  const u = list.find(x => x.id === req.params.id);
+  if (!u) return res.status(404).json({ error: 'no such user' });
+  if (u.id === req.user.userId) return res.status(400).json({ error: 'cannot remove your own account while signed in as it' });
+  const activeAdmins = list.filter(x => x.role === 'admin' && !x.disabled);
+  if (u.role === 'admin' && !u.disabled && activeAdmins.length <= 1) {
+    return res.status(400).json({ error: 'cannot remove the last active admin' });
+  }
+  store.setConfig({ users: list.filter(x => x.id !== req.params.id) });
+  sessions.destroyForUser(u.id);
+  persistSessions();
+  res.json({ ok: true });
+});
+
 // ------------------------- support tickets -------------------------
 // Both admin and employee can submit (see EMPLOYEE_API in lib/auth.js) --
 // this is how Tiffany's team flags something for Proven Agency to work on
