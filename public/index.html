@@ -7,10 +7,15 @@
 <style>
 :root{
   --bg:#f5f2ec; --card:#ffffff; --ink:#211d18; --muted:#8d8577; --line:#e8e2d6;
-  --sidebar:#211c18; --sidebar-ink:#cfc8bd; --sidebar-dim:#8d8577;
-  --green:#2e7d54; --green-soft:#e4efe7; --red:#b3372f; --red-soft:#f6e5e3;
+  --sidebar:#14151a; --sidebar-ink:#cfc8bd; --sidebar-dim:#948b7d;
+  /* money green -- richer/more saturated than the old muted forest green so
+     $ figures actually pop, per Tiffany's ask. Everything that already read
+     var(--green) (badges, up-arrows, chart lines) gets the upgrade for free. */
+  --green:#0e9e56; --green-soft:#dff7ea; --red:#b3372f; --red-soft:#f6e5e3;
   --blue:#3563a8; --blue-soft:#e6ecf6; --gray:#b9b3a8; --gold:#b98a2f; --gold-soft:#f5ecd8;
-  --pink:#e91e8c;
+  /* brand colors lifted from msfinancialsolutions.net / the login screen:
+     near-black background, hot-pink CTA, blush/rose accent text. */
+  --pink:#ff2e9a; --pink-soft:#ffe3f2; --rose:#b76e79; --blush:#e0bfb8; --brand-ink:#14151a;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -20,21 +25,22 @@ button{font-family:inherit}
 aside{width:212px;min-width:212px;background:var(--sidebar);color:var(--sidebar-ink);height:100vh;position:sticky;top:0;
   display:flex;flex-direction:column;padding:14px 0}
 .brand{display:flex;align-items:center;gap:10px;padding:8px 16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
-.brand .chip{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#f7d9c9,#caa28f);color:#211c18;
+.brand .chip{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blush),var(--rose));color:#211c18;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .brand b{display:block;font-size:13px;color:#f1ece4}
 .brand span{font-size:10.5px;color:var(--sidebar-dim)}
 .sec{font-size:9.5px;letter-spacing:.18em;color:var(--sidebar-dim);text-transform:uppercase;padding:18px 18px 6px}
 .nav button{display:flex;align-items:center;gap:10px;width:calc(100% - 16px);margin:1px 8px;padding:9px 10px;border:none;
-  background:none;color:var(--sidebar-ink);font-size:13px;border-radius:8px;cursor:pointer;text-align:left}
+  background:none;color:var(--sidebar-ink);font-size:13px;border-radius:8px;cursor:pointer;text-align:left;position:relative}
 .nav button:hover{background:rgba(255,255,255,.06)}
-.nav button.on{background:#3a332c;color:#fff;font-weight:600}
+.nav button.on{background:rgba(255,46,154,.14);color:#fff;font-weight:600}
+.nav button.on::before{content:'';position:absolute;left:-8px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--pink)}
 .nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:10.5px;font-weight:700;padding:2px 8px}
 .nav svg{width:15px;height:15px;opacity:.75}
 .spacer{flex:1}
 .sources{padding:0 18px 8px}
 .src{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sidebar-dim);padding:3.5px 0}
-.dot{width:7px;height:7px;border-radius:50%;background:#4caf7d}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
 .dot.bad{background:#c0392b}
 .src .fix{margin-left:auto;color:#d98d84;font-size:10.5px;cursor:pointer}
 /* ============ main ============ */
@@ -46,7 +52,7 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .livepill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green)}
 .hspace{flex:1}
 .search{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:250px;font-size:13px;color:var(--ink)}
-.avatar{width:32px;height:32px;border-radius:50%;background:#211c18;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--rose));color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
 /* filter row */
 .filters{display:flex;align-items:center;gap:8px;background:#eee9df;border-radius:12px;padding:7px 10px;margin-bottom:16px;flex-wrap:wrap}
 .chip{background:none;border:none;padding:6px 12px;border-radius:8px;font-size:12.5px;color:#6d675c;cursor:pointer;font-weight:600}
@@ -58,6 +64,8 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .gran button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 /* cards */
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:0 1px 2px rgba(30,25,15,.03)}
+.card.hero{border-top:4px solid var(--green)}
+.card.moneycard{border-top:4px solid var(--green)}
 .grid{display:grid;gap:14px}
 .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
@@ -69,16 +77,24 @@ h3.cardtitle .sub{display:block}
 .linklike{margin-left:auto;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none}
 /* hero */
 .hero{display:grid;grid-template-columns:1fr 230px;gap:0}
-.hero .big{font-size:44px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px}
-.hero .big sup{font-size:22px;font-weight:700;vertical-align:22px}
+.hero .big{font-size:50px;font-weight:900;letter-spacing:-.02em;margin:6px 0 2px;color:var(--green);
+  text-shadow:0 1px 0 rgba(255,255,255,.5)}
+.hero .big sup{font-size:24px;font-weight:800;vertical-align:26px;color:var(--green)}
 .hero .note{color:var(--muted);font-size:12.5px}
 .hero .note b.up{color:var(--green)} .hero .note b.down{color:var(--red)}
 .hero .cwrap{height:190px;margin-top:14px}
 .rail{border-left:1px solid var(--line);padding-left:20px;display:flex;flex-direction:column;justify-content:space-around}
 .rail .item{display:flex;gap:11px;align-items:flex-start;padding:8px 0}
-.rail .ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--gold-soft)}
-.rail b{font-size:19px;display:block}
+.rail .ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--green-soft)}
+.rail b{font-size:21px;display:block;color:var(--green);font-weight:800}
 .rail span{font-size:11px;color:var(--muted)}
+/* reusable "this is money, look at it" treatment -- big bold green figures,
+   used wherever a $ amount is meant to be the headline of its card rather
+   than supporting detail. See moneyPop()/moneyChip() in the script below. */
+.moneypop{color:var(--green);font-weight:800}
+.moneychip{display:inline-block;background:var(--green-soft);color:var(--green);font-weight:800;
+  padding:3px 10px;border-radius:8px;font-size:inherit}
+.dstat .v.money{color:var(--green);font-size:18px}
 /* client base */
 .segbar{display:flex;height:14px;border-radius:8px;overflow:hidden;margin:14px 0 12px;background:#eee}
 .segbar div{height:100%}
@@ -316,7 +332,7 @@ section.view{display:none} section.view.on{display:block}
           <div class="cardsub">Fix these before trusting the numbers</div>
           <div id="attention" style="margin-top:6px"></div>
         </div>
-        <div class="card" style="margin-top:14px">
+        <div class="card moneycard" style="margin-top:14px">
           <h3 class="cardtitle">◎ MyFreeScoreNow — affiliate gap</h3>
           <div class="cardsub">Clients not enrolled under her affiliate link</div>
           <div id="affiliateGap" style="margin-top:10px"></div>
@@ -730,9 +746,9 @@ async function renderAffiliateGap(){
     // commission where known, falling back to the blended rate — see
     // lib/affiliate.js affiliateGap() for the full explanation.
     el.innerHTML=`<div class="dstat" style="margin-bottom:10px">
-        <div style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v">${c.affiliate.toLocaleString()}</div><div class="cardsub">${fmtMoney(rev.affiliate)}</div></div>
-        <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub">missing ${fmtMoney(rev.notAffiliate)}</div></div>
-        <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v moneypop" style="font-size:20px">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--gold);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
       <div class="dstat" style="grid-template-columns:1fr 1fr">
         <div style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div><div class="cardsub">ceiling ${fmtMoney(rev.total)}</div></div>
@@ -791,9 +807,9 @@ async function loadDashboard(){
   const prod=(b.byProduct&&b.byProduct.length)?b.byProduct:b.byDeal;
   const m=k.mentorship||{};
   $('mentorStats').innerHTML=`
-    <div><div class="l">Collected · range</div><div class="v">${fmt$(m.rangeRevenue)}</div></div>
+    <div><div class="l">Collected · range</div><div class="v money">${fmt$(m.rangeRevenue)}</div></div>
     <div><div class="l">Payments · range</div><div class="v">${fmtN(m.rangeCount)}</div></div>
-    <div><div class="l">Lifetime</div><div class="v">${fmt$(m.lifetimeRevenue)}</div></div>
+    <div><div class="l">Lifetime</div><div class="v money">${fmt$(m.lifetimeRevenue)}</div></div>
     <div><div class="l">Active mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
   mkChart('chDeals',{type:'bar',data:{labels:prod.slice(0,7).map(x=>x.key),datasets:[{data:prod.slice(0,7).map(x=>x.revenue),
     backgroundColor:[GREEN,BLUE,GOLD,'#6b8f71','#8a9fc4','#c9a96a','#b9b3a8'],borderRadius:5}]},
@@ -870,7 +886,7 @@ $('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){showView('c
 /* ================= pipeline ================= */
 async function loadPipeline(){
   const d=await(await fetch('/api/pipeline')).json();
-  $('pipeStats').innerHTML=`<span><b>${fmtN(d.totalActive)}</b> active clients</span><span><b>${fmt$(d.totalRevenue)}</b> lifetime value in pipeline</span><span><b>${d.columns.length}</b> stages</span>`;
+  $('pipeStats').innerHTML=`<span><b>${fmtN(d.totalActive)}</b> active clients</span><span><b class="moneypop">${fmt$(d.totalRevenue)}</b> lifetime value in pipeline</span><span><b>${d.columns.length}</b> stages</span>`;
   $('pipeBoard').innerHTML=d.columns.map(col=>`
     <div style="min-width:230px;flex:0 0 230px;background:#faf8f3;border:1px solid var(--line);border-radius:12px;padding:12px">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="font-size:13px">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span></div>
@@ -1075,7 +1091,7 @@ async function openClient(id){
     <span class="pill ${c.status}">${c.status}</span>&nbsp; ${c.deal?'package: <b>'+c.deal+'</b>':''} ${c.round?' · round <b>'+c.round+'</b>':''}
     ${c.createdAt?' · joined '+c.createdAt.slice(0,10):''}`;
   $('dStats').innerHTML=`
-    <div><div class="l">Total spent</div><div class="v">${fmt$(c.totalSpent)}</div></div>
+    <div><div class="l">Total spent</div><div class="v money">${fmt$(c.totalSpent)}</div></div>
     <div><div class="l"># payments</div><div class="v">${c.numberOfPayments||d.payments.length||0}</div></div>
     <div><div class="l">Last payment</div><div class="v" style="font-size:13px">${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</div></div>`;
   $('dActions').innerHTML=c.status==='active'

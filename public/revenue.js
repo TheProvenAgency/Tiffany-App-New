@@ -1,7 +1,7 @@
 /* Revenue — total business income: Commas sales + MyFreeScoreNow affiliate commissions.
    Figures read from the Commas dashboard and the MyFreeScoreNow affiliate portal (Jul 28 2026). */
 (function(){
-var C={ink:'#211d18',blue:'#3563a8',green:'#2e7d54',gold:'#b98a2f',red:'#b3372f',teal:'#2f8f8a',purple:'#6b5bd0',orange:'#c06a2b',pink:'#c14d8a',lime:'#6f8f2f',slate:'#5a6b7d'};
+var C={ink:'#211d18',blue:'#3563a8',green:'#0e9e56',gold:'#b98a2f',red:'#b3372f',teal:'#2f8f8a',purple:'#6b5bd0',orange:'#c06a2b',pink:'#c14d8a',lime:'#6f8f2f',slate:'#5a6b7d'};
 var PAL=['#3563a8','#2e7d54','#b98a2f','#b3372f','#2f8f8a','#6b5bd0','#c06a2b','#c14d8a','#6f8f2f','#5a6b7d'];
 var charts={}, gran='monthly';
 
