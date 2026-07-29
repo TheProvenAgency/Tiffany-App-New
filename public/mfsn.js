@@ -179,14 +179,14 @@ function initMF(){
         var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
         ['view-production','view-personal','view-rev'].forEach(function(x){var e=document.getElementById(x);if(e)e.style.display='none';});
         var v=document.getElementById('view-mfsn');if(v)v.style.display='';
-        var nbs=document.querySelectorAll('#nav button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('active');
-        var nb=document.getElementById('mfNavBtn');if(nb)nb.classList.add('active');
+        var nbs=document.querySelectorAll('#nav button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('on');
+        var nb=document.getElementById('mfNavBtn');if(nb)nb.classList.add('on');
         var pt=document.getElementById('pageTitle');if(pt)pt.textContent='Credit Monitoring';
         renderSub();
       } else {
         var v=document.getElementById('view-mfsn');if(v)v.style.display='none';
         var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++)sv[i].style.display='';
-        var nb=document.getElementById('mfNavBtn');if(nb)nb.classList.remove('active');
+        var nb=document.getElementById('mfNavBtn');if(nb)nb.classList.remove('on');
         _sv(id);
       }
     };
