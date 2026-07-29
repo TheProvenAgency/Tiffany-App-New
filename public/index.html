@@ -794,13 +794,13 @@ async function renderAffiliateGap(){
         <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} clients are enrolled under her affiliate link and generating commission. The rest below are the gap.</div>
       </div>
       <div class="dstat" style="margin-bottom:10px">
-        <div class="tone-green" style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v moneypop" style="font-size:20px">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
+        <div class="tone-gold" style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v moneypop" style="font-size:20px">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
         <div class="${rev.notAffiliate?'tone-red':''}" style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
-        <div class="tone-gold" style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--gold);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
+        <div class="tone-red" style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
       <div class="dstat" style="grid-template-columns:1fr 1fr">
-        <div style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div><div class="cardsub">ceiling ${fmtMoney(rev.total)}</div></div>
-        <div style="cursor:pointer" onclick="openProspectsModal()"><div class="l">On MFSN, not a client</div><div class="v">${(c.prospects||0).toLocaleString()}</div></div>
+        <div class="tone-green" style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div><div class="cardsub">ceiling ${fmtMoney(rev.total)}</div></div>
+        <div class="tone-red" style="cursor:pointer" onclick="openProspectsModal()"><div class="l">On MFSN, not a client</div><div class="v">${(c.prospects||0).toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">reach out ASAP</div></div>
       </div>`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
 }
