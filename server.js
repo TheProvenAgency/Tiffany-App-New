@@ -1051,6 +1051,7 @@ app.get('/api/affiliate-gap', async (req, res) => {
     const brief = c => ({ id: c.id, name: c.name, email: c.email || null, phone: c.phone || null });
     res.json({
       counts: gap.counts,
+      revenue: gap.revenue, // $ figures per box, see lib/affiliate.js affiliateGap()
       notAffiliate: gap.notAffiliate.map(brief), // on MFSN, not under her link
       notOnMfsn: gap.notOnMfsn.map(brief), // no match on MFSN at all
       prospects: gap.prospects, // [{email, name}] on MFSN, matching no GHL contact by email or name

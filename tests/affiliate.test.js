@@ -159,3 +159,54 @@ test('a member matched by email but genuinely not enrolled under any of her code
   assert.equal(r.tagged[0].mfsnStatus, 'not_affiliate');
   assert.equal(r.tagged[0].mfsnMatched, true);
 });
+
+// ---- $ figures on the affiliate-gap card (revenue) ----
+
+test('commissionForMember maps known plan amounts to the real per-plan commission, and unknown/missing amounts to the blended rate', () => {
+  assert.equal(a.commissionForMember({ planAmount: 34.95 }), a.PLAN_AMOUNT_COMMISSION[34.95]);
+  assert.equal(a.commissionForMember({ planAmount: 29.90 }), a.PLAN_AMOUNT_COMMISSION[29.90]);
+  assert.equal(a.commissionForMember({ planAmount: 99.99 }), a.BLENDED_MONTHLY_RATE);
+  assert.equal(a.commissionForMember({}), a.BLENDED_MONTHLY_RATE);
+  assert.equal(a.commissionForMember(null), a.BLENDED_MONTHLY_RATE);
+});
+
+test('affiliateGap revenue.affiliate sums each matched member\'s real plan commission, not a flat rate times count', () => {
+  const r = a.affiliateGap(
+    [
+      { id: '1', name: 'High Plan', email: 'high@example.com' },
+      { id: '2', name: 'Low Plan', email: 'low@example.com' }
+    ],
+    [
+      { email: 'high@example.com', code: 'B01B1514', planAmount: 34.95 },
+      { email: 'low@example.com', code: 'B01B1514', planAmount: 29.90 }
+    ]
+  );
+  const expected = a.PLAN_AMOUNT_COMMISSION[34.95] + a.PLAN_AMOUNT_COMMISSION[29.90];
+  assert.equal(r.revenue.affiliate, Math.round(expected * 100) / 100);
+});
+
+test('affiliateGap revenue for not_on_mfsn and total falls back to the blended rate (no real plan to read for non-members)', () => {
+  const r = a.affiliateGap(
+    [{ id: '1', name: 'No Match', email: 'nomatch@example.com' }],
+    []
+  );
+  assert.equal(r.counts.notOnMfsn, 1);
+  assert.equal(r.revenue.notOnMfsn, a.BLENDED_MONTHLY_RATE);
+  assert.equal(r.revenue.total, a.BLENDED_MONTHLY_RATE);
+});
+
+test('affiliateGap revenue.total equals affiliate + notAffiliate + notOnMfsn revenue combined', () => {
+  const r = a.affiliateGap(
+    [
+      { id: '1', name: 'Affiliate Guy', email: 'aff@example.com' },
+      { id: '2', name: 'Leak Guy', email: 'leak@example.com' },
+      { id: '3', name: 'No Match Guy', email: 'none@example.com' }
+    ],
+    [
+      { email: 'aff@example.com', code: 'B01B1514', planAmount: 34.95 },
+      { email: 'leak@example.com', upgradeLink: 'NA', planAmount: 29.90 }
+    ]
+  );
+  const expectedTotal = Math.round((r.revenue.affiliate + r.revenue.notAffiliate + r.revenue.notOnMfsn) * 100) / 100;
+  assert.equal(r.revenue.total, expectedTotal);
+});

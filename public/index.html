@@ -655,10 +655,12 @@ async function renderAffiliateGap(){
     const d=await(await fetch('/api/affiliate-gap')).json();
     if(!d||!d.counts){el.innerHTML='<div class="cardsub">Unavailable.</div>';return;}
     if(!d.syncedAt){
-      el.innerHTML='<div class="cardsub">No members synced yet. Add a Zapier Zap (MyFreeScoreNow → Fetch Active Members List → Webhooks POST) pointing at <code>/webhooks/mfsn</code> — see ⚙ Settings for the URL.</div>';
+      el.innerHTML='<div class="cardsub">No members synced yet. Point an n8n workflow (schedule → MyFreeScoreNow member-list → POST) at <code>/webhooks/mfsn</code> — see ⚙ Settings for the URL and secret.</div>';
       return;
     }
     const c=d.counts;
+    const rev=d.revenue||{};
+    const fmtMoney=n=>n==null?'':'$'+Math.round(n).toLocaleString()+'/mo';
     lastAffiliateProspects=d.prospects||[];
     const prospects=lastAffiliateProspects.slice(0,12).map(x=>`<div class="src"><span>${escUser(x.name||x.email||'—')}</span>${x.email?'<span class="cardsub">'+escUser(x.email)+'</span>':''}</div>`).join('');
     const modeNote=d.mode==='live'?'matched against her real GoHighLevel client list by email (exact).':'GHL not connected — showing demo clients.';
@@ -666,16 +668,20 @@ async function renderAffiliateGap(){
     // Each box is a drill-down: the first four route into the Clients
     // table pre-filtered; "On MFSN, not a client" has no client record to
     // route to, so it opens a modal listing the full prospect list instead.
+    // $ figures (rev.*) use each matched member's real plan-based
+    // commission where known, falling back to the blended rate — see
+    // lib/affiliate.js affiliateGap() for the full explanation.
     el.innerHTML=`<div class="dstat" style="margin-bottom:10px">
-        <div style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v">${c.affiliate.toLocaleString()}</div></div>
-        <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div></div>
-        <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v">${c.affiliate.toLocaleString()}</div><div class="cardsub">${fmtMoney(rev.affiliate)}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub">missing ${fmtMoney(rev.notAffiliate)}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
       <div class="dstat" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
-        <div style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div></div>
+        <div style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div><div class="cardsub">ceiling ${fmtMoney(rev.total)}</div></div>
         <div style="cursor:pointer" onclick="openProspectsModal()"><div class="l">On MFSN, not a client</div><div class="v">${(c.prospects||0).toLocaleString()}</div></div>
       </div>
       <div class="cardsub" style="margin-bottom:6px">${syncedNote}</div>
+      <div class="cardsub" style="margin-bottom:6px">$ figures use MFSN's per-plan commission (${'$'+ (rev.monthlyRate||'').toString().slice(0,5)}/mo blended fallback where a client's specific plan isn't known yet).</div>
       ${c.prospects?('<div class="cardsub" style="margin-bottom:6px"><b>Prospects to reach out to</b> (first 12 — <a href="#" onclick="openProspectsModal();return false">see all '+c.prospects+'</a>):</div>'+prospects):''}`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
 }
@@ -1005,7 +1011,7 @@ async function openSettings(){
   const base=location.origin;
   $('hookFan').textContent='Fanbasis → POST '+base+'/webhooks/fanbasis?secret=…';
   $('hookFox').textContent='DisputeFox → POST '+base+'/webhooks/disputefox?secret=…';
-  $('hookMfsn').textContent='MyFreeScoreNow (Zapier: Fetch Active Members List) → POST '+base+'/webhooks/mfsn?secret=…';
+  $('hookMfsn').textContent='MyFreeScoreNow (n8n: scheduled member-list pull) → POST '+base+'/webhooks/mfsn?secret=…';
   loadUsers();
   $('overlay').classList.add('show');
 }
