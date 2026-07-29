@@ -146,6 +146,14 @@ section.view{display:none} section.view.on{display:block}
 .noterow{background:#faf8f3;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
 .noterow .mut{color:var(--muted);font-size:11px;margin-top:4px}
 .dsec textarea{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;min-height:58px;resize:vertical}
+.dsec input[type=text],.dsec input[type=date],.dsec select{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--ink)}
+.taskform{margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+.taskform .row{display:flex;gap:8px;margin-top:8px}
+.taskform .row>*{flex:1;min-width:0}
+.mentionwrap{position:relative}
+.mentionbox{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 20px rgba(30,25,15,.12);max-height:160px;overflow-y:auto}
+.mentionbox .mopt{padding:8px 12px;font-size:13px;cursor:pointer}
+.mentionbox .mopt:hover,.mentionbox .mopt.sel{background:var(--gold-soft)}
 .dactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .btn{padding:9px 16px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}
 .btn.primary{background:#211c18;color:#fff}
@@ -197,6 +205,7 @@ section.view{display:none} section.view.on{display:block}
   <div class="sec">Account</div>
   <div class="nav">
     <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'">← Back to Proven Agency</button>
+    <button onclick="openNotifications()">🔔 Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
     <button onclick="openSettings()">✧ Settings</button>
     <button onclick="showView('tickets')">🎫 Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
     <button onclick="openSupportTicket()">✉ Submit a Support Ticket</button>
@@ -487,9 +496,22 @@ section.view{display:none} section.view.on{display:block}
       <div id="dAffiliate"></div>
     </div>
     <div class="dsec"><h4>Add note</h4>
-      <textarea id="dNote" placeholder="Log a call, promise-to-pay, dispute update…"></textarea>
+      <div class="mentionwrap"><textarea id="dNote" placeholder="Log a call, promise-to-pay, dispute update… (type @ to mention someone)" oninput="mentionInput(this,'dNoteMbox')" onkeydown="return mentionKeydown(event,this,'dNoteMbox')"></textarea><div class="mentionbox" id="dNoteMbox" style="display:none"></div></div>
       <div class="dactions"><button class="btn ghost" onclick="addNoteUI()">Save note</button>
-      <button class="btn ghost" onclick="addFollowUpUI()">+ Follow-up task</button></div>
+      <button class="btn ghost" onclick="toggleTaskForm()">+ Follow-up task</button></div>
+      <div class="taskform" id="taskFormWrap" style="display:none">
+        <input type="text" id="tfTitle" placeholder="Task title…" />
+        <div class="row">
+          <input type="date" id="tfDue" />
+          <select id="tfAssignee"><option value="">Assign to…</option></select>
+        </div>
+        <div class="mentionwrap" style="margin-top:8px"><textarea id="tfNotes" placeholder="Notes for this task… (type @ to mention someone)" oninput="mentionInput(this,'tfNotesMbox')" onkeydown="return mentionKeydown(event,this,'tfNotesMbox')"></textarea><div class="mentionbox" id="tfNotesMbox" style="display:none"></div></div>
+        <div class="dactions">
+          <button class="btn primary" onclick="saveTaskUI()">Save task</button>
+          <button class="btn ghost" onclick="toggleTaskForm(false)">Cancel</button>
+        </div>
+        <span class="testres" id="tfRes"></span>
+      </div>
     </div>
     <div class="dsec"><h4>Notes</h4><div id="dNotes"></div></div>
     <div class="dsec"><h4>Payment history</h4><div id="dPays"></div></div>
@@ -586,6 +608,19 @@ section.view{display:none} section.view.on{display:block}
     <div id="prospectsList" style="max-height:420px;overflow-y:auto"></div>
     <div class="dactions" style="margin-top:16px">
       <button class="btn ghost" onclick="document.getElementById('prospectsOverlay').classList.remove('show')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NOTIFICATIONS (@mentions + task assignments) ============ -->
+<div class="overlay" id="notifOverlay">
+  <div class="modal" style="max-width:520px">
+    <h2>Notifications</h2>
+    <p class="hint">@mentions and tasks assigned to you.</p>
+    <div id="notifList" style="max-height:420px;overflow-y:auto"></div>
+    <div class="dactions" style="margin-top:16px">
+      <button class="btn ghost" onclick="markAllNotifsRead()">Mark all read</button>
+      <button class="btn ghost" onclick="document.getElementById('notifOverlay').classList.remove('show')">Close</button>
     </div>
   </div>
 </div>
@@ -897,13 +932,86 @@ async function loadTasks(){
   $('taskList').innerHTML=d.open.length?d.open.map(row).join(''):'<div class="cardsub">No open tasks — add one above.</div>';
   $('taskDone').innerHTML=d.done.length?d.done.map(row).join(''):'<div class="cardsub">Nothing completed yet.</div>';
 }
-async function addTaskUI(clientId,clientName){
-  const title=clientId?prompt('Follow-up task for '+clientName+':'):$('ntTitle').value.trim();
+async function addTaskUI(){
+  const title=$('ntTitle').value.trim();
   if(!title)return;
-  const due=clientId?null:($('ntDue').value||null);
-  await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due,clientId,clientName})});
-  if(!clientId){$('ntTitle').value='';$('ntDue').value='';}
-  loadTasks();if(clientId&&curClient)openClient(clientId);
+  const due=$('ntDue').value||null;
+  await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due})});
+  $('ntTitle').value='';$('ntDue').value='';
+  loadTasks();
+}
+
+/* ---- @mentions: shared by the note textarea and the task-notes textarea.
+   staffUsers is fetched once and cached; typing "@" opens a filtered
+   dropdown of dashboard login users, arrow keys / click / Enter pick one,
+   which replaces the partial "@tok" with "@username " so the server's
+   resolveMentions() (server.js) can match it exactly. ---- */
+let staffUsers=null;
+async function loadStaffUsers(){
+  if(staffUsers)return staffUsers;
+  try{staffUsers=await(await fetch('/api/users')).json();}catch(e){staffUsers=[];}
+  return staffUsers;
+}
+let mentionSel=0;
+function mentionInput(el,boxId){
+  loadStaffUsers().then(users=>{
+    const box=$(boxId);
+    const upTo=el.value.slice(0,el.selectionStart);
+    const m=upTo.match(/@([a-z0-9._-]*)$/i);
+    if(!m){box.style.display='none';return;}
+    const q=m[1].toLowerCase();
+    const matches=users.filter(u=>!u.disabled&&(u.username.toLowerCase().includes(q)||u.name.toLowerCase().includes(q))).slice(0,6);
+    if(!matches.length){box.style.display='none';return;}
+    mentionSel=0;
+    box.innerHTML=matches.map((u,i)=>`<div class="mopt${i===0?' sel':''}" data-u="${escUser(u.username)}" onclick="pickMention(document.getElementById('${el.id}'),'${boxId}','${escUser(u.username)}')">${escUser(u.name)} <span class="cardsub">@${escUser(u.username)}</span></div>`).join('');
+    box.style.display='block';
+  });
+}
+function mentionKeydown(ev,el,boxId){
+  const box=$(boxId);
+  if(box.style.display==='none')return true;
+  const opts=[...box.querySelectorAll('.mopt')];
+  if(!opts.length)return true;
+  if(ev.key==='ArrowDown'){mentionSel=Math.min(mentionSel+1,opts.length-1);opts.forEach((o,i)=>o.classList.toggle('sel',i===mentionSel));ev.preventDefault();return false;}
+  if(ev.key==='ArrowUp'){mentionSel=Math.max(mentionSel-1,0);opts.forEach((o,i)=>o.classList.toggle('sel',i===mentionSel));ev.preventDefault();return false;}
+  if(ev.key==='Enter'||ev.key==='Tab'){pickMention(el,boxId,opts[mentionSel].dataset.u);ev.preventDefault();return false;}
+  if(ev.key==='Escape'){box.style.display='none';return false;}
+  return true;
+}
+function pickMention(el,boxId,username){
+  const upTo=el.value.slice(0,el.selectionStart);
+  const rest=el.value.slice(el.selectionStart);
+  const newUpTo=upTo.replace(/@([a-z0-9._-]*)$/i,'@'+username+' ');
+  el.value=newUpTo+rest;
+  el.focus();
+  const pos=newUpTo.length;
+  el.setSelectionRange(pos,pos);
+  $(boxId).style.display='none';
+}
+
+/* ---- inline follow-up task form (replaces the old window.prompt()) ---- */
+async function toggleTaskForm(show){
+  const wrap=$('taskFormWrap');
+  const willShow=show!==undefined?show:wrap.style.display==='none';
+  wrap.style.display=willShow?'block':'none';
+  if(willShow){
+    const users=await loadStaffUsers();
+    $('tfAssignee').innerHTML='<option value="">Assign to…</option>'+users.filter(u=>!u.disabled).map(u=>`<option value="${u.id}">${escUser(u.name)}</option>`).join('');
+    $('tfTitle').focus();
+  }else{
+    $('tfTitle').value='';$('tfDue').value='';$('tfAssignee').value='';$('tfNotes').value='';$('tfRes').textContent='';
+  }
+}
+async function saveTaskUI(){
+  if(!curClient)return;
+  const title=$('tfTitle').value.trim();
+  if(!title){$('tfRes').textContent='Title required';$('tfRes').className='testres bad';return;}
+  const due=$('tfDue').value||null;
+  const assignedTo=$('tfAssignee').value||null;
+  const notes=$('tfNotes').value.trim()||null;
+  await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due,notes,assignedTo,clientId:curClient.id,clientName:curClient.name})});
+  toggleTaskForm(false);
+  loadTasks();openClient(curClient.id);
 }
 
 /* ================= social ================= */
@@ -955,16 +1063,17 @@ async function openClient(id){
       ${c.mfsnStatus!=='not_on_mfsn'?'<button class="btn ghost" onclick="setAffiliateUI(\'not_on_mfsn\')">Mark Not on MFSN</button>':''}
       ${c.mfsnOverride?'<button class="btn ghost" onclick="setAffiliateUI(null)">Reset to auto-detect</button>':''}
     </div>`;
-  $('dNotes').innerHTML=d.notes.length?d.notes.map(n=>`<div class="noterow">${n.text}<div class="mut">${new Date(n.at).toLocaleString()}
+  $('dNotes').innerHTML=d.notes.length?d.notes.map(n=>`<div class="noterow">${escUser(n.text)}<div class="mut">${n.authorName?escUser(n.authorName)+' · ':''}${new Date(n.at).toLocaleString()}
     <a href="#" onclick="fetch('/api/notes/${n.id}',{method:'DELETE'}).then(()=>openClient('${c.id}'));return false" style="color:var(--muted)"> · delete</a></div></div>`).join('')
     :'<div class="cardsub">No notes yet.</div>';
   $('dPays').innerHTML=d.payments.length?d.payments.map(p=>`<div class="evrow"><span>${(p.product||'payment')}</span><span><b>${fmt$(p.amount)}</b> <span class="mut">${(p.at||'').slice(0,10)}</span></span></div>`).join('')
     :`<div class="cardsub">${c.lastPaymentDate?'Last payment '+c.lastPaymentDate.slice(0,10):'No payment history yet.'}</div>`;
   $('dDisputes').innerHTML=d.disputes.length?d.disputes.map(x=>`<div class="evrow"><span>${x.action||'dispute'} ${x.round?'· R'+x.round:''}</span><span class="mut">${(x.at||'').slice(0,10)}</span></div>`).join('')
     :`<div class="cardsub">${c.round?'Currently Round '+c.round+' (from GHL).':'No dispute activity recorded.'}</div>`;
-  $('dTasks').innerHTML=d.tasks.length?d.tasks.map(t=>`<div class="evrow"><span>${t.title}</span><span class="mut">${t.due||''}</span></div>`).join('')
+  $('dTasks').innerHTML=d.tasks.length?d.tasks.map(t=>`<div class="evrow"><span>${escUser(t.title)}${t.assignedToName?' <span class="cardsub">→ '+escUser(t.assignedToName)+'</span>':''}${t.notes?'<br><span class="cardsub">'+escUser(t.notes)+'</span>':''}</span><span class="mut">${t.due||''}</span></div>`).join('')
     :'<div class="cardsub">No open tasks for this client.</div>';
   $('dSms').value='';$('dNote').value='';$('dSmsRes').textContent='';
+  toggleTaskForm(false);
 }
 async function setStatusUI(status){
   if(!curClient)return;
@@ -985,7 +1094,6 @@ async function addNoteUI(){
   await fetch('/api/clients/'+curClient.id+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
   openClient(curClient.id);
 }
-function addFollowUpUI(){if(curClient)addTaskUI(curClient.id,curClient.name);}
 async function sendSmsUI(){
   const message=$('dSms').value.trim();if(!message||!curClient)return;
   $('dSmsRes').textContent='Sending…';$('dSmsRes').className='testres';
@@ -1223,15 +1331,54 @@ function renderTopPosts(){
   if($('topPostsFull'))$('topPostsFull').innerHTML=html;
 }
 
+/* ================= notifications (@mentions + task assignments) ================= */
+let notifsCache=[];
+async function loadNotifications(){
+  const r=await fetch('/api/notifications');
+  if(!r.ok)return; // e.g. session expired -- next poll retries
+  const d=await r.json();
+  notifsCache=d.notifications||[];
+  const b=$('notifBadge'); if(!b)return;
+  if(d.unread>0){b.style.display='inline-block';b.textContent=d.unread>99?'99+':d.unread;}
+  else b.style.display='none';
+}
+function notifText(n){
+  const who=n.fromName||'Someone';
+  if(n.type==='assigned')return `${who} assigned you a task: "${n.text}"`;
+  return `${who} mentioned you in a ${n.refType==='task'?'task':'note'}${n.clientName?' for '+n.clientName:''}: "${n.text}"`;
+}
+function renderNotifList(){
+  $('notifList').innerHTML=notifsCache.length
+    ? notifsCache.map(n=>`<div class="noterow" style="${n.read?'opacity:.55;':''}cursor:${n.clientId?'pointer':'default'}" ${n.clientId?`onclick="openNotifTarget('${n.id}','${n.clientId}')"`:''}>
+      ${escUser(notifText(n))}
+      <div class="mut">${new Date(n.createdAt).toLocaleString()}${n.read?'':' · <b>new</b>'}</div>
+    </div>`).join('')
+    : '<div class="cardsub">Nothing yet — @mention someone in a note or assign them a task and it shows up here.</div>';
+}
+async function openNotifications(){
+  await loadNotifications();
+  renderNotifList();
+  $('notifOverlay').classList.add('show');
+}
+function openNotifTarget(notifId,clientId){
+  fetch('/api/notifications/'+notifId+'/read',{method:'POST'}).then(loadNotifications);
+  $('notifOverlay').classList.remove('show');
+  showView('clients');openClient(clientId);
+}
+function markAllNotifsRead(){
+  fetch('/api/notifications/read-all',{method:'POST'}).then(()=>{loadNotifications();openNotifications();});
+}
+
 /* ================= boot ================= */
 [from,to]=presetRange(preset);granularity=pickGran(from,to);
-renderFilters();loadDashboard();loadTasks();renderTopPosts();loadTickets();
+renderFilters();loadDashboard();loadTasks();renderTopPosts();loadTickets();loadNotifications();
 setInterval(loadDashboard,5*60*1000);
 // Background badge refresh (a thread that's actually open polls much
 // faster -- see openTicketThread). 20s keeps the unread count current
 // without a manual refresh, without hammering the sync endpoint for
 // people who never open Ticket Requests.
 setInterval(loadTickets,20*1000);
+setInterval(loadNotifications,20*1000);
 </script>
 <script src="/production.js" defer></script><script src="/role.js" defer></script><script src="/mfsn.js" defer></script><script src="/revenue.js" defer></script>
 </body>

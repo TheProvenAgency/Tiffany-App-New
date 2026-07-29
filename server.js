@@ -39,6 +39,34 @@ function getUsers() {
   return migrated;
 }
 
+// @mentions: match "@word" or "@word.word" tokens in free text against
+// dashboard login users by username (exact, case-insensitive) or by their
+// display name with spaces collapsed (so "@TiffanyDixon" matches "Tiffany
+// Dixon"). Longest-token-first so "@tiffanydixon" doesn't also fire a
+// partial match on a shorter username that happens to be a prefix.
+function resolveMentions(text) {
+  const tokens = [...String(text || '').matchAll(/@([a-z0-9._-]+)/gi)].map(m => m[1].toLowerCase());
+  if (!tokens.length) return [];
+  const users = getUsers().filter(u => !u.disabled);
+  const found = new Map();
+  for (const tok of tokens) {
+    const u = users.find(x => x.username.toLowerCase() === tok || x.name.replace(/\s+/g, '').toLowerCase() === tok);
+    if (u) found.set(u.id, u);
+  }
+  return [...found.values()];
+}
+
+// Fan out a notification to each @mentioned user, skipping anyone already
+// notified another way (e.g. the assignee already got an 'assigned'
+// notification, so they don't also get a redundant 'mention' one).
+function notifyMentions(mentionedUsers, base, skipIds) {
+  const skip = new Set(skipIds || []);
+  for (const u of mentionedUsers) {
+    if (skip.has(u.id)) continue;
+    store.addNotification({ userId: u.id, ...base });
+  }
+}
+
 const SESSION_FILE = path.join(process.env.DATA_DIR || __dirname, 'sessions.json');
 function readSessions() {
   try { return JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8')); } catch (e) { return {}; }
@@ -655,10 +683,20 @@ app.get('/api/clients/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/clients/:id/notes', (req, res) => {
+app.post('/api/clients/:id/notes', async (req, res) => {
   const text = (req.body.text || '').trim();
   if (!text) return res.status(400).json({ error: 'empty note' });
-  res.json(store.addNote(req.params.id, text));
+  const author = getUsers().find(u => u.id === req.user.userId);
+  const mentions = resolveMentions(text);
+  const note = store.addNote(req.params.id, text, {
+    authorId: author ? author.id : null,
+    authorName: author ? author.name : null,
+    mentions: mentions.map(u => u.id)
+  });
+  let clientName = null;
+  try { clientName = (await getClients()).find(c => c.id === req.params.id)?.name || null; } catch (e) { /* best-effort */ }
+  notifyMentions(mentions, { type: 'mention', refType: 'note', refId: note.id, clientId: req.params.id, clientName, text, fromName: author ? author.name : 'Someone' }, author ? [author.id] : []);
+  res.json(note);
 });
 app.delete('/api/notes/:id', (req, res) => { store.deleteNote(req.params.id); res.json({ ok: true }); });
 
@@ -773,16 +811,66 @@ app.get('/api/tasks', (req, res) => {
   res.json({ open: t.filter(x => !x.done), done: t.filter(x => x.done).slice(-30).reverse() });
 });
 app.post('/api/tasks', (req, res) => {
-  const { title, clientId, clientName, due } = req.body;
+  const { title, clientId, clientName, due, notes, assignedTo } = req.body;
   if (!title || !title.trim()) return res.status(400).json({ error: 'title required' });
-  res.json(store.addTask({ title: title.trim(), clientId: clientId || null, clientName: clientName || null, due: due || null }));
+  const creator = getUsers().find(u => u.id === req.user.userId);
+  const assignee = assignedTo ? getUsers().find(u => u.id === assignedTo) : null;
+  const mentions = resolveMentions(notes || '');
+  const task = store.addTask({
+    title: title.trim(),
+    clientId: clientId || null,
+    clientName: clientName || null,
+    due: due || null,
+    notes: (notes || '').trim() || null,
+    createdBy: creator ? creator.id : null,
+    createdByName: creator ? creator.name : null,
+    assignedTo: assignee ? assignee.id : null,
+    assignedToName: assignee ? assignee.name : null,
+    mentions: mentions.map(u => u.id)
+  });
+  if (assignee && assignee.id !== (creator && creator.id)) {
+    store.addNotification({
+      userId: assignee.id, type: 'assigned', refType: 'task', refId: task.id,
+      clientId: task.clientId, clientName: task.clientName,
+      text: task.title, fromName: creator ? creator.name : 'Someone'
+    });
+  }
+  notifyMentions(mentions, { type: 'mention', refType: 'task', refId: task.id, clientId: task.clientId, clientName: task.clientName, text: task.title, fromName: creator ? creator.name : 'Someone' }, assignee ? [assignee.id] : []);
+  res.json(task);
 });
 app.patch('/api/tasks/:id', (req, res) => {
-  const t = store.updateTask(req.params.id, req.body);
+  const patch = { ...req.body };
+  if (Object.prototype.hasOwnProperty.call(patch, 'assignedTo')) {
+    const assignee = patch.assignedTo ? getUsers().find(u => u.id === patch.assignedTo) : null;
+    patch.assignedTo = assignee ? assignee.id : null;
+    patch.assignedToName = assignee ? assignee.name : null;
+    if (assignee) {
+      const actor = getUsers().find(u => u.id === req.user.userId);
+      store.addNotification({
+        userId: assignee.id, type: 'assigned', refType: 'task', refId: req.params.id,
+        text: patch.title || undefined, fromName: actor ? actor.name : 'Someone'
+      });
+    }
+  }
+  const t = store.updateTask(req.params.id, patch);
   if (!t) return res.status(404).json({ error: 'not found' });
   res.json(t);
 });
 app.delete('/api/tasks/:id', (req, res) => { store.deleteTask(req.params.id); res.json({ ok: true }); });
+
+// notifications (in-app bell) — everyone can read/clear their own
+app.get('/api/notifications', (req, res) => {
+  const list = store.getNotifications(req.user.userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  res.json({ notifications: list.slice(0, 100), unread: list.filter(n => !n.read).length });
+});
+app.post('/api/notifications/:id/read', (req, res) => {
+  store.markNotificationRead(req.user.userId, req.params.id);
+  res.json({ ok: true });
+});
+app.post('/api/notifications/read-all', (req, res) => {
+  store.markAllNotificationsRead(req.user.userId);
+  res.json({ ok: true });
+});
 
 // reactivation queue: inactive clients, most recently lapsed first (hottest leads)
 app.get('/api/reactivation', async (req, res) => {
