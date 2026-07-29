@@ -207,6 +207,7 @@ section.view{display:none} section.view.on{display:block}
     <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'">← Back to Proven Agency</button>
     <button onclick="openNotifications()">🔔 Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
     <button onclick="openSettings()">✧ Settings</button>
+    <button onclick="openChangePw()">🔑 Change password</button>
     <button onclick="showView('tickets')">🎫 Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
     <button onclick="openSupportTicket()">✉ Submit a Support Ticket</button>
     <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())">→ Sign out</button>
@@ -549,11 +550,18 @@ section.view{display:none} section.view.on{display:block}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <input id="u_username" placeholder="username" style="flex:1;min-width:110px">
       <input id="u_name" placeholder="full name" style="flex:1;min-width:110px">
-      <input id="u_password" placeholder="temporary password" style="flex:1;min-width:130px">
+      <input id="u_password" placeholder="password (optional — leave blank to send a setup link)" style="flex:1;min-width:230px">
       <select id="u_role" style="flex:0 0 auto"><option value="employee">Employee</option><option value="admin">Admin</option></select>
       <button class="btn ghost" onclick="addUser()">Add</button>
     </div>
     <span class="testres" id="r_user"></span>
+    <div id="r_userLink" style="display:none;margin-top:8px;padding:9px 12px;background:#faf8f3;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
+      <div style="margin-bottom:6px">Send this link to them — it lets them set their own password and signs them straight in:</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="r_userLinkUrl" readonly style="flex:1;font-size:11.5px" onclick="this.select()">
+        <button class="btn ghost" onclick="copySetupLink()">Copy</button>
+      </div>
+    </div>
 
     <div class="dactions" style="margin-top:20px">
       <button class="btn primary" onclick="saveSettings()">Save</button>
@@ -609,6 +617,24 @@ section.view{display:none} section.view.on{display:block}
     <div class="dactions" style="margin-top:16px">
       <button class="btn ghost" onclick="document.getElementById('prospectsOverlay').classList.remove('show')">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- ============ CHANGE PASSWORD (both roles) ============ -->
+<div class="overlay" id="changePwOverlay">
+  <div class="modal" style="max-width:400px">
+    <h2>Change password</h2>
+    <label>Current password</label>
+    <input type="password" id="cp_current" autocomplete="current-password">
+    <label>New password</label>
+    <input type="password" id="cp_new" autocomplete="new-password" placeholder="At least 8 characters">
+    <label>Confirm new password</label>
+    <input type="password" id="cp_confirm" autocomplete="new-password">
+    <div class="dactions" style="margin-top:16px">
+      <button class="btn primary" onclick="submitChangePw()">Change password</button>
+      <button class="btn ghost" onclick="document.getElementById('changePwOverlay').classList.remove('show')">Cancel</button>
+    </div>
+    <span class="testres" id="cp_res"></span>
   </div>
 </div>
 
@@ -1125,23 +1151,46 @@ async function loadUsers(){
     const users=await(await fetch('/api/users')).json();
     $('userList').innerHTML=users.map(u=>
       `<div class="hookurl" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-         <span>${escUser(u.name)} · ${escUser(u.username)} · ${escUser(u.role)}${u.disabled?' · disabled':''}</span>
+         <span>${escUser(u.name)} · ${escUser(u.username)} · ${escUser(u.role)}${u.disabled?' · disabled':''}${u.mustSetPassword?' · <span style="color:var(--gold)">hasn\'t set a password yet</span>':''}</span>
          <span style="display:flex;gap:6px">
+           <button class="btn ghost" onclick="resetUserPassword('${escUser(u.id)}')">${u.mustSetPassword?'Resend setup link':'Reset password'}</button>
            <button class="btn ghost" onclick="toggleUser('${escUser(u.id)}',${u.disabled?'false':'true'})">${u.disabled?'Enable':'Disable'}</button>
            <button class="btn ghost" onclick="removeUser('${escUser(u.id)}','${escUser(u.name)}')">Remove</button>
          </span>
        </div>`).join('')||'<div class="hookurl">No users yet.</div>';
   }catch(e){ $('userList').innerHTML='<div class="hookurl">Could not load the team list.</div>'; }
 }
+function showSetupLink(setupLink){
+  const url=location.origin+setupLink;
+  $('r_userLinkUrl').value=url;
+  $('r_userLink').style.display='block';
+}
+function copySetupLink(){
+  $('r_userLinkUrl').select();
+  navigator.clipboard?.writeText($('r_userLinkUrl').value).catch(()=>document.execCommand('copy'));
+}
 async function addUser(){
-  const body={username:$('u_username').value.trim(),name:$('u_name').value.trim(),
-              password:$('u_password').value,role:$('u_role').value};
-  if(!body.username||!body.password){$('r_user').textContent='Username and password are required';$('r_user').className='testres bad';return;}
+  $('r_userLink').style.display='none';
+  const body={username:$('u_username').value.trim(),name:$('u_name').value.trim(),role:$('u_role').value};
+  const pw=$('u_password').value;
+  if(pw)body.password=pw; // otherwise the server issues a setup link instead of a password
+  if(!body.username){$('r_user').textContent='Username is required';$('r_user').className='testres bad';return;}
   const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
-  $('r_user').textContent=r.ok?('Added '+body.username):('✗ '+(d.error||'failed'));
+  $('r_user').textContent=r.ok?('Added '+body.username+(d.setupLink?' — setup link below':'')):('✗ '+(d.error||'failed'));
   $('r_user').className='testres '+(r.ok?'ok':'bad');
-  if(r.ok){$('u_username').value='';$('u_name').value='';$('u_password').value='';loadUsers();}
+  if(r.ok){
+    $('u_username').value='';$('u_name').value='';$('u_password').value='';loadUsers();
+    if(d.setupLink)showSetupLink(d.setupLink);
+  }
+}
+async function resetUserPassword(id){
+  $('r_userLink').style.display='none';
+  const r=await fetch('/api/users/'+id+'/invite',{method:'POST'});
+  const d=await r.json();
+  if(!r.ok){$('r_user').textContent='✗ '+(d.error||'failed');$('r_user').className='testres bad';return;}
+  $('r_user').textContent='Setup link ready below';$('r_user').className='testres ok';
+  showSetupLink(d.setupLink);
 }
 async function toggleUser(id,disabled){
   const r=await fetch('/api/users/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({disabled})});
@@ -1340,6 +1389,23 @@ function renderTopPosts(){
   const html=TOP_POSTS.map(row).join('');
   if($('topPostsMini'))$('topPostsMini').innerHTML=html;
   if($('topPostsFull'))$('topPostsFull').innerHTML=html;
+}
+
+/* ================= change my password (both roles) ================= */
+function openChangePw(){
+  $('cp_current').value='';$('cp_new').value='';$('cp_confirm').value='';$('cp_res').textContent='';
+  $('changePwOverlay').classList.add('show');
+}
+async function submitChangePw(){
+  const currentPassword=$('cp_current').value, newPassword=$('cp_new').value, confirm=$('cp_confirm').value;
+  const res=$('cp_res');
+  if(newPassword.length<8){res.textContent='New password must be at least 8 characters';res.className='testres bad';return;}
+  if(newPassword!==confirm){res.textContent="Passwords don't match";res.className='testres bad';return;}
+  const r=await fetch('/api/me/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword,newPassword})});
+  const d=await r.json();
+  if(!r.ok){res.textContent='✗ '+(d.error||'failed');res.className='testres bad';return;}
+  res.textContent='Password changed — signing you out…';res.className='testres ok';
+  setTimeout(()=>fetch('/api/logout',{method:'POST'}).then(()=>location.reload()),900);
 }
 
 /* ================= notifications (@mentions + task assignments) ================= */

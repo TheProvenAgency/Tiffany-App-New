@@ -39,6 +39,22 @@ function getUsers() {
   return migrated;
 }
 
+// Secret behind setup/reset links (auth.signAppToken / verifyAppToken).
+// Generated once and persisted to the store on first use so it survives a
+// restart -- a link signed before a redeploy must still verify after one.
+function getInviteSecret() {
+  const cfg = store.getConfig();
+  if (cfg.inviteSecret) return cfg.inviteSecret;
+  const secret = crypto.randomBytes(32).toString('hex');
+  store.setConfig({ inviteSecret: secret });
+  return secret;
+}
+const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // a week to act on it
+function setupLinkFor(userId) {
+  const token = auth.signAppToken({ userId, exp: Date.now() + SETUP_LINK_TTL_MS }, getInviteSecret());
+  return `/set-password.html?token=${token}`;
+}
+
 // @mentions: match "@word" or "@word.word" tokens in free text against
 // dashboard login users by username (exact, case-insensitive) or by their
 // display name with spaces collapsed (so "@TiffanyDixon" matches "Tiffany
@@ -168,8 +184,15 @@ app.get('/api/sso', (req, res) => {
 
 // webhooks + login page are public; everything else needs a session, and the
 // session's role decides what it may reach. Deny by default.
+//
+// set-password.html / POST /api/set-password are also public: that's the
+// whole point of a setup/reset link -- the person opening it doesn't have a
+// session yet. The token itself (see auth.verifyAppToken) is what proves
+// they're allowed to be there, not a cookie.
 app.use((req, res, next) => {
-  const open = req.path.startsWith('/webhooks/') || req.path === '/api/login' || req.path === '/api/sso' || req.path === '/login.html' || req.path === '/favicon.ico';
+  const open = req.path.startsWith('/webhooks/') || req.path === '/api/login' || req.path === '/api/sso'
+    || req.path === '/login.html' || req.path === '/favicon.ico'
+    || req.path === '/set-password.html' || req.path === '/api/set-password';
   if (open) return next();
 
   const session = sessions.resolve(cookieToken(req));
@@ -193,18 +216,24 @@ app.get('/api/me', (req, res) => {
 
 // user management (admin only — employees are blocked by canAccess)
 app.get('/api/users', (req, res) => {
-  res.json(getUsers().map(u => ({ id: u.id, username: u.username, name: u.name, role: u.role, disabled: !!u.disabled })));
+  res.json(getUsers().map(u => ({ id: u.id, username: u.username, name: u.name, role: u.role, disabled: !!u.disabled, mustSetPassword: !!u.mustSetPassword })));
 });
 
+// password is optional -- leave it out and the account is created with
+// mustSetPassword:true plus a returned one-time setupLink instead, so the
+// admin never has to invent (and relay) a temporary password. Still accepts
+// an explicit password too, for anyone who'd rather just set one directly.
 app.post('/api/users', (req, res) => {
   const { username, name, role, password } = req.body || {};
-  if (!username || !password) return res.status(400).json({ error: 'username and password required' });
+  if (!username) return res.status(400).json({ error: 'username required' });
   if (role !== 'admin' && role !== 'employee') return res.status(400).json({ error: 'role must be admin or employee' });
   const list = getUsers();
   if (list.some(u => u.username === username)) return res.status(409).json({ error: 'username already taken' });
   const user = auth.makeUser({ username, name, role, password });
   store.setConfig({ users: list.concat([user]) });
-  res.json({ ok: true, id: user.id, username, role });
+  const resp = { ok: true, id: user.id, username, role };
+  if (user.mustSetPassword) resp.setupLink = setupLinkFor(user.id);
+  res.json(resp);
 });
 
 app.patch('/api/users/:id', (req, res) => {
@@ -220,10 +249,63 @@ app.patch('/api/users/:id', (req, res) => {
   if (req.body.name) u.name = req.body.name;
   if (req.body.role === 'admin' || req.body.role === 'employee') u.role = req.body.role;
   if (typeof req.body.disabled === 'boolean') u.disabled = req.body.disabled;
-  if (req.body.password) Object.assign(u, auth.hashPassword(req.body.password));
+  if (req.body.password) { Object.assign(u, auth.hashPassword(req.body.password)); u.mustSetPassword = false; }
   // Revoking access must take effect immediately, not at cookie expiry.
   if (u.disabled || req.body.password || req.body.role) { sessions.destroyForUser(u.id); persistSessions(); }
   store.setConfig({ users: list });
+  res.json({ ok: true });
+});
+
+// (Re)generate a one-time setup/reset link for an existing user -- this is
+// the "reset their password" button: it doesn't touch their current
+// password at all, it just hands them a way to pick a new one themselves.
+// Admin-only (not in EMPLOYEE_API).
+app.post('/api/users/:id/invite', (req, res) => {
+  const u = getUsers().find(x => x.id === req.params.id);
+  if (!u) return res.status(404).json({ error: 'no such user' });
+  res.json({ ok: true, setupLink: setupLinkFor(u.id) });
+});
+
+// Public: the landing point for a setup/reset link. No session required --
+// the signed token itself (7-day expiry) is the proof of authorization.
+// Logs them straight in afterward so a brand-new hire doesn't also have to
+// then type the password they just chose back into the login form.
+app.post('/api/set-password', (req, res) => {
+  const { token, password } = req.body || {};
+  const payload = auth.verifyAppToken(token, getInviteSecret());
+  if (!payload || !payload.userId) return res.status(400).json({ error: 'This link is invalid or has expired — ask your admin for a new one.' });
+  if (!password || String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  const list = getUsers();
+  const u = list.find(x => x.id === payload.userId);
+  if (!u || u.disabled) return res.status(400).json({ error: 'This account is no longer available.' });
+  Object.assign(u, auth.hashPassword(password));
+  u.mustSetPassword = false;
+  store.setConfig({ users: list });
+  sessions.destroyForUser(u.id); // any stale sessions shouldn't outlive the password they were issued under
+  const sessionToken = sessions.create(u);
+  persistSessions();
+  res.setHeader('Set-Cookie', `msfs=${sessionToken}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax`);
+  res.json({ ok: true });
+});
+
+// Self-service password change from an active session (both roles -- see
+// EMPLOYEE_API in lib/auth.js). Requires the current password, unlike the
+// admin PATCH route above, since anyone at an unlocked, already-signed-in
+// desk could otherwise hijack the account without knowing it.
+app.post('/api/me/password', (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!newPassword || String(newPassword).length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  const list = getUsers();
+  const u = list.find(x => x.id === req.user.userId);
+  if (!u) return res.status(404).json({ error: 'account not found' });
+  if (!auth.verifyPassword(currentPassword || '', u)) return res.status(400).json({ error: 'Current password is incorrect' });
+  Object.assign(u, auth.hashPassword(newPassword));
+  u.mustSetPassword = false;
+  store.setConfig({ users: list });
+  // Same as the admin-driven password change: revoke everywhere, including
+  // this tab, so the new password is the only thing that works from here on.
+  sessions.destroyForUser(u.id);
+  persistSessions();
   res.json({ ok: true });
 });
 
