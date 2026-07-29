@@ -3,7 +3,7 @@
 var DOCS=['SSC','DL','POA','FTC','Data breach','Affidavit','Perm. purpose','Experian letter'];
 var VAS=['Antoinette','Bri','Jasmine','Tori','—'];
 var STAGES=['Onboarding','Ready','In rounds','Completed'];
-var C={blue:'#3563a8',green:'#0e9e56',gold:'#b98a2f',red:'#b3372f',gray:'#b9b3a8',slate:'#6b6256'};
+var C={blue:'#3b82f6',green:'#0e9e56',gold:'#f59e0b',red:'#e11d48',gray:'#c9c3e0',slate:'#6b6256'};
 var CLIENTS=[], loaded=false, saveT=null, charts={};
 var curView='overview', curFilter='all', curSearch='', curPage=1, PAGE=60, openId=null;
 var MYNAME=null, openStamp=null, pollTimer=null;

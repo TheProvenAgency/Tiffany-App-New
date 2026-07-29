@@ -1,6 +1,6 @@
 /* Credit Monitoring — MyFreeScoreNow affiliate book. Figures from the affiliate portal (Jul 28 2026). */
 (function(){
-var C={ink:'#211d18',blue:'#3563a8',green:'#0e9e56',gold:'#b98a2f',red:'#b3372f',teal:'#2f8f8a',purple:'#6b5bd0',orange:'#c06a2b',pink:'#c14d8a'};
+var C={ink:'#211d18',blue:'#3b82f6',green:'#0e9e56',gold:'#f59e0b',red:'#e11d48',teal:'#06b6d4',purple:'#8b5cf6',orange:'#f97316',pink:'#ff2e9a'};
 var PAL=['#3563a8','#2e7d54','#b98a2f','#b3372f','#2f8f8a','#6b5bd0','#c06a2b','#c14d8a','#6f8f2f','#5a6b7d'];
 var charts={}, curSub='overview';
 

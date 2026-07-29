@@ -3,7 +3,7 @@
    Endpoints that map to this view: GET /v1/assets + /v1/plaid_accounts (Accounts), /v1/transactions (Transactions),
    /v1/budgets (Budget), /v1/recurring_items (Recurring), /v1/me (currency). */
 (function(){
-var C={blue:'#3563a8',green:'#0e9e56',gold:'#b98a2f',red:'#b3372f',teal:'#2f8f8a',purple:'#6b5bd0',slate:'#6b6256',gray:'#b9b3a8'};
+var C={blue:'#3b82f6',green:'#0e9e56',gold:'#f59e0b',red:'#e11d48',teal:'#06b6d4',purple:'#8b5cf6',slate:'#6b6256',gray:'#c9c3e0'};
 var PAL=['#3563a8','#2e7d54','#b98a2f','#b3372f','#2f8f8a','#6b5bd0','#c06a2b','#8d8577','#4a7db5','#5a9e6f'];
 var charts={}, curSub='overview', txFilter='all', txSearch='';
 

@@ -62,10 +62,30 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .gran{margin-left:auto;display:flex;gap:2px;background:#e2dcd0;border-radius:9px;padding:3px}
 .gran button{border:none;background:none;padding:5px 13px;font-size:12.5px;border-radius:7px;color:#6d675c;cursor:pointer;font-weight:600}
 .gran button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-/* cards */
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:0 1px 2px rgba(30,25,15,.03)}
+/* cards -- rounder + a softer lifted shadow so cards read as distinct
+   surfaces at a glance, closer to the reference dashboards. */
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px 22px;box-shadow:0 4px 18px rgba(30,25,15,.055)}
 .card.hero{border-top:4px solid var(--green)}
 .card.moneycard{border-top:4px solid var(--green)}
+/* gradient KPI stat cards -- the "at a glance" headline numbers, in
+   Tiffany's brand colors (pink/rose) plus a couple of complementary
+   accents so four in a row don't read as one flat block. */
+.kpirow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.kpi{border-radius:18px;padding:16px 18px;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.14)}
+.kpi .ico{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:12px}
+.kpi b{display:block;font-size:23px;font-weight:800;letter-spacing:-.01em}
+.kpi span{font-size:11px;opacity:.88;display:block;margin-top:2px}
+.kpi.pink{background:linear-gradient(135deg,#ff5cb3,#e4157f)}
+.kpi.purple{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
+.kpi.blue{background:linear-gradient(135deg,#5aa4f2,#2563eb)}
+.kpi.dark{background:linear-gradient(135deg,#3a3a48,#191a20)}
+/* progress ring -- a lightweight donut gauge (conic-gradient, no chart
+   library needed) for the handful of "% of something" figures. */
+.ring{width:92px;height:92px;border-radius:50%;padding:8px;flex:0 0 auto;
+  background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),#efece2 0)}
+.ring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .hole b{font-size:17px;font-weight:800;color:var(--ink)}
+.ring .hole span{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
 .grid{display:grid;gap:14px}
 .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
@@ -76,7 +96,7 @@ h3.cardtitle .sub{display:block}
 .cardsub{color:var(--muted);font-size:12px;margin-top:2px}
 .linklike{margin-left:auto;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none}
 /* hero */
-.hero{display:grid;grid-template-columns:1fr 230px;gap:0}
+.hero{display:grid;grid-template-columns:1fr}
 .hero .big{font-size:50px;font-weight:900;letter-spacing:-.02em;margin:6px 0 2px;color:var(--green);
   text-shadow:0 1px 0 rgba(255,255,255,.5)}
 .hero .big sup{font-size:24px;font-weight:800;vertical-align:26px;color:var(--green)}
@@ -252,6 +272,12 @@ section.view{display:none} section.view.on{display:block}
 
   <!-- ================= DASHBOARD ================= -->
   <section class="view on" id="view-dash">
+    <div class="kpirow">
+      <div class="kpi pink"><div class="ico">◈</div><b id="railLifetime">—</b><span id="railLifetimeSub">Lifetime collected</span></div>
+      <div class="kpi purple"><div class="ico">▤</div><b id="railAvg">—</b><span>Avg payment · per transaction</span></div>
+      <div class="kpi blue"><div class="ico">◎</div><b id="railLtv">—</b><span>LTV · per paying client</span></div>
+      <div class="kpi dark"><div class="ico">✚</div><b id="railNew">—</b><span>New clients · joined in period</span></div>
+    </div>
     <div class="grid" style="grid-template-columns:1fr">
       <div class="card hero">
         <div>
@@ -263,12 +289,6 @@ section.view{display:none} section.view.on{display:block}
           <div class="note" id="heroNote">—</div>
           <div class="cwrap"><canvas id="chHero"></canvas></div>
         </div>
-        <div class="rail">
-          <div class="item"><div class="ico">◈</div><div><b id="railLifetime">—</b><span id="railLifetimeSub">Lifetime collected</span></div></div>
-          <div class="item"><div class="ico">▤</div><div><b id="railAvg">—</b><span>Avg payment · per transaction</span></div></div>
-          <div class="item"><div class="ico">◎</div><div><b id="railLtv">—</b><span>LTV · per paying client</span></div></div>
-          <div class="item"><div class="ico">✚</div><div><b id="railNew">—</b><span>New clients · joined in period</span></div></div>
-        </div>
       </div>
     </div>
 
@@ -277,8 +297,13 @@ section.view{display:none} section.view.on{display:block}
         <div class="card">
           <h3 class="cardtitle">◉ Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
           <div class="cardsub">Where every client sits right now</div>
-          <div class="segbar" id="segbar"></div>
-          <div class="tiles" id="tiles"></div>
+          <div style="display:flex;gap:18px;align-items:center;margin-top:10px">
+            <div class="ring" id="activeRing" style="--pct:0;--ring-c:var(--green)"><div class="hole"><b id="activeRingPct">—</b><span>active</span></div></div>
+            <div style="flex:1;min-width:0">
+              <div class="segbar" id="segbar"></div>
+              <div class="tiles" id="tiles"></div>
+            </div>
+          </div>
         </div>
 
         <div class="card" style="margin-top:14px">
@@ -719,7 +744,11 @@ Chart.defaults.color='#8d8577';Chart.defaults.borderColor='#efece2';
 Chart.defaults.font.family="-apple-system,'Segoe UI',Inter,sans-serif";
 const charts={};
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
-const GREEN='#2e7d54',RED='#b3372f',BLUE='#3563a8',GOLD='#b98a2f',GRAY='#b9b3a8',INK='#211d18';
+/* vibrant, brand-leaning chart palette -- money stays the same green used
+   everywhere else in the app; everything else moves from the old muted
+   olive/tan set to punchier blue/purple/pink so charts read at a glance
+   instead of blending into the background. */
+const GREEN='#0e9e56',RED='#e11d48',BLUE='#3b82f6',GOLD='#f59e0b',GRAY='#c9c3e0',INK='#211d18',PURPLE='#8b5cf6',PINK='#ff2e9a';
 function grad(ctx,color,h){const g=ctx.createLinearGradient(0,0,0,h||190);g.addColorStop(0,color+'33');g.addColorStop(1,color+'00');return g;}
 
 /* ================= dashboard ================= */
@@ -745,7 +774,12 @@ async function renderAffiliateGap(){
     // $ figures (rev.*) use each matched member's real plan-based
     // commission where known, falling back to the blended rate — see
     // lib/affiliate.js affiliateGap() for the full explanation.
-    el.innerHTML=`<div class="dstat" style="margin-bottom:10px">
+    const enrolledPct=c.total?Math.round(c.affiliate/c.total*100):0;
+    el.innerHTML=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+        <div class="ring" style="--pct:${enrolledPct};--ring-c:var(--green)"><div class="hole"><b>${enrolledPct}%</b><span>enrolled</span></div></div>
+        <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} clients are enrolled under her affiliate link and generating commission. The rest below are the gap.</div>
+      </div>
+      <div class="dstat" style="margin-bottom:10px">
         <div style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v moneypop" style="font-size:20px">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
         <div style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
         <div style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--gold);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
@@ -793,6 +827,9 @@ async function loadDashboard(){
   $('viewAllClients').textContent=`View all ${fmtN(k.totalClients)} →`;
   $('segbar').innerHTML=segs.map(([n,c])=>`<div style="width:${Math.max(1,n/total*100)}%;background:${c}"></div>`).join('');
   $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="tile" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><b>${fmtN(n)}</b><span>${l}</span></div>`).join('');
+  const activePct=Math.round((k.activeClients||0)/total*100);
+  $('activeRing').style.setProperty('--pct',activePct);
+  $('activeRingPct').textContent=activePct+'%';
   $('reactBadge').textContent=fmtN(k.inactiveClients);
   // conversations
   $('convIn').textContent=fmtN(k.textsIn);$('convOut').textContent=fmtN(k.textsOut);
@@ -812,17 +849,17 @@ async function loadDashboard(){
     <div><div class="l">Lifetime</div><div class="v money">${fmt$(m.lifetimeRevenue)}</div></div>
     <div><div class="l">Active mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
   mkChart('chDeals',{type:'bar',data:{labels:prod.slice(0,7).map(x=>x.key),datasets:[{data:prod.slice(0,7).map(x=>x.revenue),
-    backgroundColor:[GREEN,BLUE,GOLD,'#6b8f71','#8a9fc4','#c9a96a','#b9b3a8'],borderRadius:5}]},
+    backgroundColor:[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa','#93c5fd'],borderRadius:5}]},
     options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.x)}}},
     scales:{x:{ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'K':v)}},y:{grid:{display:false}}}}});
   mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{data:b.byRound.map(x=>x.count),
-    backgroundColor:c=>grad(c.chart.ctx,GREEN,210),borderColor:GREEN,borderWidth:1.5,borderRadius:5}]},
+    backgroundColor:c=>grad(c.chart.ctx,PURPLE,210),borderColor:PURPLE,borderWidth:1.5,borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
   mkChart('chChurn',{type:'bar',data:{labels:b.churnRecency.map(x=>x.key),datasets:[{data:b.churnRecency.map(x=>x.count),
-    backgroundColor:[GREEN+'88',GOLD+'88','#c9a96a88',RED+'77',RED+'aa'],borderRadius:5}]},
+    backgroundColor:[BLUE+'aa',PURPLE+'aa',GOLD+'aa',RED+'88',RED+'dd'],borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
   mkChart('chSocial',{type:'line',data:{labels:labels(s.igFollowers),datasets:[
-    {label:'Instagram',data:vals(s.igFollowers),borderColor:'#c2547e',backgroundColor:c=>grad(c.chart.ctx,'#c2547e',210),fill:true,tension:.3,pointRadius:0},
+    {label:'Instagram',data:vals(s.igFollowers),borderColor:PINK,backgroundColor:c=>grad(c.chart.ctx,PINK,210),fill:true,tension:.3,pointRadius:0},
     {label:'Facebook',data:vals(s.fbFollowers),borderColor:BLUE,backgroundColor:c=>grad(c.chart.ctx,BLUE,210),fill:true,tension:.3,pointRadius:0}]},
     options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
   $('socialSub').textContent=`Instagram ${fmtN(k.igFollowers)} · Facebook ${fmtN(k.fbFollowers)}${k.igDelta?` · IG ${k.igDelta>=0?'+':''}${k.igDelta} in period`:''}`;
