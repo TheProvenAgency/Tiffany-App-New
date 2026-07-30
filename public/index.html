@@ -91,7 +91,7 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .kpi b{display:block;font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-top:2px}
 .kpi .delta{font-size:11px;font-weight:700;margin-top:3px;display:inline-flex;align-items:center;gap:3px}
 .kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--gold)}
-.kpi .spark{display:block;width:60px!important;max-width:60px;height:34px!important;max-height:34px;flex:0 0 auto}
+.kpi .spark{display:block;width:76px!important;max-width:76px;height:40px!important;max-height:40px;flex:0 0 auto}
 .kpi .miniring{width:44px;height:44px;border-radius:50%;padding:5px;flex:0 0 auto;
   background:conic-gradient(var(--ring-c,var(--green)) calc(var(--pct,0)*1%),#eef4ee 0)}
 .kpi .miniring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
@@ -964,18 +964,37 @@ async function loadDashboard(){
   setDelta('railLtvDelta',k.ltv,k.prevLtv);
   setDelta('railNewDelta',k.newClients,k.prevNewClients);
   const s=d.series;const labels=x=>x.map(p=>p.label),vals=x=>x.map(p=>p.value);
+  // A KPI sparkline is only ~60px wide. A series that's fine for the big
+  // charts (which can have hundreds of daily buckets across a long range)
+  // becomes an invisible comb of hairline bars/points squeezed into that
+  // width -- so sparklines get their own downsampled copy, bucketed down to
+  // a handful of points that can each actually render a few pixels wide.
+  function sparkPoints(series,maxPoints=10){
+    if(!series||series.length<=maxPoints)return series||[];
+    const out=[];const chunk=series.length/maxPoints;
+    for(let i=0;i<maxPoints;i++){
+      const start=Math.floor(i*chunk),end=Math.floor((i+1)*chunk)||start+1;
+      const slice=series.slice(start,Math.max(end,start+1));
+      const sum=slice.reduce((a,p)=>a+(p.value||0),0);
+      out.push({label:slice[slice.length-1].label,value:sum});
+    }
+    return out;
+  }
   // KPI rail mini-charts -- every card in its own green shade (g1..g4, see
   // CSS) instead of the old pink/purple/blue mix, each paired with a small
   // chart so the row reads like the reference money dashboard rather than
-  // four bare numbers.
-  mkChart('sparkLifetime',{type:'bar',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),backgroundColor:'#0e9e56',
-    borderRadius:2,barPercentage:.7}]},options:{maintainAspectRatio:false,
+  // four bare numbers. Line sparklines get a small pointRadius (not 0) so a
+  // series with only 1-2 real data points -- normal right after a slow
+  // start or a sync gap -- still shows something instead of a blank canvas.
+  const revSpark=sparkPoints(s.revenue),paySpark=sparkPoints(s.payments),newSpark=sparkPoints(s.newClients);
+  mkChart('sparkLifetime',{type:'bar',data:{labels:labels(revSpark),datasets:[{data:vals(revSpark),backgroundColor:'#0e9e56',
+    borderRadius:2,barPercentage:.7,minBarLength:2}]},options:{maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
-  mkChart('sparkAvg',{type:'line',data:{labels:labels(s.payments),datasets:[{data:vals(s.payments),borderColor:'#0f9488',
-    borderWidth:2,tension:.5,pointRadius:0,fill:false}]},options:{maintainAspectRatio:false,
+  mkChart('sparkAvg',{type:'line',data:{labels:labels(paySpark),datasets:[{data:vals(paySpark),borderColor:'#0f9488',
+    borderWidth:2,tension:.5,pointRadius:paySpark.length<=3?3:0,pointBackgroundColor:'#0f9488',fill:false}]},options:{maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
-  mkChart('sparkNew',{type:'bar',data:{labels:labels(s.newClients),datasets:[{data:vals(s.newClients),backgroundColor:'#166534',
-    borderRadius:2,barPercentage:.7}]},options:{maintainAspectRatio:false,
+  mkChart('sparkNew',{type:'bar',data:{labels:labels(newSpark),datasets:[{data:vals(newSpark),backgroundColor:'#166534',
+    borderRadius:2,barPercentage:.7,minBarLength:2}]},options:{maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
   const repeatPct=k.revenueTotal>0?Math.round((k.repeatRevenue||0)/k.revenueTotal*100):0;
   $('ltvRing').style.setProperty('--pct',repeatPct);
