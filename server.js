@@ -647,16 +647,23 @@ app.get('/api/dashboard', async (req, res) => {
     // dispute events (from DisputeFox webhook feed)
     const disputes = store.getEvents().filter(e => e.type === 'dispute' && inRange(e.at || e.receivedAt, from, to));
 
-    // previous equal-length period comparison (for hero vs-% )
-    let prevRevenue = null;
+    // previous equal-length period comparison (for hero vs-% and the KPI
+    // row's delta arrows) -- same trick for avg payment / LTV / new clients
+    // so those cards get a real vs-previous-period % instead of a fake one.
+    let prevRevenue = null, prevAvgPayment = null, prevLtv = null, prevNewClients = null;
     if (from && to) {
       const f = new Date(from), t = new Date(to);
       const days = Math.round((t - f) / 86400000) + 1;
       const pf = new Date(f); pf.setDate(pf.getDate() - days);
       const pt = new Date(f); pt.setDate(pt.getDate() - 1);
       const pfs = pf.toISOString().slice(0, 10), pts = pt.toISOString().slice(0, 10);
-      prevRevenue = payments.filter(p => inRange(p.at, pfs, pts)).reduce((s, p) => s + (p.amount || 0), 0);
+      const prevPayments = payments.filter(p => inRange(p.at, pfs, pts));
+      prevRevenue = prevPayments.reduce((s, p) => s + (p.amount || 0), 0);
       prevRevenue = Math.round(prevRevenue * 100) / 100;
+      prevAvgPayment = prevPayments.length ? Math.round(prevRevenue / prevPayments.length * 100) / 100 : null;
+      const prevPayers = new Set(prevPayments.map(p => p.email).filter(Boolean));
+      prevLtv = prevPayers.size ? Math.round(prevRevenue / prevPayers.size) : null;
+      prevNewClients = clients.filter(c => inRange(c.createdAt, pfs, pts)).length;
     }
 
     // client-base segments + value metrics + system health
@@ -701,6 +708,9 @@ app.get('/api/dashboard', async (req, res) => {
         fbDelta: followerDelta.fb,
         disputesSent: disputes.length,
         prevRevenue,
+        prevAvgPayment,
+        prevLtv,
+        prevNewClients,
         unclassified,
         distinctPayers: payers.size,
         ltv: payers.size ? Math.round(payments.reduce((s, p) => s + (p.amount || 0), 0) / payers.size) : 0,

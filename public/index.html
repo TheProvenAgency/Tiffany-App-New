@@ -311,11 +311,11 @@ section.view{display:none} section.view.on{display:block}
   <section class="view on" id="view-dash">
     <div class="kpirow">
       <div class="kpi pink"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>
-      <div class="kpi purple"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b></div></div>
-      <div class="kpi blue"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b></div></div>
-      <div class="kpi dark"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b></div></div>
+      <div class="kpi purple"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b><span class="delta" id="railAvgDelta"></span></div></div>
+      <div class="kpi blue"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b><span class="delta" id="railLtvDelta"></span></div></div>
+      <div class="kpi dark"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div></div>
     </div>
-    <div class="grid" style="grid-template-columns:1fr">
+    <div class="grid" style="grid-template-columns:1.55fr 1fr">
       <div class="card hero">
         <div>
           <div style="display:flex;gap:10px;align-items:center">
@@ -326,6 +326,11 @@ section.view{display:none} section.view.on{display:block}
           <div class="note" id="heroNote">—</div>
           <div class="cwrap"><canvas id="chHero"></canvas></div>
         </div>
+      </div>
+      <div class="card moneycard">
+        <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:20px;width:20px;border-radius:5px;vertical-align:-4px;margin-right:6px">MyFreeScoreNow — affiliate gap</h3>
+        <div class="cardsub">Clients not enrolled under her affiliate link</div>
+        <div id="affiliateGap" style="margin-top:10px"></div>
       </div>
     </div>
 
@@ -393,11 +398,6 @@ section.view{display:none} section.view.on{display:block}
           <h3 class="cardtitle">⚠ Needs attention</h3>
           <div class="cardsub">Fix these before trusting the numbers</div>
           <div id="attention" style="margin-top:6px"></div>
-        </div>
-        <div class="card moneycard" style="margin-top:14px">
-          <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:20px;width:20px;border-radius:5px;vertical-align:-4px;margin-right:6px">MyFreeScoreNow — affiliate gap</h3>
-          <div class="cardsub">Clients not enrolled under her affiliate link</div>
-          <div id="affiliateGap" style="margin-top:10px"></div>
         </div>
         <div class="card" style="margin-top:14px">
           <h3 class="cardtitle">✦ Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
@@ -856,11 +856,17 @@ async function loadDashboard(){
   $('railAvg').textContent=fmt$(k.avgPayment);
   $('railLtv').textContent=fmt$(k.ltv);
   $('railNew').textContent=fmtN(k.newClients);
-  if(k.prevRevenue!=null&&k.prevRevenue>0){
-    const pct2=Math.round((k.revenueTotal-k.prevRevenue)/k.prevRevenue*1000)/10;
-    $('railLifetimeDelta').innerHTML=`${pct2>=0?'▲':'▼'} ${Math.abs(pct2)}% vs previous period`;
-    $('railLifetimeDelta').className='delta '+(pct2>=0?'up':'down');
-  }else{ $('railLifetimeDelta').textContent=''; }
+  const setDelta=(id,cur,prev)=>{
+    const el=$(id); if(!el)return;
+    if(prev==null||prev<=0){ el.textContent=''; el.className='delta'; return; }
+    const pct=Math.round((cur-prev)/prev*1000)/10;
+    el.innerHTML=`${pct>=0?'▲':'▼'} ${Math.abs(pct)}% vs previous period`;
+    el.className='delta '+(pct>=0?'up':'down');
+  };
+  setDelta('railLifetimeDelta',k.revenueTotal,k.prevRevenue);
+  setDelta('railAvgDelta',k.avgPayment,k.prevAvgPayment);
+  setDelta('railLtvDelta',k.ltv,k.prevLtv);
+  setDelta('railNewDelta',k.newClients,k.prevNewClients);
   const s=d.series;const labels=x=>x.map(p=>p.label),vals=x=>x.map(p=>p.value);
   mkChart('sparkLifetime',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:'#e4157f',
     borderWidth:2,tension:.4,pointRadius:0,fill:false}]},options:{maintainAspectRatio:false,
