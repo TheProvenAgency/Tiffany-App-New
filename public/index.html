@@ -154,12 +154,25 @@ header h1{font-size:19px;margin:0;font-weight:700}
    and reflow logic; we just theme it and toggle edit mode on/off. */
 .dashbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .grid-stack{margin:0 -7px}
-.grid-stack-item-content{position:absolute;inset:7px;overflow:hidden;background:none}
+.grid-stack-item-content{position:absolute;inset:7px;overflow:hidden;background:none;
+  /* lets any card inside size its text/number off the ACTUAL box it's been
+     dragged/resized to (via the cq* units below), instead of every card
+     reading the same size regardless of how big or small it's been made */
+  container-type:size}
 /* while actively arranging, let the drag/resize outline breathe past the
    card edge instead of getting clipped by the line above */
 .grid-stack.gs-editing .grid-stack-item-content{overflow:visible}
 .grid-stack-item-content>.card,.grid-stack-item-content>.kpi,
-.grid-stack-item-content>.rv-card,.grid-stack-item-content>.rv-kpis{height:100%;box-sizing:border-box}
+.grid-stack-item-content>.rv-card,.grid-stack-item-content>.rv-kpis,
+.grid-stack-item-content>.rv-kpi{height:100%;box-sizing:border-box}
+/* the big number on a KPI tile (Lifetime collected, Total income, etc.)
+   scales with the tile's own width instead of staying fixed -- shrink the
+   card and the figure shrinks to fit, stretch it and the figure grows. */
+.grid-stack-item-content>.kpi b,
+.grid-stack-item-content>.rv-kpi .v{font-size:clamp(15px,9cqw,32px)}
+.grid-stack-item-content>.kpi .l,
+.grid-stack-item-content>.rv-kpi .l{font-size:clamp(9px,3.2cqw,12px)}
+.grid-stack-item-content>.rv-kpi .s{font-size:clamp(9px,3cqw,11px)}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
@@ -186,16 +199,19 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .grid-stack.gs-editing .grid-stack-item-content>.card,
 .grid-stack.gs-editing .grid-stack-item-content>.kpi,
 .grid-stack.gs-editing .grid-stack-item-content>.rv-card,
-.grid-stack.gs-editing .grid-stack-item-content>.rv-kpis{outline:2px dashed var(--pink);outline-offset:3px;cursor:grab}
+.grid-stack.gs-editing .grid-stack-item-content>.rv-kpis,
+.grid-stack.gs-editing .grid-stack-item-content>.rv-kpi{outline:2px dashed var(--pink);outline-offset:3px;cursor:grab}
 .grid-stack.gs-editing .ui-draggable-dragging .card,
 .grid-stack.gs-editing .ui-draggable-dragging .kpi,
 .grid-stack.gs-editing .ui-draggable-dragging .rv-card,
-.grid-stack.gs-editing .ui-draggable-dragging .rv-kpis{cursor:grabbing}
+.grid-stack.gs-editing .ui-draggable-dragging .rv-kpis,
+.grid-stack.gs-editing .ui-draggable-dragging .rv-kpi{cursor:grabbing}
 .grid-stack .ui-resizable-handle{z-index:5}
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.card,
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.kpi,
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-card,
-.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpis{outline-color:var(--green);box-shadow:0 10px 30px rgba(0,0,0,.15)}
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpis,
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpi{outline-color:var(--green);box-shadow:0 10px 30px rgba(0,0,0,.15)}
 .gs-placeholder>.placeholder-content{background:var(--pink-soft)!important;border-radius:16px}
 .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
@@ -457,14 +473,25 @@ section.view{display:none} section.view.on{display:block}
            Payment methods, now also live here -- see revenue.js for the
            chart wiring on #dashTrend and the shared #rvGran/#rvGranDash
            tab-sync logic. -->
-      <div class="grid-stack-item" gs-id="rev-kpis" gs-w="12" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpis">
-          <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div></div>
-          <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div></div>
-          <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div></div>
-          <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div></div>
-          <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div></div>
-        </div>
+      <!-- These 5 used to be one bundled "rev-kpis" block that dragged and
+           resized as a single unit. Split into 5 separate grid-stack-items
+           so each tile can be moved/resized on its own, same as any other
+           card. Widths sum to 12 (3+2+2+2+3) so the row still spans the
+           full grid at the default layout. -->
+      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="rev-kpi-commas-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="rev-kpi-mfsn-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="rev-kpi-commas-month" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="rev-kpi-mfsn-month" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div></div>
       </div></div>
 
       <div class="grid-stack-item" gs-id="rev-trend" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
