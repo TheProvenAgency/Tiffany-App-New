@@ -985,6 +985,17 @@ app.post('/api/notifications/read-all', (req, res) => {
   res.json({ ok: true });
 });
 
+// dashboard layout (drag/resize customization) — per login, both roles
+app.get('/api/dashboard-layout', (req, res) => {
+  res.json({ layout: store.getDashboardLayout(req.user.userId) });
+});
+app.post('/api/dashboard-layout', (req, res) => {
+  const layout = req.body && req.body.layout;
+  if (!layout || !Array.isArray(layout.order)) return res.status(400).json({ error: 'layout.order (array) is required' });
+  store.setDashboardLayout(req.user.userId, layout);
+  res.json({ ok: true });
+});
+
 // reactivation queue: inactive clients, most recently lapsed first (hottest leads)
 app.get('/api/reactivation', async (req, res) => {
   try {
