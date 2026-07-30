@@ -6,7 +6,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --bg:#f5f2ec; --card:#ffffff; --ink:#211d18; --muted:#8d8577; --line:#e8e2d6;
+  /* clean cool white/gray canvas -- Tiffany asked to match the Admina
+     reference (clean white cards, soft gray canvas) instead of the old
+     warm beige/tan background. Sidebar stays her actual brand chrome
+     (near-black + hot pink), established earlier from her live site. */
+  --bg:#f4f6fa; --card:#ffffff; --ink:#20222b; --muted:#8b93a3; --line:#eaedf3;
   --sidebar:#14151a; --sidebar-ink:#cfc8bd; --sidebar-dim:#948b7d;
   /* money green -- richer/more saturated than the old muted forest green so
      $ figures actually pop, per Tiffany's ask. Everything that already read
@@ -25,7 +29,7 @@ button{font-family:inherit}
 aside{width:212px;min-width:212px;background:var(--sidebar);color:var(--sidebar-ink);height:100vh;position:sticky;top:0;
   display:flex;flex-direction:column;padding:14px 0}
 .brand{display:flex;align-items:center;gap:10px;padding:8px 16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
-.brand .chip{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blush),var(--rose));color:#211c18;
+.brand .chip{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blush),var(--rose));color:#20222b;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .brand b{display:block;font-size:13px;color:#f1ece4}
 .brand span{font-size:10.5px;color:var(--sidebar-dim)}
@@ -54,13 +58,13 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .search{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:250px;font-size:13px;color:var(--ink)}
 .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--rose));color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
 /* filter row */
-.filters{display:flex;align-items:center;gap:8px;background:#eee9df;border-radius:12px;padding:7px 10px;margin-bottom:16px;flex-wrap:wrap}
-.chip{background:none;border:none;padding:6px 12px;border-radius:8px;font-size:12.5px;color:#6d675c;cursor:pointer;font-weight:600}
+.filters{display:flex;align-items:center;gap:8px;background:#eef0f5;border-radius:12px;padding:7px 10px;margin-bottom:16px;flex-wrap:wrap}
+.chip{background:none;border:none;padding:6px 12px;border-radius:8px;font-size:12.5px;color:#6b7280;cursor:pointer;font-weight:600}
 .chip.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.rangebox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;color:#6d675c;display:flex;gap:6px;align-items:center}
+.rangebox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;color:#6b7280;display:flex;gap:6px;align-items:center}
 .rangebox input{border:none;font-size:12px;color:var(--ink);width:105px;background:none;color-scheme:light}
-.gran{margin-left:auto;display:flex;gap:2px;background:#e2dcd0;border-radius:9px;padding:3px}
-.gran button{border:none;background:none;padding:5px 13px;font-size:12.5px;border-radius:7px;color:#6d675c;cursor:pointer;font-weight:600}
+.gran{margin-left:auto;display:flex;gap:2px;background:#e3e7ee;border-radius:9px;padding:3px}
+.gran button{border:none;background:none;padding:5px 13px;font-size:12.5px;border-radius:7px;color:#6b7280;cursor:pointer;font-weight:600}
 .gran button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 /* cards -- rounder + a softer lifted shadow so cards read as distinct
    surfaces at a glance, closer to the reference dashboards. */
@@ -71,18 +75,23 @@ header h1{font-size:19px;margin:0;font-weight:700}
    Tiffany's brand colors (pink/rose) plus a couple of complementary
    accents so four in a row don't read as one flat block. */
 .kpirow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
-.kpi{border-radius:18px;padding:16px 18px;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.14)}
-.kpi .ico{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:12px}
-.kpi b{display:block;font-size:23px;font-weight:800;letter-spacing:-.01em}
-.kpi span{font-size:11px;opacity:.88;display:block;margin-top:2px}
-.kpi.pink{background:linear-gradient(135deg,#ff5cb3,#e4157f)}
-.kpi.purple{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
-.kpi.blue{background:linear-gradient(135deg,#5aa4f2,#2563eb)}
-.kpi.dark{background:linear-gradient(135deg,#3a3a48,#191a20)}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;
+  box-shadow:0 1px 3px rgba(20,20,30,.04);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.kpi>div{display:flex;flex-direction:column}
+.kpi .ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:10px;flex:0 0 auto}
+.kpi .l{font-size:11px;color:var(--muted);font-weight:600}
+.kpi b{display:block;font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-top:2px}
+.kpi .delta{font-size:11px;font-weight:700;margin-top:3px;display:inline-flex;align-items:center;gap:3px}
+.kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--muted)}
+.kpi .spark{width:60px;height:34px;flex:0 0 auto}
+.kpi.pink .ico{background:var(--pink-soft);color:#c2185b}
+.kpi.purple .ico{background:#ece5ff;color:#7c3aed}
+.kpi.blue .ico{background:var(--blue-soft);color:#2563eb}
+.kpi.dark .ico{background:var(--green-soft);color:var(--green)}
 /* progress ring -- a lightweight donut gauge (conic-gradient, no chart
    library needed) for the handful of "% of something" figures. */
 .ring{width:92px;height:92px;border-radius:50%;padding:8px;flex:0 0 auto;
-  background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),#efece2 0)}
+  background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),#eef0f5 0)}
 .ring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ring .hole b{font-size:17px;font-weight:800;color:var(--ink)}
 .ring .hole span{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
@@ -120,10 +129,18 @@ h3.cardtitle .sub{display:block}
 .segbar div{height:100%}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .tile{border:1px solid var(--line);border-radius:13px;padding:11px 13px;cursor:pointer;transition:transform .15s ease,border-color .15s ease}
-.tile:hover{border-color:#cfc8b8;transform:translateY(-2px)}
+.tile:hover{border-color:#c9cedb;transform:translateY(-2px)}
 .tile .dot2{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
 .tile b{font-size:19px}
 .tile span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+/* delivery-status-style row list: dot + label left, count right */
+.statlist{display:flex;flex-direction:column}
+.statrow{display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.statrow:last-child{border-bottom:none}
+.statrow:hover{background:var(--bg)}
+.statrow .dot2{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.statrow .lbl{flex:1;font-size:12.5px;color:var(--ink)}
+.statrow b{font-size:13px;font-weight:800}
 /* attention */
 .att{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
 .att:last-child{border-bottom:none}
@@ -131,7 +148,7 @@ h3.cardtitle .sub{display:block}
 .att b{font-size:13px;display:block}
 .att span{font-size:11.5px;color:var(--muted)}
 .att .act{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
-.att .act.dark{background:#211c18;color:#fff;border-color:#211c18}
+.att .act.dark{background:#20222b;color:#fff;border-color:#20222b}
 /* feed */
 .feeditem{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
 .feeditem:last-child{border:none}
@@ -149,12 +166,12 @@ h3.cardtitle .sub{display:block}
 /* tables (clients etc.) */
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{color:var(--muted);text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
-td{padding:10px;border-bottom:1px solid #f0ece2}
-tr:hover td{background:#faf8f3}
+td{padding:10px;border-bottom:1px solid #eef0f5}
+tr:hover td{background:#f8f9fc}
 .pill{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
 .pill.active{background:var(--green-soft);color:var(--green)}
 .pill.inactive{background:var(--red-soft);color:var(--red)}
-.pill.unknown{background:#efece4;color:var(--muted)}
+.pill.unknown{background:#eef0f5;color:var(--muted)}
 .pill.warn{background:var(--gold-soft);color:var(--gold)}
 .tbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .tbar input,.tbar select{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--ink)}
@@ -177,7 +194,7 @@ section.view{display:none} section.view.on{display:block}
    can tell "this is money" (green), "this needs attention" (red/gold),
    or "this is just a count" (neutral) without reading the label first. */
 .dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
-.dstat div{background:#f7f4ec;border-radius:14px;padding:12px 14px;transition:transform .15s ease}
+.dstat div{background:#f2f4f8;border-radius:14px;padding:12px 14px;transition:transform .15s ease}
 .dstat div[onclick]:hover{transform:translateY(-2px)}
 .dstat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .dstat .v{font-size:17px;font-weight:800;margin-top:3px}
@@ -186,9 +203,9 @@ section.view{display:none} section.view.on{display:block}
 .dstat div.tone-gold{background:var(--gold-soft)}
 .dstat div.tone-blue{background:var(--blue-soft)}
 .dstat div.tone-pink{background:var(--pink-soft)}
-.evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0ece2;font-size:12.5px}
+.evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eef0f5;font-size:12.5px}
 .evrow .mut{color:var(--muted)}
-.noterow{background:#faf8f3;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
+.noterow{background:#f8f9fc;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
 .noterow .mut{color:var(--muted);font-size:11px;margin-top:4px}
 .dsec textarea{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;min-height:58px;resize:vertical}
 .dsec input[type=text],.dsec input[type=date],.dsec select{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--ink)}
@@ -201,7 +218,7 @@ section.view{display:none} section.view.on{display:block}
 .mentionbox .mopt:hover,.mentionbox .mopt.sel{background:var(--gold-soft)}
 .dactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .btn{padding:9px 16px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}
-.btn.primary{background:#211c18;color:#fff}
+.btn.primary{background:#20222b;color:#fff}
 .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
 .testres{font-size:12.5px;min-height:16px}
 .testres.ok{color:var(--green)}.testres.bad{color:var(--red)}
@@ -216,7 +233,7 @@ section.view{display:none} section.view.on{display:block}
 .addtask input{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:13px;color-scheme:light}
 .addtask input[type=text]{flex:1;min-width:220px}
 .statchips{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
-.statchips span{background:#faf8f3;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
+.statchips span{background:#f8f9fc;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
 .statchips b{color:var(--ink)}
 /* settings modal */
 .overlay{position:fixed;inset:0;background:rgba(30,25,15,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;overflow:auto;padding:40px 16px}
@@ -227,7 +244,7 @@ section.view{display:none} section.view.on{display:block}
 .modal label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 5px}
 .modal input{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px}
 .modal .row{display:flex;gap:12px}.modal .row>div{flex:1}
-.hookurl{background:#faf8f3;border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:11.5px;color:#7a6a3d;margin-top:6px;word-break:break-all}
+.hookurl{background:#f8f9fc;border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:11.5px;color:#7a6a3d;margin-top:6px;word-break:break-all}
 @media(max-width:1150px){.hero{grid-template-columns:1fr}.rail{border-left:none;padding-left:0;flex-direction:row}.tiles{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -282,10 +299,10 @@ section.view{display:none} section.view.on{display:block}
   <!-- ================= DASHBOARD ================= -->
   <section class="view on" id="view-dash">
     <div class="kpirow">
-      <div class="kpi pink"><div class="ico">◈</div><b id="railLifetime">—</b><span id="railLifetimeSub">Lifetime collected</span></div>
-      <div class="kpi purple"><div class="ico">▤</div><b id="railAvg">—</b><span>Avg payment · per transaction</span></div>
-      <div class="kpi blue"><div class="ico">◎</div><b id="railLtv">—</b><span>LTV · per paying client</span></div>
-      <div class="kpi dark"><div class="ico">✚</div><b id="railNew">—</b><span>New clients · joined in period</span></div>
+      <div class="kpi pink"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>
+      <div class="kpi purple"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b></div></div>
+      <div class="kpi blue"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b></div></div>
+      <div class="kpi dark"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b></div></div>
     </div>
     <div class="grid" style="grid-template-columns:1fr">
       <div class="card hero">
@@ -310,7 +327,7 @@ section.view{display:none} section.view.on{display:block}
             <div class="ring" id="activeRing" style="--pct:0;--ring-c:var(--green)"><div class="hole"><b id="activeRingPct">—</b><span>active</span></div></div>
             <div style="flex:1;min-width:0">
               <div class="segbar" id="segbar"></div>
-              <div class="tiles" id="tiles"></div>
+              <div class="statlist" id="tiles"></div>
             </div>
           </div>
         </div>
@@ -605,7 +622,7 @@ section.view{display:none} section.view.on{display:block}
       <button class="btn ghost" onclick="addUser()">Add</button>
     </div>
     <span class="testres" id="r_user"></span>
-    <div id="r_userLink" style="display:none;margin-top:8px;padding:9px 12px;background:#faf8f3;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
+    <div id="r_userLink" style="display:none;margin-top:8px;padding:9px 12px;background:#f8f9fc;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
       <div style="margin-bottom:6px">Send this link to them — it lets them set their own password and signs them straight in:</div>
       <div style="display:flex;gap:8px;align-items:center">
         <input id="r_userLinkUrl" readonly style="flex:1;font-size:11.5px" onclick="this.select()">
@@ -749,7 +766,7 @@ function setPreset(p){preset=p;[from,to]=presetRange(p);granularity=pickGran(fro
 function applyCustom(){preset='';from=$('fromD').value||null;to=$('toD').value||null;granularity=pickGran(from,to);renderFilters();loadDashboard();}
 
 /* ================= charts ================= */
-Chart.defaults.color='#8d8577';Chart.defaults.borderColor='#efece2';
+Chart.defaults.color='#8d8577';Chart.defaults.borderColor='#eef0f5';
 Chart.defaults.font.family="-apple-system,'Segoe UI',Inter,sans-serif";
 const charts={};
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
@@ -794,7 +811,7 @@ async function renderAffiliateGap(){
         <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} clients are enrolled under her affiliate link and generating commission. The rest below are the gap.</div>
       </div>
       <div class="dstat" style="margin-bottom:10px">
-        <div class="tone-gold" style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v moneypop" style="font-size:20px">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
+        <div class="tone-gold" style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v" style="font-size:20px;color:var(--ink)">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
         <div class="${rev.notAffiliate?'tone-red':''}" style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
         <div class="tone-red" style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
@@ -828,7 +845,15 @@ async function loadDashboard(){
   $('railAvg').textContent=fmt$(k.avgPayment);
   $('railLtv').textContent=fmt$(k.ltv);
   $('railNew').textContent=fmtN(k.newClients);
+  if(k.prevRevenue!=null&&k.prevRevenue>0){
+    const pct2=Math.round((k.revenueTotal-k.prevRevenue)/k.prevRevenue*1000)/10;
+    $('railLifetimeDelta').innerHTML=`${pct2>=0?'▲':'▼'} ${Math.abs(pct2)}% vs previous period`;
+    $('railLifetimeDelta').className='delta '+(pct2>=0?'up':'down');
+  }else{ $('railLifetimeDelta').textContent=''; }
   const s=d.series;const labels=x=>x.map(p=>p.label),vals=x=>x.map(p=>p.value);
+  mkChart('sparkLifetime',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:'#e4157f',
+    borderWidth:2,tension:.4,pointRadius:0,fill:false}]},options:{maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
   mkChart('chHero',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:GREEN,borderWidth:2,
     backgroundColor:c=>grad(c.chart.ctx,GREEN),fill:true,tension:.35,pointRadius:0,pointHitRadius:12}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.y)}}},
@@ -840,7 +865,7 @@ async function loadDashboard(){
   const total=k.totalClients||1;
   $('viewAllClients').textContent=`View all ${fmtN(k.totalClients)} →`;
   $('segbar').innerHTML=segs.map(([n,c])=>`<div style="width:${Math.max(1,n/total*100)}%;background:${c}"></div>`).join('');
-  $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="tile" style="background:${c}14" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><b>${fmtN(n)}</b><span>${l}</span></div>`).join('');
+  $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="statrow" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><span class="lbl">${l}</span><b>${fmtN(n)}</b></div>`).join('');
   const activePct=Math.round((k.activeClients||0)/total*100);
   $('activeRing').style.setProperty('--pct',activePct);
   $('activeRingPct').textContent=activePct+'%';
@@ -862,10 +887,10 @@ async function loadDashboard(){
     <div><div class="l">Payments · range</div><div class="v">${fmtN(m.rangeCount)}</div></div>
     <div class="tone-green"><div class="l">Lifetime</div><div class="v money">${fmt$(m.lifetimeRevenue)}</div></div>
     <div><div class="l">Active mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
-  mkChart('chDeals',{type:'bar',data:{labels:prod.slice(0,7).map(x=>x.key),datasets:[{data:prod.slice(0,7).map(x=>x.revenue),
-    backgroundColor:[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa','#93c5fd'],borderRadius:5}]},
-    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.x)}}},
-    scales:{x:{ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'K':v)}},y:{grid:{display:false}}}}});
+  mkChart('chDeals',{type:'doughnut',data:{labels:prod.slice(0,6).map(x=>x.key),datasets:[{data:prod.slice(0,6).map(x=>x.revenue),
+    backgroundColor:[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa'],borderWidth:0,hoverOffset:6}]},
+    options:{cutout:'68%',maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:10,font:{size:10.5}}},
+    tooltip:{callbacks:{label:c=>c.label+': '+fmt$(c.parsed)}}}}});
   mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{data:b.byRound.map(x=>x.count),
     backgroundColor:c=>grad(c.chart.ctx,PURPLE,210),borderColor:PURPLE,borderWidth:1.5,borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
@@ -939,7 +964,7 @@ async function loadPipeline(){
   const d=await(await fetch('/api/pipeline')).json();
   $('pipeStats').innerHTML=`<span><b>${fmtN(d.totalActive)}</b> active clients</span><span><b class="moneypop">${fmt$(d.totalRevenue)}</b> lifetime value in pipeline</span><span><b>${d.columns.length}</b> stages</span>`;
   $('pipeBoard').innerHTML=d.columns.map(col=>`
-    <div style="min-width:230px;flex:0 0 230px;background:#faf8f3;border:1px solid var(--line);border-radius:12px;padding:12px">
+    <div style="min-width:230px;flex:0 0 230px;background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="font-size:13px">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span></div>
       <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:10px">${fmt$(col.revenue)}</div>
       ${col.clients.map(c=>`<div onclick="openClient('${c.id}')" style="cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px">
