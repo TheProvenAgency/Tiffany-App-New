@@ -36,11 +36,13 @@
   }
 
   // production.js injects its own nav button, so wait for it to appear.
-  // The sidebar is split into several grouped .navgroup containers
-  // (Overview/Clients/Production/Finance/Marketing/Account) rather than one
-  // flat list -- an employee still gets only Deal Production, so this has
-  // to hide every button across every group, not just the one #nav held
-  // back when the sidebar was a single list.
+  // The sidebar is a two-tier icon-rail + expandable-panel: an icon rail
+  // (.railbtn, one per group) always visible on the far left, plus a panel
+  // of grouped .navgroup containers (Overview/Clients/Production/Finance/
+  // Marketing/Account). An employee still gets only Deal Production, so
+  // this has to hide every button/rail-icon across every group except
+  // Production's, not just the one #nav held back when the sidebar was a
+  // single flat list.
   function gateNav() {
     var prodBtn = document.getElementById('pvNavBtn');
     if (!prodBtn) return false;
@@ -50,14 +52,16 @@
     });
     // A group heading with nothing left visible under it just reads as a
     // dangling label ("Finance" over a blank box) -- hide those too.
-    Array.prototype.forEach.call(document.querySelectorAll('.sec'), function (heading) {
-      var group = heading.nextElementSibling;
-      if (!group || !group.classList.contains('navgroup')) return;
-      var anyVisible = Array.prototype.some.call(group.querySelectorAll('button'), function (b) {
-        return b.style.display !== 'none';
-      });
-      heading.style.display = anyVisible ? '' : 'none';
+    Array.prototype.forEach.call(document.querySelectorAll('.sec[data-g]'), function (heading) {
+      if (heading.dataset.g !== 'pr') heading.style.display = 'none';
     });
+    // Same idea for the icon rail: an employee has nothing to see under
+    // any group but Production, so don't offer icons that only lead to a
+    // blank panel.
+    Array.prototype.forEach.call(document.querySelectorAll('.railbtn[data-g]'), function (rb) {
+      if (rb.dataset.g !== 'pr') rb.style.display = 'none';
+    });
+    if (typeof window.setNavGroup === 'function') window.setNavGroup('pr', false);
     if (typeof window.showView === 'function') window.showView('production');
     return true;
   }

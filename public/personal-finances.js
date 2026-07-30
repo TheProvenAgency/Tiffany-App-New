@@ -385,8 +385,9 @@ function initLM(){
         var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
         var pd=document.getElementById('view-production');if(pd)pd.style.display='none';
         var v=document.getElementById('view-personal');if(v)v.style.display='';
-        var nbs=document.querySelectorAll('#nav button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('on');
+        var nbs=document.querySelectorAll('.navgroup button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('on');
         var nb=document.getElementById('lmNavBtn');if(nb)nb.classList.add('on');
+        if(window.setNavGroup)window.setNavGroup('fi',false);
         var pt=document.getElementById('pageTitle');if(pt)pt.textContent='Personal Finances';
         renderPersonal();
       } else {

@@ -28,27 +28,53 @@ html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-family:-apple-system,'Segoe UI',Inter,system-ui,sans-serif;font-size:14px;display:flex}
 button{font-family:inherit}
 /* ============ sidebar ============ */
-aside{width:212px;min-width:212px;background:var(--sidebar);color:var(--sidebar-ink);height:100vh;position:sticky;top:0;
-  display:flex;flex-direction:column;padding:14px 0}
+/* Two-tier nav, matching the Admina-style reference: a slim always-visible
+   icon rail (one button per group) plus a wider panel that shows that
+   group's actual pages. Clicking a rail icon switches which group's panel
+   is showing; the whole panel can also be collapsed down to just the rail
+   so it "lives on the left edge" out of the way. Each group carries its
+   own accent color -- money (Finance) is green, everything else gets its
+   own color so groups stay visually distinct even collapsed to icons only. */
+aside{display:flex;height:100vh;position:sticky;top:0}
+.navrail{width:56px;min-width:56px;background:var(--sidebar);display:flex;flex-direction:column;align-items:center;
+  padding:14px 0;gap:4px;border-right:1px solid rgba(255,255,255,.06)}
+.navrail .brandmark{width:34px;height:34px;border-radius:9px;margin-bottom:10px;object-fit:contain}
+.railbtn{width:38px;height:38px;border:none;border-radius:11px;background:none;color:var(--sidebar-dim);
+  display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;flex:0 0 auto;
+  background:color-mix(in srgb, var(--rc) 14%, transparent)}
+.railbtn:hover{background:color-mix(in srgb, var(--rc) 24%, transparent);color:#fff}
+.railbtn.on{background:var(--rc);color:#fff;box-shadow:0 3px 10px color-mix(in srgb, var(--rc) 55%, transparent)}
+.railbtn.collapse{margin-top:auto;background:rgba(255,255,255,.06);color:var(--sidebar-dim);font-size:13px}
+.railbtn.collapse:hover{background:rgba(255,255,255,.12)}
+.navpanel{width:194px;min-width:194px;background:var(--sidebar);color:var(--sidebar-ink);height:100%;
+  display:flex;flex-direction:column;padding:14px 0;overflow-y:auto;transition:margin-left .16s ease,opacity .16s ease}
+aside.collapsed .navpanel{margin-left:-194px;opacity:0;pointer-events:none}
 .brand{display:flex;align-items:center;gap:10px;padding:8px 16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
 .brand .chip{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blush),var(--rose));color:#20222b;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .brand b{display:block;font-size:13px;color:#f1ece4}
 .brand span{font-size:10.5px;color:var(--sidebar-dim)}
 .sec{font-size:9.5px;letter-spacing:.18em;color:var(--sidebar-dim);text-transform:uppercase;padding:18px 18px 6px}
+.navgroup{display:none}
+.navgroup.on{display:block}
+/* Only the active group's heading shows -- clicking a rail icon reveals
+   that one category's pages, not every heading stacked with only one
+   populated (the "Data sources" heading has no data-g and always shows). */
+.sec[data-g]{display:none}
+.sec[data-g].on{display:block}
 .nav button{display:flex;align-items:center;gap:10px;width:calc(100% - 16px);margin:1px 8px;padding:9px 10px;border:none;
   background:none;color:var(--sidebar-ink);font-size:13px;border-radius:8px;cursor:pointer;text-align:left;position:relative}
 .nav button:hover{background:rgba(255,255,255,.06)}
-.nav button.on{background:rgba(255,46,154,.14);color:#fff;font-weight:600}
-.nav button.on::before{content:'';position:absolute;left:-8px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--pink)}
+.nav button.on{background:color-mix(in srgb, var(--rc,var(--pink)) 16%, transparent);color:#fff;font-weight:600}
+.nav button.on::before{content:'';position:absolute;left:-8px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--rc,var(--pink))}
 .nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:10.5px;font-weight:700;padding:2px 8px}
 .nav svg{width:15px;height:15px;opacity:.75}
-/* small icon chip per nav item -- grouped sidebar redesign (Tiffany's
-   reference had a colored icon box per row instead of a bare glyph).
-   Dims by default, lights up pink to match the row's own active state. */
+/* small icon chip per nav item -- colored per group (money/Finance is
+   green, per Tiffany's ask) instead of one flat tint, dims by default and
+   fills solid when its row is active. */
 .nav button .ico2{width:22px;height:22px;border-radius:7px;flex:0 0 auto;display:flex;align-items:center;
-  justify-content:center;font-size:12px;background:rgba(255,255,255,.07);color:var(--sidebar-dim)}
-.nav button.on .ico2{background:var(--pink);color:#fff}
+  justify-content:center;font-size:12px;background:color-mix(in srgb, var(--ic,var(--pink)) 20%, transparent);color:var(--ic,var(--pink))}
+.nav button.on .ico2{background:var(--ic,var(--pink));color:#fff}
 .spacer{flex:1}
 .sources{padding:0 18px 8px}
 .src{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sidebar-dim);padding:3.5px 0}
@@ -320,45 +346,58 @@ section.view{display:none} section.view.on{display:block}
 </head>
 <body>
 
-<aside>
+<aside id="sidebar">
+  <div class="navrail" id="navrail">
+    <img class="brandmark" src="/logo.png" alt="MSFS">
+    <button class="railbtn on" data-g="ov" style="--rc:#ff2e9a" title="Overview" onclick="setNavGroup('ov')">▦</button>
+    <button class="railbtn" data-g="cl" style="--rc:#7c5cff" title="Clients" onclick="setNavGroup('cl')">◉</button>
+    <button class="railbtn" data-g="pr" style="--rc:#2f8fd6" title="Production" onclick="setNavGroup('pr')">▤</button>
+    <button class="railbtn" data-g="fi" style="--rc:#0e9e56" title="Finance" onclick="setNavGroup('fi')">$</button>
+    <button class="railbtn" data-g="ma" style="--rc:#e08a3c" title="Marketing" onclick="setNavGroup('ma')">✦</button>
+    <button class="railbtn" data-g="ac" style="--rc:#8b93a3" title="Account" onclick="setNavGroup('ac')">⚙</button>
+    <div class="spacer"></div>
+    <button class="railbtn collapse" id="railCollapseBtn" title="Collapse sidebar" onclick="toggleNavPanel()">«</button>
+  </div>
+  <div class="navpanel" id="navpanel">
   <div class="brand">
     <img src="/logo.png" alt="Ms. Financial Solutions" style="height:56px;width:auto;margin:0 auto;display:block">
-    
+
   </div>
-  <div class="sec">Overview</div>
-  <div class="nav navgroup" id="nav">
-    <button data-v="dash" class="on" onclick="showView('dash')"><span class="ico2">▦</span>Dashboard</button>
+  <div class="sec" data-g="ov">Overview</div>
+  <div class="nav navgroup on" data-g="ov" id="nav" style="--rc:#ff2e9a">
+    <button data-v="dash" class="on" onclick="showView('dash')"><span class="ico2" style="--ic:#ff2e9a">▦</span>Dashboard</button>
   </div>
-  <div class="sec">Clients</div>
-  <div class="nav navgroup">
-    <button data-v="pipeline" onclick="showView('pipeline')"><span class="ico2">⚲</span>Pipeline</button>
-    <button data-v="clients" onclick="showView('clients')"><span class="ico2">◉</span>Clients</button>
-    <button data-v="react" onclick="showView('react')"><span class="ico2">↻</span>Reactivation <span class="badge" id="reactBadge"></span></button>
-    <button data-v="tasks" onclick="showView('tasks')"><span class="ico2">☰</span>Follow-Ups</button>
+  <div class="sec" data-g="cl">Clients</div>
+  <div class="nav navgroup" data-g="cl" style="--rc:#7c5cff">
+    <button data-v="pipeline" onclick="showView('pipeline')"><span class="ico2" style="--ic:#7c5cff">⚲</span>Pipeline</button>
+    <button data-v="clients" onclick="showView('clients')"><span class="ico2" style="--ic:#7c5cff">◉</span>Clients</button>
+    <button data-v="react" onclick="showView('react')"><span class="ico2" style="--ic:#7c5cff">↻</span>Reactivation <span class="badge" id="reactBadge"></span></button>
+    <button data-v="tasks" onclick="showView('tasks')"><span class="ico2" style="--ic:#7c5cff">☰</span>Follow-Ups</button>
   </div>
   <!-- Deal Production + Credit Monitoring inject themselves here (production.js, mfsn.js) -->
-  <div class="sec">Production</div>
-  <div class="nav navgroup" id="navProduction"></div>
-  <!-- Revenue + Personal Finances inject themselves here (revenue.js, personal-finances.js) -->
-  <div class="sec">Finance</div>
-  <div class="nav navgroup" id="navFinance"></div>
-  <div class="sec">Marketing</div>
-  <div class="nav navgroup">
-    <button data-v="social" onclick="showView('social')"><span class="ico2">✦</span>Social</button>
+  <div class="sec" data-g="pr">Production</div>
+  <div class="nav navgroup" data-g="pr" id="navProduction" style="--rc:#2f8fd6"></div>
+  <!-- Revenue + Personal Finances inject themselves here (revenue.js, personal-finances.js) -- money, so green -->
+  <div class="sec" data-g="fi">Finance</div>
+  <div class="nav navgroup" data-g="fi" id="navFinance" style="--rc:#0e9e56"></div>
+  <div class="sec" data-g="ma">Marketing</div>
+  <div class="nav navgroup" data-g="ma" style="--rc:#e08a3c">
+    <button data-v="social" onclick="showView('social')"><span class="ico2" style="--ic:#e08a3c">✦</span>Social</button>
   </div>
-  <div class="sec">Account</div>
-  <div class="nav navgroup">
-    <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2">←</span>Back to Proven Agency</button>
-    <button onclick="openNotifications()"><span class="ico2">🔔</span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
-    <button onclick="openSettings()"><span class="ico2">✧</span>Settings</button>
-    <button onclick="openChangePw()"><span class="ico2">🔑</span>Change password</button>
-    <button onclick="showView('tickets')"><span class="ico2">🎫</span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
-    <button onclick="openSupportTicket()"><span class="ico2">✉</span>Submit a Support Ticket</button>
-    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())"><span class="ico2">→</span>Sign out</button>
+  <div class="sec" data-g="ac">Account</div>
+  <div class="nav navgroup" data-g="ac" style="--rc:#8b93a3">
+    <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2" style="--ic:#8b93a3">←</span>Back to Proven Agency</button>
+    <button onclick="openNotifications()"><span class="ico2" style="--ic:#8b93a3">🔔</span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
+    <button onclick="openSettings()"><span class="ico2" style="--ic:#8b93a3">✧</span>Settings</button>
+    <button onclick="openChangePw()"><span class="ico2" style="--ic:#8b93a3">🔑</span>Change password</button>
+    <button onclick="showView('tickets')"><span class="ico2" style="--ic:#8b93a3">🎫</span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
+    <button onclick="openSupportTicket()"><span class="ico2" style="--ic:#8b93a3">✉</span>Submit a Support Ticket</button>
+    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())"><span class="ico2" style="--ic:#8b93a3">→</span>Sign out</button>
   </div>
   <div class="spacer"></div>
   <div class="sec">Data sources</div>
   <div class="sources" id="sources"></div>
+  </div>
 </aside>
 
 <main>
@@ -1112,12 +1151,44 @@ function openProspectsModal(){
   $('prospectsOverlay').classList.add('show');
 }
 
+/* ================= sidebar rail/panel ================= */
+// Which group each base view belongs to -- production.js/mfsn.js/revenue.js/
+// personal-finances.js add their own views ('production','mfsn','rev',
+// 'personal') and call setNavGroup themselves since they load after this.
+const VIEW_GROUP={dash:'ov',pipeline:'cl',clients:'cl',react:'cl',tasks:'cl',social:'ma',tickets:'ac'};
+// Switches which group's panel is visible (and lights the matching rail
+// icon). expand=true also un-collapses the panel if it was closed -- used
+// when the user deliberately clicks a rail icon; navigation-driven calls
+// pass false so jumping to a view doesn't yank an intentionally-collapsed
+// sidebar back open.
+function setNavGroup(g,expand){
+  if(expand===undefined)expand=true;
+  document.querySelectorAll('.railbtn[data-g]').forEach(b=>b.classList.toggle('on',b.dataset.g===g));
+  document.querySelectorAll('.sec[data-g]').forEach(s=>s.classList.toggle('on',s.dataset.g===g));
+  document.querySelectorAll('.navgroup[data-g]').forEach(nv=>nv.classList.toggle('on',nv.dataset.g===g));
+  try{localStorage.setItem('navGroup',g);}catch(e){}
+  if(expand)setNavCollapsed(false);
+}
+function setNavCollapsed(collapsed){
+  $('sidebar').classList.toggle('collapsed',collapsed);
+  $('railCollapseBtn').textContent=collapsed?'»':'«';
+  try{localStorage.setItem('navCollapsed',collapsed?'1':'0');}catch(e){}
+}
+function toggleNavPanel(){setNavCollapsed(!$('sidebar').classList.contains('collapsed'));}
+(function initNavRail(){
+  let g='ov',collapsed=false;
+  try{g=localStorage.getItem('navGroup')||'ov';collapsed=localStorage.getItem('navCollapsed')==='1';}catch(e){}
+  setNavGroup(g,false);
+  setNavCollapsed(collapsed);
+})();
+
 /* ================= views ================= */
 const TITLES={dash:'Dashboard',pipeline:'Pipeline',clients:'Clients',react:'Reactivation',tasks:'Follow-Ups',social:'Social',tickets:'Ticket Requests'};
 function showView(v){
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  document.querySelectorAll('.navgroup button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
   $('pageTitle').textContent=TITLES[v]||'Dashboard';
+  if(VIEW_GROUP[v])setNavGroup(VIEW_GROUP[v],false);
   if(v==='pipeline')loadPipeline();if(v==='react')loadReact();if(v==='tasks')loadTasks();
   if(v==='clients')loadClients();if(v==='social')loadSocial();if(v==='tickets')loadTickets();
 }

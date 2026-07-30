@@ -513,8 +513,9 @@ function initProd(){
         var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
         var pl=document.getElementById('view-personal');if(pl)pl.style.display='none';
         var v=document.getElementById('view-production');if(v)v.style.display='';
-        var nbs=document.querySelectorAll('#nav button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('on');
+        var nbs=document.querySelectorAll('.navgroup button');for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('on');
         var nb=document.getElementById('pvNavBtn');if(nb)nb.classList.add('on');
+        if(window.setNavGroup)window.setNavGroup('pr',false);
         var pt=document.getElementById('pageTitle');if(pt)pt.textContent='Deal Production';
         renderProduction();
       } else {
