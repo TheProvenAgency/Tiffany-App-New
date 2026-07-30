@@ -4,6 +4,8 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ms. Financial Solutions — Command Center</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <style>
 :root{
   /* clean cool white/gray canvas -- Tiffany asked to match the Admina
@@ -106,28 +108,27 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .ring .hole b{font-size:17px;font-weight:800;color:var(--ink)}
 .ring .hole span{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
 .grid{display:grid;gap:14px}
-/* ============ customizable dashboard grid ============
-   Each top-level dashboard card is a .widget in a 4-column grid.
-   data-size controls how many columns it spans; drag-reorder + the
-   size buttons only show up in edit mode so normal use isn't cluttered. */
+/* ============ customizable dashboard grid (GridStack.js) ============
+   True free-form drag-anywhere + drag-resize, with other cards pushed
+   aside/down automatically -- GridStack handles all of the collision
+   and reflow logic; we just theme it and toggle edit mode on/off. */
 .dashbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-#dashGrid{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-flow:row dense;align-items:start}
-.widget{min-width:0}
-.widget[data-size="sm"]{grid-column:span 1}
-.widget[data-size="md"]{grid-column:span 2}
-.widget[data-size="lg"]{grid-column:span 3}
-.widget[data-size="full"]{grid-column:span 4}
-@media (max-width:1000px){.widget{grid-column:span 4!important}}
-.widget-bar{display:none;align-items:center;gap:6px;margin-bottom:6px}
-#dashGrid.editing .widget-bar{display:flex}
-#dashGrid.editing .widget{outline:2px dashed var(--pink);outline-offset:4px;border-radius:20px}
-#dashGrid.editing .widget.dragover{outline-color:var(--green);background:var(--green-soft)}
-.widget.dragging{opacity:.35}
-.wb-handle{cursor:grab;font-size:15px;color:var(--muted);line-height:1;padding:2px 4px;user-select:none}
-.wb-handle:active{cursor:grabbing}
-.wb-size{margin-left:auto;display:flex;gap:3px}
-.wb-size button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;color:var(--muted)}
-.wb-size button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.grid-stack{margin:0 -7px}
+.grid-stack-item-content{position:absolute;inset:7px;overflow:visible!important;background:none}
+.grid-stack-item-content>.card,.grid-stack-item-content>.kpi{height:100%;box-sizing:border-box}
+/* not in edit mode: totally inert, looks/behaves like a plain page */
+.grid-stack:not(.gs-editing) .grid-stack-item{pointer-events:none}
+.grid-stack:not(.gs-editing) .grid-stack-item-content>*{pointer-events:auto}
+/* edit mode: dashed outline so it's obvious what's draggable, plus
+   GridStack's own drag handle / resize-handle affordances */
+.grid-stack.gs-editing .grid-stack-item-content>.card,
+.grid-stack.gs-editing .grid-stack-item-content>.kpi{outline:2px dashed var(--pink);outline-offset:3px;cursor:grab}
+.grid-stack.gs-editing .ui-draggable-dragging .card,
+.grid-stack.gs-editing .ui-draggable-dragging .kpi{cursor:grabbing}
+.grid-stack .ui-resizable-handle{z-index:5}
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.card,
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.kpi{outline-color:var(--green);box-shadow:0 10px 30px rgba(0,0,0,.15)}
+.gs-placeholder>.placeholder-content{background:var(--pink-soft)!important;border-radius:16px}
 .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
 .badge-ok{background:var(--green-soft);color:var(--green)}
@@ -339,29 +340,24 @@ section.view{display:none} section.view.on{display:block}
   <section class="view on" id="view-dash">
     <div class="dashbar">
       <button class="chip" id="layoutEditBtn" onclick="toggleLayoutEdit()">⠿ Customize layout</button>
-      <span class="cardsub" id="layoutHint" style="display:none">Drag the ⠿ handle to reorder · click S/M/L/XL to resize · saved automatically</span>
+      <span class="cardsub" id="layoutHint" style="display:none">Drag anywhere to move · drag an edge/corner to resize · other cards move out of the way · saved automatically</span>
       <button class="linklike" id="layoutResetBtn" style="display:none" onclick="resetLayout()">Reset to default</button>
     </div>
-    <div class="grid" id="dashGrid">
-      <div class="widget" data-widget-id="kpi-lifetime" data-size="sm">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+    <div class="grid-stack" id="dashGrid">
+      <div class="grid-stack-item" gs-id="kpi-lifetime" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
         <div class="kpi pink"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>
-      </div>
-      <div class="widget" data-widget-id="kpi-avg" data-size="sm">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="kpi-avg" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
         <div class="kpi purple"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b><span class="delta" id="railAvgDelta"></span></div></div>
-      </div>
-      <div class="widget" data-widget-id="kpi-ltv" data-size="sm">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="kpi-ltv" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
         <div class="kpi blue"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b><span class="delta" id="railLtvDelta"></span></div></div>
-      </div>
-      <div class="widget" data-widget-id="kpi-new" data-size="sm">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="kpi-new" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
         <div class="kpi dark"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div></div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="hero" data-size="full">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="hero" gs-w="12" gs-h="6"><div class="grid-stack-item-content">
         <div class="card hero thin">
           <div>
             <div style="display:flex;gap:10px;align-items:center">
@@ -373,19 +369,17 @@ section.view{display:none} section.view.on{display:block}
             <div class="cwrap"><canvas id="chHero"></canvas></div>
           </div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="mfsn" data-size="full">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="mfsn" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
         <div class="card moneycard">
           <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:20px;width:20px;border-radius:5px;vertical-align:-4px;margin-right:6px">MyFreeScoreNow — affiliate gap</h3>
           <div class="cardsub">Clients not enrolled under her affiliate link</div>
           <div id="affiliateGap" style="margin-top:10px"></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="clientbase" data-size="lg">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="clientbase" gs-w="7" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">◉ Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
           <div class="cardsub">Where every client sits right now</div>
@@ -397,19 +391,17 @@ section.view{display:none} section.view.on{display:block}
             </div>
           </div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="attention" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="attention" gs-w="5" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">⚠ Needs attention</h3>
           <div class="cardsub">Fix these before trusting the numbers</div>
           <div id="attention" style="margin-top:6px"></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="conversations" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="conversations" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">🗨 Conversations <button class="linklike" onclick="showView('clients')">Open inbox →</button></h3>
           <div class="cardsub">SMS volume · inbound above the line, outbound below</div>
@@ -419,55 +411,49 @@ section.view{display:none} section.view.on{display:block}
           </div>
           <div class="cwrap2"><canvas id="chConv"></canvas></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="revenue-package" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="revenue-package" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">◈ Revenue by package</h3>
           <div class="cardsub">Fanbasis sales in period</div>
           <div class="cwrap2"><canvas id="chDeals"></canvas></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="mentorship" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="mentorship" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">🎓 Mentorship program</h3>
           <div class="cardsub">Fanbasis mentorship sales</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr;margin-top:14px" id="mentorStats"></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="rounds" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="rounds" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">⚲ Active by dispute round</h3>
           <div class="cardsub">Credit repair delivery stages</div>
           <div class="cwrap2"><canvas id="chRounds"></canvas></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="social-growth" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="social-growth" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">✦ Social growth</h3>
           <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
           <div class="cwrap2"><canvas id="chSocial"></canvas></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="churn" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="churn" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">↻ Churn recency</h3>
           <div class="cardsub">How long ago inactive clients lapsed</div>
           <div class="cwrap2"><canvas id="chChurn"></canvas></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="social-snapshot" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="social-snapshot" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">✦ Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
           <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
@@ -477,25 +463,23 @@ section.view{display:none} section.view.on{display:block}
             <div class="tone-blue"><div class="l">Group members</div><div class="v">15,090</div></div>
           </div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="top-content" data-size="md">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="top-content" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">🏆 Top performing content</h3>
           <div class="cardsub">Public engagement · read Jul 14, 2026</div>
           <div id="topPostsMini" style="margin-top:6px"></div>
         </div>
-      </div>
+      </div></div>
 
-      <div class="widget" data-widget-id="activity" data-size="lg">
-        <div class="widget-bar"><span class="wb-handle" draggable="true">⠿</span><div class="wb-size"><button data-s="sm">S</button><button data-s="md">M</button><button data-s="lg">L</button><button data-s="full">XL</button></div></div>
+      <div class="grid-stack-item" gs-id="activity" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">⚡ Activity</h3>
           <div class="cardsub">Latest sales, disputes & new clients</div>
           <div id="feed" style="margin-top:6px"></div>
         </div>
-      </div>
+      </div></div>
     </div>
   </section>
 
@@ -1632,105 +1616,59 @@ function markAllNotifsRead(){
   fetch('/api/notifications/read-all',{method:'POST'}).then(()=>{loadNotifications();openNotifications();});
 }
 
-/* ================= dashboard layout (drag/resize/persist) =================
-   Widgets are the direct .widget children of #dashGrid. "Customize layout"
-   reveals a drag handle + S/M/L/XL size buttons on each; dragging reorders
-   DOM nodes directly (no library), size buttons set data-size, and every
-   change saves to the server (debounced) keyed to this login so it follows
-   the user across devices. */
-const DASH_DEFAULT_ORDER=['kpi-lifetime','kpi-avg','kpi-ltv','kpi-new','hero','mfsn','clientbase','attention',
-  'conversations','revenue-package','mentorship','rounds','social-growth','churn','social-snapshot','top-content','activity'];
-const DASH_DEFAULT_SIZES={'kpi-lifetime':'sm','kpi-avg':'sm','kpi-ltv':'sm','kpi-new':'sm','hero':'full','mfsn':'full',
-  'clientbase':'lg','attention':'md','conversations':'md','revenue-package':'md','mentorship':'md','rounds':'md',
-  'social-growth':'md','churn':'md','social-snapshot':'md','top-content':'md','activity':'lg'};
-let dashLayoutSaveTimer=null;
-function applyDashLayout(layout){
-  const grid=$('dashGrid'); if(!grid)return;
-  const order=(layout&&layout.order&&layout.order.length)?layout.order:DASH_DEFAULT_ORDER;
-  const sizes=Object.assign({},DASH_DEFAULT_SIZES,(layout&&layout.sizes)||{});
-  const widgets={};
-  grid.querySelectorAll(':scope > .widget').forEach(w=>{widgets[w.dataset.widgetId]=w;});
-  order.forEach(id=>{ if(widgets[id]) grid.appendChild(widgets[id]); });
-  // any widget not in the saved order (e.g. a new card shipped after the
-  // user last saved) keeps a sane spot at the end instead of disappearing
-  Object.keys(widgets).forEach(id=>{ if(!order.includes(id)) grid.appendChild(widgets[id]); });
-  Object.keys(widgets).forEach(id=>{
-    const size=sizes[id]||'md';
-    widgets[id].dataset.size=size;
-    widgets[id].querySelectorAll('.wb-size button').forEach(b=>b.classList.toggle('on',b.dataset.s===size));
-  });
+/* ================= dashboard layout (GridStack: free drag + free resize) =================
+   True free-form placement, not a fixed reorder-and-pick-a-size system:
+   drag a card anywhere and GridStack pushes whatever's in the way aside
+   or down, and every edge/corner is a resize handle. Locked by default
+   (disableDrag/disableResize) so normal use is unaffected; "Customize
+   layout" flips both on. Saved as GridStack's own {id,x,y,w,h} node list,
+   keyed to this login so it follows across devices. */
+let dashGridStack=null, dashLayoutEditing=false, dashLayoutSaveTimer=null;
+function initDashGrid(){
+  const el=$('dashGrid'); if(!el||dashGridStack)return;
+  dashGridStack=GridStack.init({
+    column:12, cellHeight:50, margin:8, float:false, animate:true,
+    disableDrag:true, disableResize:true,
+    resizable:{handles:'e, se, s, sw, w'}
+  },'#dashGrid');
+  dashGridStack.on('change',saveDashLayout);
 }
 async function loadDashLayout(){
+  if(!dashGridStack)return;
   try{
     const r=await fetch('/api/dashboard-layout');
-    applyDashLayout(r.ok?(await r.json()).layout:null);
-  }catch(e){ applyDashLayout(null); }
-}
-function currentDashLayout(){
-  const grid=$('dashGrid'); if(!grid)return null;
-  const items=[...grid.querySelectorAll(':scope > .widget')];
-  return { order:items.map(w=>w.dataset.widgetId), sizes:Object.fromEntries(items.map(w=>[w.dataset.widgetId,w.dataset.size])) };
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length) dashGridStack.load(d.layout.nodes);
+  }catch(e){ /* keep the shipped default layout from the HTML */ }
 }
 function saveDashLayout(){
+  if(!dashGridStack)return;
   clearTimeout(dashLayoutSaveTimer);
   dashLayoutSaveTimer=setTimeout(()=>{
-    const layout=currentDashLayout(); if(!layout)return;
-    fetch('/api/dashboard-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout})});
-  },400);
+    const nodes=dashGridStack.save(false); // false = positions/sizes only, no HTML content
+    fetch('/api/dashboard-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:{nodes}})});
+  },500);
 }
 function toggleLayoutEdit(){
-  const grid=$('dashGrid'); if(!grid)return;
-  const on=grid.classList.toggle('editing');
-  $('layoutEditBtn').textContent=on?'✓ Done arranging':'⠿ Customize layout';
-  $('layoutHint').style.display=on?'inline':'none';
-  $('layoutResetBtn').style.display=on?'inline':'none';
+  if(!dashGridStack)return;
+  dashLayoutEditing=!dashLayoutEditing;
+  dashGridStack.enableMove(dashLayoutEditing);
+  dashGridStack.enableResize(dashLayoutEditing);
+  $('dashGrid').classList.toggle('gs-editing',dashLayoutEditing);
+  $('layoutEditBtn').textContent=dashLayoutEditing?'✓ Done arranging':'⠿ Customize layout';
+  $('layoutHint').style.display=dashLayoutEditing?'inline':'none';
+  $('layoutResetBtn').style.display=dashLayoutEditing?'inline':'none';
 }
 function resetLayout(){
   if(!confirm('Reset the dashboard back to its default layout?'))return;
-  applyDashLayout(null);
-  saveDashLayout();
-}
-function initDashLayoutEvents(){
-  const grid=$('dashGrid'); if(!grid||grid.__wired)return; grid.__wired=true;
-  let dragEl=null;
-  grid.addEventListener('dragstart',e=>{
-    const handle=e.target.closest('.wb-handle'); const w=e.target.closest('.widget');
-    if(!handle||!w){e.preventDefault();return;}
-    dragEl=w; w.classList.add('dragging'); e.dataTransfer.effectAllowed='move';
-  });
-  grid.addEventListener('dragend',()=>{
-    if(dragEl)dragEl.classList.remove('dragging');
-    grid.querySelectorAll('.widget.dragover').forEach(w=>w.classList.remove('dragover'));
-    dragEl=null; saveDashLayout();
-  });
-  grid.addEventListener('dragover',e=>{
-    if(!dragEl)return; e.preventDefault();
-    const over=e.target.closest('.widget');
-    if(!over||over===dragEl)return;
-    grid.querySelectorAll('.widget.dragover').forEach(w=>w.classList.remove('dragover'));
-    over.classList.add('dragover');
-  });
-  grid.addEventListener('drop',e=>{
-    if(!dragEl)return; e.preventDefault();
-    const over=e.target.closest('.widget');
-    if(over&&over!==dragEl){
-      const rect=over.getBoundingClientRect();
-      const before=(e.clientX-rect.left)<rect.width/2;
-      over.insertAdjacentElement(before?'beforebegin':'afterend',dragEl);
-    }
-    grid.querySelectorAll('.widget.dragover').forEach(w=>w.classList.remove('dragover'));
-  });
-  grid.addEventListener('click',e=>{
-    const btn=e.target.closest('.wb-size button'); if(!btn)return;
-    const w=btn.closest('.widget'); w.dataset.size=btn.dataset.s;
-    w.querySelectorAll('.wb-size button').forEach(b=>b.classList.toggle('on',b===btn));
-    saveDashLayout();
-  });
+  fetch('/api/dashboard-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:{nodes:[]}})})
+    .then(()=>location.reload());
 }
 
 /* ================= boot ================= */
 [from,to]=presetRange(preset);granularity=pickGran(from,to);
-renderFilters();initDashLayoutEvents();loadDashLayout();loadDashboard();loadTasks();renderTopPosts();loadTickets();loadNotifications();
+renderFilters();initDashGrid();loadDashLayout();loadDashboard();loadTasks();renderTopPosts();loadTickets();loadNotifications();
 setInterval(loadDashboard,5*60*1000);
 // Background badge refresh (a thread that's actually open polls much
 // faster -- see openTicketThread). 20s keeps the unread count current

@@ -985,13 +985,16 @@ app.post('/api/notifications/read-all', (req, res) => {
   res.json({ ok: true });
 });
 
-// dashboard layout (drag/resize customization) — per login, both roles
+// dashboard layout (free drag/resize via GridStack) — per login, both roles.
+// layout.nodes is GridStack's own [{id,x,y,w,h}, ...] node list (empty array
+// means "reset to the shipped default", since the frontend then just leaves
+// the HTML's own gs-w/gs-h/gs-x/gs-y attributes in place).
 app.get('/api/dashboard-layout', (req, res) => {
   res.json({ layout: store.getDashboardLayout(req.user.userId) });
 });
 app.post('/api/dashboard-layout', (req, res) => {
   const layout = req.body && req.body.layout;
-  if (!layout || !Array.isArray(layout.order)) return res.status(400).json({ error: 'layout.order (array) is required' });
+  if (!layout || !Array.isArray(layout.nodes)) return res.status(400).json({ error: 'layout.nodes (array) is required' });
   store.setDashboardLayout(req.user.userId, layout);
   res.json({ ok: true });
 });
