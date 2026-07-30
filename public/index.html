@@ -114,8 +114,24 @@ header h1{font-size:19px;margin:0;font-weight:700}
    and reflow logic; we just theme it and toggle edit mode on/off. */
 .dashbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .grid-stack{margin:0 -7px}
-.grid-stack-item-content{position:absolute;inset:7px;overflow:visible!important;background:none}
+.grid-stack-item-content{position:absolute;inset:7px;overflow:hidden;background:none}
+/* while actively arranging, let the drag/resize outline breathe past the
+   card edge instead of getting clipped by the line above */
+.grid-stack.gs-editing .grid-stack-item-content{overflow:visible}
 .grid-stack-item-content>.card,.grid-stack-item-content>.kpi{height:100%;box-sizing:border-box}
+/* content adapts to whatever size the card gets dragged/resized to, rather
+   than sitting at a fixed pixel height and spilling into the next card --
+   the card becomes a flex column, its title/subtitle stay natural height,
+   and whichever element holds the actual data (chart, stat grid, list)
+   stretches or shrinks to fill what's left, scrolling internally as a
+   last resort instead of overlapping a neighbor. */
+.grid-stack-item-content>.card{display:flex;flex-direction:column;overflow:hidden}
+.grid-stack-item-content>.card>*:last-child{flex:1 1 auto;min-height:0;overflow:auto}
+.grid-stack-item-content>.card>*:last-child::-webkit-scrollbar{width:5px}
+.grid-stack-item-content>.card>*:last-child::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.grid-stack-item-content .cwrap,.grid-stack-item-content .cwrap2{height:auto!important;flex:1 1 auto;min-height:70px;margin-top:10px;position:relative}
+.grid-stack-item-content .card.hero>div{display:flex;flex-direction:column;height:100%;min-height:0}
+.grid-stack-item-content .dstat{overflow:auto}
 /* not in edit mode: totally inert, looks/behaves like a plain page */
 .grid-stack:not(.gs-editing) .grid-stack-item{pointer-events:none}
 .grid-stack:not(.gs-editing) .grid-stack-item-content>*{pointer-events:auto}
@@ -1624,6 +1640,15 @@ function markAllNotifsRead(){
    layout" flips both on. Saved as GridStack's own {id,x,y,w,h} node list,
    keyed to this login so it follows across devices. */
 let dashGridStack=null, dashLayoutEditing=false, dashLayoutSaveTimer=null;
+// Chart.js sizes a canvas off its immediate parent's box (.cwrap/.cwrap2,
+// now flex:1 instead of a fixed height -- see CSS above), so once a card's
+// box actually changes size the chart just needs telling to re-measure and
+// redraw at the new size instead of staying stretched/squished from
+// whatever size it was created at. rAF so it reads the box after GridStack
+// (and the browser) have actually applied the new layout, not mid-drag.
+function resizeDashCharts(){
+  requestAnimationFrame(()=>{ for(const id in charts){ const c=charts[id]; if(c) c.resize(); } });
+}
 function initDashGrid(){
   const el=$('dashGrid'); if(!el||dashGridStack)return;
   dashGridStack=GridStack.init({
@@ -1631,7 +1656,9 @@ function initDashGrid(){
     disableDrag:true, disableResize:true,
     resizable:{handles:'e, se, s, sw, w'}
   },'#dashGrid');
-  dashGridStack.on('change',saveDashLayout);
+  dashGridStack.on('change',()=>{saveDashLayout();resizeDashCharts();});
+  dashGridStack.on('resize',resizeDashCharts);
+  dashGridStack.on('resizestop dragstop',resizeDashCharts);
 }
 async function loadDashLayout(){
   if(!dashGridStack)return;
@@ -1641,6 +1668,7 @@ async function loadDashLayout(){
     const d=await r.json();
     if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length) dashGridStack.load(d.layout.nodes);
   }catch(e){ /* keep the shipped default layout from the HTML */ }
+  resizeDashCharts();
 }
 function saveDashLayout(){
   if(!dashGridStack)return;
@@ -1668,7 +1696,12 @@ function resetLayout(){
 
 /* ================= boot ================= */
 [from,to]=presetRange(preset);granularity=pickGran(from,to);
-renderFilters();initDashGrid();loadDashLayout();loadDashboard();loadTasks();renderTopPosts();loadTickets();loadNotifications();
+renderFilters();initDashGrid();
+// layout and dashboard data load in parallel (independent fetches); once
+// both have landed, do one more resize pass so charts created against
+// whatever box size existed at that instant match the final loaded layout.
+Promise.all([loadDashLayout(),loadDashboard()]).then(resizeDashCharts);
+loadTasks();renderTopPosts();loadTickets();loadNotifications();
 setInterval(loadDashboard,5*60*1000);
 // Background badge refresh (a thread that's actually open polls much
 // faster -- see openTicketThread). 20s keeps the unread count current
