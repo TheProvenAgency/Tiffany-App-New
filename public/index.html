@@ -174,6 +174,12 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .grid-stack-item-content>.kpi .l,
 .grid-stack-item-content>.rv-kpi .l{font-size:clamp(9px,3.2cqw,12px)}
 .grid-stack-item-content>.rv-kpi .s{font-size:clamp(9px,3cqw,11px)}
+/* small trend chart tucked in the corner of each income KPI tile, same
+   idea as the .kpi .spark sparklines above -- built from the same monthly/
+   daily figures the tile's own number comes from (see revenue.js
+   drawKpiSparklines), not placeholder data. */
+.rv-kpi{position:relative;overflow:hidden}
+.rv-kpi .rvkspark{position:absolute;right:14px;bottom:14px;width:30%;max-width:78px;height:30%;max-height:38px;pointer-events:none;opacity:.9}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
@@ -458,6 +464,12 @@ section.view{display:none} section.view.on{display:block}
       <button class="chip" id="layoutEditBtn" onclick="toggleLayoutEdit()">⠿ Customize layout</button>
       <span class="cardsub" id="layoutHint" style="display:none">Drag anywhere to move · drag an edge/corner to resize · other cards move out of the way · saved automatically</span>
       <button class="linklike" id="layoutResetBtn" style="display:none" onclick="resetLayout()">Reset to default</button>
+      <!-- Admin-only: promotes whatever's currently on screen to be the
+           layout everyone else starts from -- someone who's already
+           personally rearranged their own dashboard keeps their own
+           arrangement either way; this only changes the fallback for
+           logins that haven't touched it. -->
+      <button class="linklike" id="layoutSetDefaultBtn" style="display:none" onclick="setLayoutAsDefault()">Set as default for everyone</button>
     </div>
     <div class="grid-stack" id="dashGrid">
       <!-- The Lifetime collected / Avg payment / LTV / New clients KPI rail
@@ -480,19 +492,19 @@ section.view{display:none} section.view.on{display:block}
            card. Widths sum to 12 (3+2+2+2+3) so the row still spans the
            full grid at the default layout. -->
       <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div></div>
+        <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div><canvas class="rvkspark" id="rvkSparkTotal"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-commas-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div></div>
+        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div><canvas class="rvkspark" id="rvkSparkCommasYtd"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-mfsn-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div></div>
+        <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div><canvas class="rvkspark" id="rvkSparkMfsnYtd"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-commas-month" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div></div>
+        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div><canvas class="rvkspark" id="rvkSparkCommasMonth"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-mfsn-month" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div></div>
+        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div><canvas class="rvkspark" id="rvkSparkMfsnMonth"></canvas></div>
       </div></div>
 
       <div class="grid-stack-item" gs-id="rev-trend" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
@@ -1928,11 +1940,27 @@ function toggleLayoutEdit(){
   $('layoutEditBtn').textContent=dashLayoutEditing?'✓ Done arranging':'⠿ Customize layout';
   $('layoutHint').style.display=dashLayoutEditing?'inline':'none';
   $('layoutResetBtn').style.display=dashLayoutEditing?'inline':'none';
+  // only admins ever reach this view at all (role.js keeps employees off
+  // the main Dashboard), but gate on role anyway rather than assume that.
+  const canSetDefault=document.body.getAttribute('data-role')!=='employee';
+  $('layoutSetDefaultBtn').style.display=(dashLayoutEditing&&canSetDefault)?'inline':'none';
 }
 function resetLayout(){
-  if(!confirm('Reset the dashboard back to its default layout?'))return;
-  fetch('/api/dashboard-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:{nodes:[]}})})
-    .then(()=>location.reload());
+  // Drops your personal override so you fall back to whatever the site
+  // default is (an admin may have promoted a shared layout -- see "Set as
+  // default for everyone" below) -- or the shipped HTML order if no one
+  // ever has.
+  if(!confirm("Reset your dashboard back to the default layout? (If someone has set a shared default, you'll see that; otherwise the original layout.)"))return;
+  fetch('/api/dashboard-layout',{method:'DELETE'}).then(()=>location.reload());
+}
+function setLayoutAsDefault(){
+  if(!dashGridStack)return;
+  if(!confirm("Make this arrangement the default for everyone who logs in? Anyone who's already customized their own dashboard keeps their own -- this only changes what a fresh login starts from."))return;
+  const nodes=dashGridStack.save(false);
+  fetch('/api/dashboard-layout/default',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:{nodes}})})
+    .then(r=>{ if(!r.ok) throw new Error('save failed'); return r.json(); })
+    .then(()=>alert('Saved — that\'s now the default view for anyone logging in for the first time.'))
+    .catch(()=>alert('Could not save the default layout — try again.'));
 }
 
 /* ================= boot ================= */

@@ -1011,9 +1011,13 @@ app.post('/api/notifications/read-all', (req, res) => {
 });
 
 // dashboard layout (free drag/resize via GridStack) — per login, both roles.
-// layout.nodes is GridStack's own [{id,x,y,w,h}, ...] node list (empty array
-// means "reset to the shipped default", since the frontend then just leaves
-// the HTML's own gs-w/gs-h/gs-x/gs-y attributes in place).
+// layout.nodes is GridStack's own [{id,x,y,w,h}, ...] node list.
+//
+// Three tiers: (1) a personal override, saved automatically on every
+// drag/resize -- once someone has one, it always wins; (2) a site-wide
+// default an admin can promote their own current arrangement into, for
+// anyone who hasn't personally rearranged anything; (3) failing both, the
+// HTML's own shipped gs-w/gs-h/gs-x/gs-y attributes.
 app.get('/api/dashboard-layout', (req, res) => {
   res.json({ layout: store.getDashboardLayout(req.user.userId) });
 });
@@ -1021,6 +1025,24 @@ app.post('/api/dashboard-layout', (req, res) => {
   const layout = req.body && req.body.layout;
   if (!layout || !Array.isArray(layout.nodes)) return res.status(400).json({ error: 'layout.nodes (array) is required' });
   store.setDashboardLayout(req.user.userId, layout);
+  res.json({ ok: true });
+});
+// "Reset to default": drop the personal override so the site default (or
+// the shipped HTML order) takes back over, rather than pinning the user to
+// an explicit empty layout that would never see a future default either.
+app.delete('/api/dashboard-layout', (req, res) => {
+  store.clearDashboardLayout(req.user.userId);
+  res.json({ ok: true });
+});
+// Admin-only: promote a layout (normally the admin's own current
+// arrangement) to be what everyone without a personal override sees.
+// Anyone who already has their own saved layout is unaffected -- this
+// only changes the fallback.
+app.post('/api/dashboard-layout/default', (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const layout = req.body && req.body.layout;
+  if (!layout || !Array.isArray(layout.nodes)) return res.status(400).json({ error: 'layout.nodes (array) is required' });
+  store.setDefaultDashboardLayout(layout);
   res.json({ ok: true });
 });
 

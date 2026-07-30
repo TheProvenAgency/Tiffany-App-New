@@ -129,6 +129,58 @@ test('an employee can create, note, and complete a Follow-Ups task', async () =>
   assert.equal(patched.status, 200);
 });
 
+// ------------------------- dashboard layout default -------------------------
+
+test('a login with no personal dashboard layout gets the shared default once an admin sets one', async () => {
+  // Before any default is set, a fresh login sees null (frontend falls
+  // back to the layout baked into the HTML).
+  const before = await req('/api/dashboard-layout', { cookie: employeeCookie });
+  assert.equal(before.status, 200);
+  assert.equal((await before.json()).layout, null);
+
+  const nodes = [{ id: 'rev-kpi-total', x: 0, y: 0, w: 4, h: 3 }];
+  const setDefault = await req('/api/dashboard-layout/default', {
+    method: 'POST', cookie: adminCookie, body: { layout: { nodes } }
+  });
+  assert.equal(setDefault.status, 200);
+
+  const after = await req('/api/dashboard-layout', { cookie: employeeCookie });
+  assert.equal(after.status, 200);
+  assert.deepEqual((await after.json()).layout, { nodes });
+});
+
+test('an employee cannot set the shared default layout', async () => {
+  const r = await req('/api/dashboard-layout/default', {
+    method: 'POST', cookie: employeeCookie, body: { layout: { nodes: [] } }
+  });
+  assert.equal(r.status, 403);
+});
+
+test('a personal layout always wins over the shared default', async () => {
+  const own = [{ id: 'rev-trend', x: 0, y: 0, w: 12, h: 5 }];
+  await req('/api/dashboard-layout', { method: 'POST', cookie: employeeCookie, body: { layout: { nodes: own } } });
+
+  const mine = await req('/api/dashboard-layout', { cookie: employeeCookie });
+  assert.deepEqual((await mine.json()).layout, { nodes: own });
+
+  // changing the shared default afterward doesn't touch someone who
+  // already has their own saved layout
+  await req('/api/dashboard-layout/default', {
+    method: 'POST', cookie: adminCookie, body: { layout: { nodes: [{ id: 'mfsn', x: 0, y: 0, w: 12, h: 7 }] } }
+  });
+  const stillMine = await req('/api/dashboard-layout', { cookie: employeeCookie });
+  assert.deepEqual((await stillMine.json()).layout, { nodes: own });
+});
+
+test('DELETE /api/dashboard-layout clears a personal override, falling back to the default again', async () => {
+  await req('/api/dashboard-layout', { method: 'POST', cookie: employeeCookie, body: { layout: { nodes: [{ id: 'x', x: 0, y: 0, w: 1, h: 1 }] } } });
+  const cleared = await req('/api/dashboard-layout', { method: 'DELETE', cookie: employeeCookie });
+  assert.equal(cleared.status, 200);
+  const after = await req('/api/dashboard-layout', { cookie: employeeCookie });
+  // by this point in the suite the default has been set at least once above
+  assert.notEqual((await after.json()).layout, null);
+});
+
 // ------------------------- admin still works -------------------------
 
 test('an admin reaches the dashboard and config', async () => {

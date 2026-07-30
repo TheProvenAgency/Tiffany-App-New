@@ -114,7 +114,7 @@ var css=''+
 '.rv-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '.rv-kpi .v{font-size:23px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
 '.rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
-'.rv-kpi.hero{background:var(--ink);border-top-color:#b98a2f}.rv-kpi.hero .l{color:#c7c0b4}.rv-kpi.hero .v{color:#fff;font-size:25px}.rv-kpi.hero .s{color:#a49c8e}'+
+'.rv-kpi.hero{background:var(--green);border-top-color:var(--green)}.rv-kpi.hero .l{color:rgba(0,0,0,.6)}.rv-kpi.hero .v{color:var(--ink);font-size:25px}.rv-kpi.hero .s{color:rgba(0,0,0,.55)}'+
 '#view-rev .rv-grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}'+
 '#view-rev .rv-grid11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}'+
 '.rv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
@@ -292,6 +292,41 @@ function drawMf(){
   charts.mf=new Chart(el.getContext('2d'),{type:'bar',data:{labels:MF_MONTHLY.labels,datasets:[{data:MF_MONTHLY.vals,backgroundColor:MF_MONTHLY.labels.map(function(_,i){return PAL[i%PAL.length];}),borderRadius:4}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
+// small trend chart in the corner of each Dashboard income KPI tile (see
+// index.html gs-id="rev-kpi-*", .rvkspark canvases). Built from the same
+// real figures already on the page -- the combined-total monthly series
+// for the hero tile, Commas' own monthly/daily series, MFSN's own monthly
+// series -- not fabricated placeholder data.
+function sparkOpts(){
+  return {responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},
+    scales:{x:{display:false},y:{display:false}},
+    elements:{point:{radius:0}}};
+}
+function drawKpiSparklines(){
+  if(!window.Chart)return;
+  var defs=[
+    // Total income (hero, green bg) -- combined Commas+MFSN by month
+    {id:'rvkSparkTotal', vals:HERO_MONTH.vals, type:'line', color:C.ink},
+    // Commas sales YTD -- Commas gross by month
+    {id:'rvkSparkCommasYtd', vals:CO_MONTHLY.rev, type:'bar', color:C.blue},
+    // MFSN commissions YTD -- MFSN payout, last 7 months to match the others
+    {id:'rvkSparkMfsnYtd', vals:MF_MONTHLY.vals.slice(-7), type:'bar', color:C.green},
+    // Commas this month -- daily trend within the current month
+    {id:'rvkSparkCommasMonth', vals:CO_DAILY.rev, type:'line', color:C.teal},
+    // MFSN latest month -- recent-months trend leading into the latest payout
+    {id:'rvkSparkMfsnMonth', vals:MF_MONTHLY.vals.slice(-6), type:'bar', color:C.purple}
+  ];
+  defs.forEach(function(d){
+    var el=document.getElementById(d.id); if(!el)return;
+    killChart(d.id);
+    var labels=d.vals.map(function(_,i){return i;});
+    var cfg = d.type==='line'
+      ? {type:'line',data:{labels:labels,datasets:[{data:d.vals,borderColor:d.color,borderWidth:2,tension:.4,fill:false}]},options:sparkOpts()}
+      : {type:'bar',data:{labels:labels,datasets:[{data:d.vals,backgroundColor:d.color,borderRadius:2,barPercentage:.7,minBarLength:2}]},options:sparkOpts()};
+    charts[d.id]=new Chart(el.getContext('2d'),cfg);
+  });
+}
 function drawPeriods(){
   if(!window.Chart)return;var el=document.getElementById('rvPeriods');if(!el)return;killChart('p');
   var labels=['This week','This month','Last 6 mo','Year to date'];
@@ -338,11 +373,14 @@ function initRV(){
   // not something render() builds, so it needs its own one-time draw +
   // tab wiring here instead of waiting for the Revenue view to be opened.
   drawTrend('dashTrend');
+  drawKpiSparklines();
   wireGranTabs('rvGranDash');
   // resizeDashCharts() in index.html only knows about its own chart
-  // registry; this lets it also nudge the chart this file owns after a
-  // GridStack drag/resize.
-  window.__resizeExtraCharts=function(){ if(charts.dashTrend) charts.dashTrend.resize(); };
+  // registry; this lets it also nudge every chart this file owns (the
+  // Sales-trend copy and the 5 KPI sparklines) after a GridStack
+  // drag/resize, so they don't stay stretched/squished from whatever size
+  // they were created at.
+  window.__resizeExtraCharts=function(){ for(var k in charts){ if(charts[k]) charts[k].resize(); } };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
 
