@@ -136,6 +136,11 @@ var css=''+
 '.grid-stack-item-content>.rv-card{height:100%;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column}'+
 '.grid-stack-item-content>.rv-card>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important}'+
 '.grid-stack-item-content>.rv-kpis{height:100%}'+
+// the Lifetime collected / Avg payment / LTV / New clients KPI rail, moved
+// here from the Dashboard -- .kpi/.spark/.miniring are all global classes
+// (defined in index.html, not scoped to #view-dash), so they render fine
+// here too; this just lays the four out in a row.
+'.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}'+
 // the relocated "Total collected" hero card (moved out of #dashGrid, see
 // index.html) needs the flex rule that used to key off
 // .grid-stack-item-content>.card.hero -- it's a plain block on the Revenue
@@ -151,6 +156,12 @@ var css=''+
    still finds and fills it in exactly as before. */
 var sectionHTML=''+
 '<div class="rv-sub"><b>Revenue.</b> Total business income — Commas sales plus MyFreeScoreNow affiliate commissions — by day, week and month, with the full payment-method mix.</div>'+
+'<div class="kpi-row">'+
+  '<div class="kpi g1"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>'+
+  '<div class="kpi g2"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b><span class="delta" id="railAvgDelta"></span></div><canvas class="spark" id="sparkAvg"></canvas></div>'+
+  '<div class="kpi g3"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b><span class="delta" id="railLtvDelta"></span></div><div class="miniring" id="ltvRing" style="--pct:0"><div class="hole"><b id="ltvRingPct">0%</b></div></div></div>'+
+  '<div class="kpi g4"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div><canvas class="spark" id="sparkNew"></canvas></div>'+
+'</div>'+
 '<div class="card hero thin">'+
   '<div>'+
     '<div style="display:flex;gap:10px;align-items:center">'+
