@@ -600,7 +600,7 @@ section.view{display:none} section.view.on{display:block}
       <div class="grid-stack-item" gs-id="revenue-package" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">◈ Revenue by package</h3>
-          <div class="cardsub">Fanbasis sales in period</div>
+          <div class="cardsub">All-time · Commas + Fanbasis sales</div>
           <div class="cwrap2"><canvas id="chDeals"></canvas></div>
         </div>
       </div></div>
@@ -608,8 +608,9 @@ section.view{display:none} section.view.on{display:block}
       <div class="grid-stack-item" gs-id="mentorship" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">🎓 Mentorship program</h3>
-          <div class="cardsub">Fanbasis mentorship sales</div>
+          <div class="cardsub">All-time mentorship sales</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr;margin-top:14px" id="mentorStats"></div>
+          <div id="mentorBuyers" style="margin-top:10px;max-height:120px;overflow:auto;font-size:12.5px"></div>
         </div>
       </div></div>
 
@@ -1191,13 +1192,20 @@ async function loadDashboard(){
     scales:{x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:10}},y:{stacked:true,ticks:{callback:v=>Math.abs(v)}}}}});
   // packages / rounds / churn / social
   const b=d.breakdowns;
-  const prod=(b.byProduct&&b.byProduct.length)?b.byProduct:b.byDeal;
+  const prod=(b.byProductAllTime&&b.byProductAllTime.length)?b.byProductAllTime:((b.byProduct&&b.byProduct.length)?b.byProduct:b.byDeal);
   const m=k.mentorship||{};
   $('mentorStats').innerHTML=`
     <div class="tone-green"><div class="l">Collected · range</div><div class="v money">${fmt$(m.rangeRevenue)}</div></div>
     <div><div class="l">Payments · range</div><div class="v">${fmtN(m.rangeCount)}</div></div>
     <div class="tone-green"><div class="l">Lifetime</div><div class="v money">${fmt$(m.lifetimeRevenue)}</div></div>
-    <div><div class="l">Active mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
+    <div><div class="l">Total mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
+  const mentorBuyersEl=$('mentorBuyers');
+  if(mentorBuyersEl){
+    const buyers=b.mentorshipBuyers||[];
+    mentorBuyersEl.innerHTML=buyers.length?('<div style="opacity:.55;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Mentorship clients</div>'+
+      buyers.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--line,#eee)">
+        <span>${x.name||x.email||'—'}</span><span style="opacity:.6">${fmt$(x.amount)}</span></div>`).join('')):'';
+  }
   mkChart('chDeals',{type:'doughnut',data:{labels:prod.slice(0,6).map(x=>x.key),datasets:[{data:prod.slice(0,6).map(x=>x.revenue),
     backgroundColor:[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa'],borderWidth:0,hoverOffset:6}]},
     options:{cutout:'68%',maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:10,font:{size:10.5}}},

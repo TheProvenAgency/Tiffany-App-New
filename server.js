@@ -15,6 +15,78 @@ const meta = require('./lib/meta');
 const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
 
+// ------------------------- historical Commas product sales -------------------------
+// Real orders/revenue pulled directly from the Commas product catalog
+// (https://commas.com/dashboard/org_yWsBDMHkMrka/products) on 2026-07-30,
+// covering every sale before the Fanbasis webhook started carrying a
+// `product` field. Normalized by product name (case/whitespace variants of
+// the same package collapsed into one row) so "Revenue by package" isn't
+// blank for all the sales that happened before that field existed. Once
+// live Fanbasis events start carrying their own product name, those get
+// added on top of this snapshot in getProductBreakdownAllTime() below --
+// no double counting, since this snapshot predates the webhook fix.
+const HISTORICAL_PRODUCT_SALES = [
+  { key: 'Full Expedited Credit Repair', count: 630, revenue: 177107.11 },
+  { key: 'Diamond Package', count: 415, revenue: 89563.58 },
+  { key: '3 Expedited Rounds', count: 606, revenue: 77302.00 },
+  { key: 'Partnership', count: 51, revenue: 100975.00 },
+  { key: 'Round Table Partnership', count: 12, revenue: 18387.50 },
+  { key: '1 Expedited Round', count: 203, revenue: 7563.13 },
+  { key: '2 Expedited Rounds', count: 22, revenue: 2200.00 },
+  { key: 'Upgrade to Diamond', count: 77, revenue: 21122.77 },
+  { key: 'Help me fix it', count: 86, revenue: 4300.00 },
+  { key: 'Full Credit Repair', count: 1, revenue: 250.00 },
+  { key: 'Full Credit Repair + 2 Credit Cards', count: 40, revenue: 8000.00 },
+  { key: 'Mentorship', count: 9, revenue: 16500.00 },
+  { key: 'Amob Expedited Credit Repair', count: 2, revenue: 500.00 },
+  { key: 'Amob Credit Repair Discount', count: 15, revenue: 4176.26 },
+  { key: '4 Credit Repair Rounds', count: 4, revenue: 1100.00 },
+  { key: "Adreain's Credit Repair Discount", count: 4, revenue: 2600.00 },
+  { key: 'Credit to capital', count: 2, revenue: 1043.75 },
+  { key: 'Inquiry Removal', count: 4, revenue: 1100.00 },
+  { key: 'Business Funding', count: 4, revenue: 4000.00 },
+  { key: 'Funding Due', count: 37, revenue: 9808.17 },
+  { key: 'Stickwithus Referral Credit Clean Up', count: 32, revenue: 7721.87 },
+  { key: 'I need funding!', count: 34, revenue: 6234.36 }
+];
+
+// Real names, pulled from Commas transactions filtered to the three
+// Mentorship product SKUs (ZpYOE, o63XN, BL672), Succeeded status only, on
+// 2026-07-30. $3,000 rows are two-mentorship-seat purchases in one charge.
+const HISTORICAL_MENTORSHIP_BUYERS = [
+  { name: 'Joanna Rogers', email: 'jmarie3525@gmail.com', amount: 1500, date: '2026-07-01' },
+  { name: 'Myah Floyd', email: 'omyah1@yahoo.com', amount: 1500, date: '2026-07-03' },
+  { name: 'Tiffany Collins', email: 'tiffanyrenee062087@gmail.com', amount: 1500, date: '2026-07-03' },
+  { name: 'Maia Harris', email: 'maiaharris777@yahoo.com', amount: 1500, date: '2026-07-04' },
+  { name: 'Saloam Bey', email: 'Knox@creditpowerllc.org', amount: 1500, date: '2026-06-28' },
+  { name: 'Keistyiuana Benson', email: 'info@etsproseries.com', amount: 1500, date: '2026-06-27' },
+  { name: 'Kenyatta Averett', email: 'Kla1224@yahoo.com', amount: 1500, date: '2026-06-27' },
+  { name: 'Chazell Adkins', email: 'cainvest00@gmail.com', amount: 3000, date: '2025-12-15' },
+  { name: 'Al Coney', email: 'firmfoundation01@yahoo.com', amount: 3000, date: '2025-12-14' }
+];
+
+// Merges the historical Commas snapshot with any live Fanbasis payment
+// events that carry a `product` field (real sales since the webhook secret
+// got fixed on 2026-07-30) so the card grows on its own from here.
+function getProductBreakdownAllTime(allPayments) {
+  const m = {};
+  for (const h of HISTORICAL_PRODUCT_SALES) m[h.key] = { count: h.count, revenue: h.revenue };
+  for (const p of allPayments) {
+    const k = (p.product || '').trim();
+    if (!k) continue;
+    m[k] = m[k] || { count: 0, revenue: 0 };
+    m[k].count++;
+    m[k].revenue += p.amount || 0;
+  }
+  return Object.entries(m).map(([key, v]) => ({ key, count: v.count, revenue: Math.round(v.revenue) })).sort((a, b) => b.revenue - a.revenue);
+}
+function getMentorshipBuyersAllTime(allPayments) {
+  const live = allPayments.filter(p => /mentorship/i.test(p.product || '')).map(p => ({
+    name: p.name || p.email || 'Unknown', email: p.email || '', amount: p.amount || 0, date: (p.at || '').slice(0, 10)
+  }));
+  return [...HISTORICAL_MENTORSHIP_BUYERS, ...live].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
 const app = express();
 // Render terminates TLS and forwards, so without this req.ip is Render's edge
 // rather than the visitor. Trust exactly one hop: entries a client forges
@@ -641,6 +713,15 @@ app.get('/api/dashboard', async (req, res) => {
       }
       return Object.entries(m).map(([key, v]) => ({ key, count: v.count, revenue: Math.round(v.revenue) })).sort((a, b) => b.revenue - a.revenue);
     })();
+    // All-time version of the above: the Commas historical snapshot (every
+    // sale before the webhook carried a product field) plus every live
+    // Fanbasis payment event regardless of the date-range filter above --
+    // "Revenue by package" should answer "what has she ever sold", not just
+    // what sold in the currently-selected range.
+    const byProductAllTime = getProductBreakdownAllTime(payments);
+    const mentorshipBuyersAllTime = getMentorshipBuyersAllTime(payments);
+    const mentorshipRow = byProductAllTime.find(p => /mentorship/i.test(p.key)) || { count: 0, revenue: 0 };
+    const mentorshipRangeEvents = paysIn.filter(p => /mentorship/i.test(p.product || ''));
 
     // churn recency for inactive clients
     const now = new Date();
@@ -734,7 +815,13 @@ app.get('/api/dashboard', async (req, res) => {
         unclassified,
         distinctPayers: payers.size,
         ltv: payers.size ? Math.round(payments.reduce((s, p) => s + (p.amount || 0), 0) / payers.size) : 0,
-        repeatRevenue: Math.round(repeatRevenue)
+        repeatRevenue: Math.round(repeatRevenue),
+        mentorship: {
+          rangeRevenue: Math.round(mentorshipRangeEvents.reduce((s, p) => s + (p.amount || 0), 0)),
+          rangeCount: mentorshipRangeEvents.length,
+          lifetimeRevenue: Math.round(mentorshipRow.revenue),
+          activeClients: mentorshipRow.count
+        }
       },
       health,
       series: {
@@ -748,6 +835,8 @@ app.get('/api/dashboard', async (req, res) => {
       },
       breakdowns: {
         byProduct: byProductRaw,
+        byProductAllTime,
+        mentorshipBuyers: mentorshipBuyersAllTime,
         byDeal: by(clients, c => c.deal),
         byRound: by(active, c => c.round ? 'Round ' + c.round : null).sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true })),
         activeByDeal: by(active, c => c.deal),
