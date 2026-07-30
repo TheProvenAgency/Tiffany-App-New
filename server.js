@@ -621,6 +621,26 @@ app.get('/api/dashboard', async (req, res) => {
       for (const c of list) { const k = keyFn(c) || '(none)'; m[k] = m[k] || { count: 0, revenue: 0 }; m[k].count++; m[k].revenue += c.totalSpent || 0; }
       return Object.entries(m).map(([key, v]) => ({ key, count: v.count, revenue: Math.round(v.revenue) })).sort((a, b) => b.revenue - a.revenue);
     };
+    // Revenue by package, from the actual Fanbasis sale events in the
+    // selected date range (each event's own `product` field, set by the
+    // /webhooks/fanbasis payload) -- rather than byDeal's Deal Production
+    // package tag summed over each client's all-time GHL total. Once real
+    // sales start carrying a product name this is what "Revenue by
+    // package" actually means: what sold, in this period, for how much.
+    // Falls back to byDeal (below) for as long as no payment event has a
+    // product on it yet, so the card isn't blank before that Zap field gets
+    // mapped.
+    const byProductRaw = (() => {
+      const m = {};
+      for (const p of paysIn) {
+        const k = (p.product || '').trim();
+        if (!k) continue;
+        m[k] = m[k] || { count: 0, revenue: 0 };
+        m[k].count++;
+        m[k].revenue += p.amount || 0;
+      }
+      return Object.entries(m).map(([key, v]) => ({ key, count: v.count, revenue: Math.round(v.revenue) })).sort((a, b) => b.revenue - a.revenue);
+    })();
 
     // churn recency for inactive clients
     const now = new Date();
@@ -727,6 +747,7 @@ app.get('/api/dashboard', async (req, res) => {
         fbFollowers: followersInRange.map(s => ({ label: bucketKey(s.date, granularity), value: s.fbFollowers })).filter((v, i, a) => a.findIndex(x => x.label === v.label) === i)
       },
       breakdowns: {
+        byProduct: byProductRaw,
         byDeal: by(clients, c => c.deal),
         byRound: by(active, c => c.round ? 'Round ' + c.round : null).sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true })),
         activeByDeal: by(active, c => c.deal),
