@@ -4,6 +4,9 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ms. Financial Solutions — Command Center</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link rel="icon" type="image/png" href="/logo.png"/>
+<link rel="shortcut icon" type="image/png" href="/logo.png"/>
+<link rel="apple-touch-icon" href="/logo.png"/>
 <link href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <style>
@@ -36,15 +39,15 @@ button{font-family:inherit}
    own accent color -- money (Finance) is green, everything else gets its
    own color so groups stay visually distinct even collapsed to icons only. */
 aside{display:flex;height:100vh;position:sticky;top:0}
-.navrail{width:56px;min-width:56px;background:var(--sidebar);display:flex;flex-direction:column;align-items:center;
-  padding:14px 0;gap:4px;border-right:1px solid rgba(255,255,255,.06)}
-.navrail .brandmark{width:34px;height:34px;border-radius:9px;margin-bottom:10px;object-fit:contain}
-.railbtn{width:38px;height:38px;border:none;border-radius:11px;background:none;color:var(--sidebar-dim);
-  display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;flex:0 0 auto;
+.navrail{width:72px;min-width:72px;background:var(--sidebar);display:flex;flex-direction:column;align-items:center;
+  padding:16px 0;gap:8px;border-right:1px solid rgba(255,255,255,.06)}
+.navrail .brandmark{width:42px;height:42px;border-radius:10px;margin-bottom:12px;object-fit:contain}
+.railbtn{width:50px;height:50px;border:none;border-radius:13px;background:none;color:var(--sidebar-dim);
+  display:flex;align-items:center;justify-content:center;font-size:21px;cursor:pointer;flex:0 0 auto;
   background:color-mix(in srgb, var(--rc) 14%, transparent)}
 .railbtn:hover{background:color-mix(in srgb, var(--rc) 24%, transparent);color:#fff}
 .railbtn.on{background:var(--rc);color:#fff;box-shadow:0 3px 10px color-mix(in srgb, var(--rc) 55%, transparent)}
-.railbtn.collapse{margin-top:auto;background:rgba(255,255,255,.06);color:var(--sidebar-dim);font-size:13px}
+.railbtn.collapse{margin-top:auto;background:rgba(255,255,255,.06);color:var(--sidebar-dim);font-size:17px}
 .railbtn.collapse:hover{background:rgba(255,255,255,.12)}
 .navpanel{width:194px;min-width:194px;background:var(--sidebar);color:var(--sidebar-ink);height:100%;
   display:flex;flex-direction:column;padding:14px 0;overflow-y:auto;transition:margin-left .16s ease,opacity .16s ease}
@@ -179,7 +182,12 @@ header h1{font-size:19px;margin:0;font-weight:700}
    daily figures the tile's own number comes from (see revenue.js
    drawKpiSparklines), not placeholder data. */
 .rv-kpi{position:relative;overflow:hidden}
-.rv-kpi .rvkspark{position:absolute;right:14px;bottom:14px;width:30%;max-width:78px;height:30%;max-height:38px;pointer-events:none;opacity:.9}
+.rv-kpi .rvkspark{position:absolute;right:12px;bottom:12px;width:40%;max-width:120px;height:40%;max-height:58px;opacity:.95;cursor:crosshair}
+.rv-kpi .rvktrend{position:absolute;top:14px;right:14px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,0,0,.06);color:#6b7280}
+.rv-kpi .rvktrend.up{color:#0e9e56;background:rgba(14,158,86,.14)}
+.rv-kpi .rvktrend.down{color:#c0392b;background:rgba(192,57,43,.14)}
+.rv-kpi.hero .rvktrend{background:rgba(0,0,0,.14);color:rgba(0,0,0,.7)}
+.rv-kpi.hero .rvktrend.up{color:#0a5c33;background:rgba(0,0,0,.16)}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
@@ -492,19 +500,19 @@ section.view{display:none} section.view.on{display:block}
            card. Widths sum to 12 (3+2+2+2+3) so the row still spans the
            full grid at the default layout. -->
       <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div><canvas class="rvkspark" id="rvkSparkTotal"></canvas></div>
+        <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div><span class="rvktrend" id="rvkTrendTotal"></span><canvas class="rvkspark" id="rvkSparkTotal"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-commas-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div><canvas class="rvkspark" id="rvkSparkCommasYtd"></canvas></div>
+        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div><span class="rvktrend" id="rvkTrendCommasYtd"></span><canvas class="rvkspark" id="rvkSparkCommasYtd"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-mfsn-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div><canvas class="rvkspark" id="rvkSparkMfsnYtd"></canvas></div>
+        <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div><span class="rvktrend" id="rvkTrendMfsnYtd"></span><canvas class="rvkspark" id="rvkSparkMfsnYtd"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-commas-month" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div><canvas class="rvkspark" id="rvkSparkCommasMonth"></canvas></div>
+        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div><span class="rvktrend" id="rvkTrendCommasMonth"></span><canvas class="rvkspark" id="rvkSparkCommasMonth"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-kpi-mfsn-month" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div><canvas class="rvkspark" id="rvkSparkMfsnMonth"></canvas></div>
+        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div><span class="rvktrend" id="rvkTrendMfsnMonth"></span><canvas class="rvkspark" id="rvkSparkMfsnMonth"></canvas></div>
       </div></div>
 
       <div class="grid-stack-item" gs-id="rev-trend" gs-w="12" gs-h="7"><div class="grid-stack-item-content">

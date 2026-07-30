@@ -297,34 +297,80 @@ function drawMf(){
 // real figures already on the page -- the combined-total monthly series
 // for the hero tile, Commas' own monthly/daily series, MFSN's own monthly
 // series -- not fabricated placeholder data.
-function sparkOpts(){
+// A single shared HTML tooltip (not the canvas-drawn kind) so it can float
+// outside each tiny sparkline's own clipped card instead of getting cut off
+// at ~60px square. Positioned with position:fixed against the real cursor
+// point Chart.js hands us, so it works no matter how the card is resized.
+function sparkTooltipEl(){
+  var el=document.getElementById('rvkTooltip');
+  if(!el){
+    el=document.createElement('div');
+    el.id='rvkTooltip';
+    el.style.cssText='position:fixed;pointer-events:none;z-index:9999;background:#20222b;color:#fff;'+
+      'font-size:11.5px;line-height:1.45;padding:7px 11px;border-radius:9px;box-shadow:0 8px 22px rgba(0,0,0,.28);'+
+      'opacity:0;transition:opacity .08s ease;white-space:nowrap;transform:translate(-50%,-100%)';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function sparkOpts(period){
   return {responsive:true,maintainAspectRatio:false,animation:false,
-    plugins:{legend:{display:false},tooltip:{enabled:false}},
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{enabled:false,external:function(ctx){
+      var el=sparkTooltipEl(), tt=ctx.tooltip;
+      if(!tt||tt.opacity===0){ el.style.opacity=0; return; }
+      var dp=tt.dataPoints&&tt.dataPoints[0];
+      if(dp){
+        var y=dp.parsed&&(dp.parsed.y!=null?dp.parsed.y:dp.parsed);
+        el.innerHTML='<div style="opacity:.65;font-size:10px;letter-spacing:.03em;text-transform:uppercase">'+dp.label+' &middot; '+period+'</div>'+
+          '<div style="font-weight:800;font-size:13px;margin-top:1px">'+money0(y)+'</div>';
+      }
+      var rect=ctx.chart.canvas.getBoundingClientRect();
+      el.style.left=(rect.left+tt.caretX)+'px';
+      el.style.top=(rect.top+tt.caretY-8)+'px';
+      el.style.opacity=1;
+    }}},
     scales:{x:{display:false},y:{display:false}},
-    elements:{point:{radius:0}}};
+    elements:{point:{radius:0,hoverRadius:4,hitRadius:12}}};
+}
+function trendBadge(vals){
+  if(!vals||vals.length<2)return null;
+  // Trailing zeros mean "no data yet" (e.g. days later this month), not a
+  // real drop to $0 -- walk back to the last actual reported value.
+  var end=vals.length-1;
+  while(end>0 && !vals[end]) end--;
+  var first=vals[0], last=vals[end];
+  if(!first || end<1)return null;
+  var pct=((last-first)/Math.abs(first))*100;
+  var up=pct>=0;
+  return {text:(up?'▲ ':'▼ ')+Math.abs(pct).toFixed(0)+'%', up:up};
 }
 function drawKpiSparklines(){
   if(!window.Chart)return;
   var defs=[
     // Total income (hero, green bg) -- combined Commas+MFSN by month
-    {id:'rvkSparkTotal', vals:HERO_MONTH.vals, type:'line', color:C.ink},
+    {id:'rvkSparkTotal', trendId:'rvkTrendTotal', labels:HERO_MONTH.labels, vals:HERO_MONTH.vals, type:'line', color:C.ink, period:'monthly total'},
     // Commas sales YTD -- Commas gross by month
-    {id:'rvkSparkCommasYtd', vals:CO_MONTHLY.rev, type:'bar', color:C.blue},
+    {id:'rvkSparkCommasYtd', trendId:'rvkTrendCommasYtd', labels:CO_MONTHLY.labels, vals:CO_MONTHLY.rev, type:'bar', color:C.blue, period:'monthly gross'},
     // MFSN commissions YTD -- MFSN payout, last 7 months to match the others
-    {id:'rvkSparkMfsnYtd', vals:MF_MONTHLY.vals.slice(-7), type:'bar', color:C.green},
+    {id:'rvkSparkMfsnYtd', trendId:'rvkTrendMfsnYtd', labels:MF_MONTHLY.labels.slice(-7), vals:MF_MONTHLY.vals.slice(-7), type:'bar', color:C.green, period:'monthly commissions'},
     // Commas this month -- daily trend within the current month
-    {id:'rvkSparkCommasMonth', vals:CO_DAILY.rev, type:'line', color:C.teal},
+    {id:'rvkSparkCommasMonth', trendId:'rvkTrendCommasMonth', labels:CO_DAILY.labels, vals:CO_DAILY.rev, type:'line', color:C.teal, period:'daily gross'},
     // MFSN latest month -- recent-months trend leading into the latest payout
-    {id:'rvkSparkMfsnMonth', vals:MF_MONTHLY.vals.slice(-6), type:'bar', color:C.purple}
+    {id:'rvkSparkMfsnMonth', trendId:'rvkTrendMfsnMonth', labels:MF_MONTHLY.labels.slice(-6), vals:MF_MONTHLY.vals.slice(-6), type:'bar', color:C.purple, period:'monthly commissions'}
   ];
   defs.forEach(function(d){
     var el=document.getElementById(d.id); if(!el)return;
     killChart(d.id);
-    var labels=d.vals.map(function(_,i){return i;});
     var cfg = d.type==='line'
-      ? {type:'line',data:{labels:labels,datasets:[{data:d.vals,borderColor:d.color,borderWidth:2,tension:.4,fill:false}]},options:sparkOpts()}
-      : {type:'bar',data:{labels:labels,datasets:[{data:d.vals,backgroundColor:d.color,borderRadius:2,barPercentage:.7,minBarLength:2}]},options:sparkOpts()};
+      ? {type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,borderWidth:2,tension:.4,fill:false}]},options:sparkOpts(d.period)}
+      : {type:'bar',data:{labels:d.labels,datasets:[{data:d.vals,backgroundColor:d.color,borderRadius:2,barPercentage:.7,minBarLength:2}]},options:sparkOpts(d.period)};
     charts[d.id]=new Chart(el.getContext('2d'),cfg);
+    var badge=trendBadge(d.vals), badgeEl=document.getElementById(d.trendId);
+    if(badgeEl){
+      if(badge){ badgeEl.textContent=badge.text; badgeEl.className='rvktrend '+(badge.up?'up':'down'); }
+      else { badgeEl.textContent=''; }
+    }
   });
 }
 function drawPeriods(){
