@@ -188,8 +188,9 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .rv-kpi .rvktrend.down{color:#c0392b;background:rgba(192,57,43,.14)}
 .rv-kpi.hero .rvktrend{background:rgba(0,0,0,.14);color:rgba(0,0,0,.7)}
 .rv-kpi.hero .rvktrend.up{color:#0a5c33;background:rgba(0,0,0,.16)}
-.rv-kpi-donut{padding-right:74px}
-.rv-kpi-donut .rvkdonut{position:absolute;right:10px;bottom:10px;top:10px;width:60px;height:auto;max-height:70px;margin:auto 0;cursor:pointer}
+.rv-kpi-donut{padding-right:calc(clamp(72px,44cqw,140px) + 14px)}
+.rv-kpi-donut .rvkdonut{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  width:clamp(72px,44cqw,140px);height:clamp(72px,44cqh,140px);cursor:pointer}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
