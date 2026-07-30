@@ -158,7 +158,8 @@ header h1{font-size:19px;margin:0;font-weight:700}
 /* while actively arranging, let the drag/resize outline breathe past the
    card edge instead of getting clipped by the line above */
 .grid-stack.gs-editing .grid-stack-item-content{overflow:visible}
-.grid-stack-item-content>.card,.grid-stack-item-content>.kpi{height:100%;box-sizing:border-box}
+.grid-stack-item-content>.card,.grid-stack-item-content>.kpi,
+.grid-stack-item-content>.rv-card,.grid-stack-item-content>.rv-kpis{height:100%;box-sizing:border-box}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
@@ -176,14 +177,25 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .grid-stack:not(.gs-editing) .grid-stack-item{pointer-events:none}
 .grid-stack:not(.gs-editing) .grid-stack-item-content>*{pointer-events:auto}
 /* edit mode: dashed outline so it's obvious what's draggable, plus
-   GridStack's own drag handle / resize-handle affordances */
+   GridStack's own drag handle / resize-handle affordances. The Revenue
+   KPI band and Sales trend card (.rv-kpis/.rv-card) that moved onto this
+   grid need the same treatment as .card/.kpi -- they were already
+   draggable/resizable via GridStack (nothing item-specific was ever
+   locking them), they just didn't get this outline/cursor feedback
+   before, which made them look uneditable even though they weren't. */
 .grid-stack.gs-editing .grid-stack-item-content>.card,
-.grid-stack.gs-editing .grid-stack-item-content>.kpi{outline:2px dashed var(--pink);outline-offset:3px;cursor:grab}
+.grid-stack.gs-editing .grid-stack-item-content>.kpi,
+.grid-stack.gs-editing .grid-stack-item-content>.rv-card,
+.grid-stack.gs-editing .grid-stack-item-content>.rv-kpis{outline:2px dashed var(--pink);outline-offset:3px;cursor:grab}
 .grid-stack.gs-editing .ui-draggable-dragging .card,
-.grid-stack.gs-editing .ui-draggable-dragging .kpi{cursor:grabbing}
+.grid-stack.gs-editing .ui-draggable-dragging .kpi,
+.grid-stack.gs-editing .ui-draggable-dragging .rv-card,
+.grid-stack.gs-editing .ui-draggable-dragging .rv-kpis{cursor:grabbing}
 .grid-stack .ui-resizable-handle{z-index:5}
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.card,
-.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.kpi{outline-color:var(--green);box-shadow:0 10px 30px rgba(0,0,0,.15)}
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.kpi,
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-card,
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpis{outline-color:var(--green);box-shadow:0 10px 30px rgba(0,0,0,.15)}
 .gs-placeholder>.placeholder-content{background:var(--pink-soft)!important;border-radius:16px}
 .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
