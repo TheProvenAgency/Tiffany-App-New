@@ -36,13 +36,27 @@
   }
 
   // production.js injects its own nav button, so wait for it to appear.
+  // The sidebar is split into several grouped .navgroup containers
+  // (Overview/Clients/Production/Finance/Marketing/Account) rather than one
+  // flat list -- an employee still gets only Deal Production, so this has
+  // to hide every button across every group, not just the one #nav held
+  // back when the sidebar was a single list.
   function gateNav() {
-    var nav = document.getElementById('nav');
     var prodBtn = document.getElementById('pvNavBtn');
-    if (!nav || !prodBtn) return false;
+    if (!prodBtn) return false;
 
-    Array.prototype.forEach.call(nav.querySelectorAll('button'), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll('.navgroup button'), function (b) {
       if (b.id !== 'pvNavBtn') b.style.display = 'none';
+    });
+    // A group heading with nothing left visible under it just reads as a
+    // dangling label ("Finance" over a blank box) -- hide those too.
+    Array.prototype.forEach.call(document.querySelectorAll('.sec'), function (heading) {
+      var group = heading.nextElementSibling;
+      if (!group || !group.classList.contains('navgroup')) return;
+      var anyVisible = Array.prototype.some.call(group.querySelectorAll('button'), function (b) {
+        return b.style.display !== 'none';
+      });
+      heading.style.display = anyVisible ? '' : 'none';
     });
     if (typeof window.showView === 'function') window.showView('production');
     return true;

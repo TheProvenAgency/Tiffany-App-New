@@ -166,11 +166,10 @@ function initMF(){
   var sec=document.createElement('section');sec.id='view-mfsn';sec.style.display='none';sec.innerHTML=sectionHTML;
   if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc); else document.body.appendChild(sec);
   sec.querySelectorAll('.mf-tabs button').forEach(function(b){b.onclick=function(){setSub(b.getAttribute('data-v'));};});
-  var nav=document.getElementById('nav');
+  var nav=document.getElementById('navProduction')||document.getElementById('nav');
   if(nav&&!document.getElementById('mfNavBtn')){
-    var sib=nav.querySelector('button');var b=document.createElement('button');b.id='mfNavBtn';
-    if(sib)b.className=sib.className;b.setAttribute('onclick',"showView('mfsn')");
-    b.innerHTML=(sib&&sib.querySelector('.dot')?'<span class="dot"></span>':'')+'Credit Monitoring';nav.appendChild(b);
+    var b=document.createElement('button');b.id='mfNavBtn';b.setAttribute('onclick',"showView('mfsn')");
+    b.innerHTML='<span class="ico2">◈</span>Credit Monitoring';nav.appendChild(b);
   }
   if(typeof window.showView==='function'&&!window.__mfWrap){
     window.__mfWrap=true;var _sv=window.showView;

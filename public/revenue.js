@@ -240,11 +240,10 @@ function initRV(){
   var anc=document.getElementById('view-dash');
   var sec=document.createElement('section');sec.id='view-rev';sec.style.display='none';sec.innerHTML=sectionHTML;
   if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc); else document.body.appendChild(sec);
-  var nav=document.getElementById('nav');
+  var nav=document.getElementById('navFinance')||document.getElementById('nav');
   if(nav&&!document.getElementById('rvNavBtn')){
-    var sib=nav.querySelector('button');var b=document.createElement('button');b.id='rvNavBtn';
-    if(sib)b.className=sib.className;b.setAttribute('onclick',"showView('rev')");
-    b.innerHTML=(sib&&sib.querySelector('.dot')?'<span class="dot"></span>':'')+'Revenue';nav.appendChild(b);
+    var b=document.createElement('button');b.id='rvNavBtn';b.setAttribute('onclick',"showView('rev')");
+    b.innerHTML='<span class="ico2">$</span>Revenue';nav.appendChild(b);
   }
   if(typeof window.showView==='function'&&!window.__rvWrap){
     window.__rvWrap=true;var _sv=window.showView;

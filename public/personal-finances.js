@@ -372,11 +372,10 @@ function initLM(){
   var sec=document.createElement('section');sec.id='view-personal';sec.style.display='none';sec.innerHTML=sectionHTML;
   if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc); else document.body.appendChild(sec);
   sec.querySelectorAll('.lm-tabs button').forEach(function(b){b.onclick=function(){setSub(b.getAttribute('data-v'));};});
-  var nav=document.getElementById('nav');
+  var nav=document.getElementById('navFinance')||document.getElementById('nav');
   if(nav&&!document.getElementById('lmNavBtn')){
-    var sib=nav.querySelector('button');var b=document.createElement('button');b.id='lmNavBtn';
-    if(sib)b.className=sib.className;b.setAttribute('onclick',"showView('personal')");
-    b.innerHTML=(sib&&sib.querySelector('.dot')?'<span class="dot"></span>':'')+'Personal Finances';nav.appendChild(b);
+    var b=document.createElement('button');b.id='lmNavBtn';b.setAttribute('onclick',"showView('personal')");
+    b.innerHTML='<span class="ico2">◎</span>Personal Finances';nav.appendChild(b);
   }
   if(typeof window.showView==='function'&&!window.__lmWrap){
     window.__lmWrap=true;var _sv=window.showView;

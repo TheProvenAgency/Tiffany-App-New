@@ -43,6 +43,12 @@ aside{width:212px;min-width:212px;background:var(--sidebar);color:var(--sidebar-
 .nav button.on::before{content:'';position:absolute;left:-8px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--pink)}
 .nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:10.5px;font-weight:700;padding:2px 8px}
 .nav svg{width:15px;height:15px;opacity:.75}
+/* small icon chip per nav item -- grouped sidebar redesign (Tiffany's
+   reference had a colored icon box per row instead of a bare glyph).
+   Dims by default, lights up pink to match the row's own active state. */
+.nav button .ico2{width:22px;height:22px;border-radius:7px;flex:0 0 auto;display:flex;align-items:center;
+  justify-content:center;font-size:12px;background:rgba(255,255,255,.07);color:var(--sidebar-dim)}
+.nav button.on .ico2{background:var(--pink);color:#fff}
 .spacer{flex:1}
 .sources{padding:0 18px 8px}
 .src{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sidebar-dim);padding:3.5px 0}
@@ -319,24 +325,36 @@ section.view{display:none} section.view.on{display:block}
     <img src="/logo.png" alt="Ms. Financial Solutions" style="height:56px;width:auto;margin:0 auto;display:block">
     
   </div>
-  <div class="sec">Workspace</div>
-  <div class="nav" id="nav">
-    <button data-v="dash" class="on" onclick="showView('dash')">▦ Dashboard</button>
-    <button data-v="pipeline" onclick="showView('pipeline')">⚲ Pipeline</button>
-    <button data-v="clients" onclick="showView('clients')">◉ Clients</button>
-    <button data-v="react" onclick="showView('react')">↻ Reactivation <span class="badge" id="reactBadge"></span></button>
-    <button data-v="tasks" onclick="showView('tasks')">☰ Follow-Ups</button>
-    <button data-v="social" onclick="showView('social')">✦ Social</button>
+  <div class="sec">Overview</div>
+  <div class="nav navgroup" id="nav">
+    <button data-v="dash" class="on" onclick="showView('dash')"><span class="ico2">▦</span>Dashboard</button>
+  </div>
+  <div class="sec">Clients</div>
+  <div class="nav navgroup">
+    <button data-v="pipeline" onclick="showView('pipeline')"><span class="ico2">⚲</span>Pipeline</button>
+    <button data-v="clients" onclick="showView('clients')"><span class="ico2">◉</span>Clients</button>
+    <button data-v="react" onclick="showView('react')"><span class="ico2">↻</span>Reactivation <span class="badge" id="reactBadge"></span></button>
+    <button data-v="tasks" onclick="showView('tasks')"><span class="ico2">☰</span>Follow-Ups</button>
+  </div>
+  <!-- Deal Production + Credit Monitoring inject themselves here (production.js, mfsn.js) -->
+  <div class="sec">Production</div>
+  <div class="nav navgroup" id="navProduction"></div>
+  <!-- Revenue + Personal Finances inject themselves here (revenue.js, personal-finances.js) -->
+  <div class="sec">Finance</div>
+  <div class="nav navgroup" id="navFinance"></div>
+  <div class="sec">Marketing</div>
+  <div class="nav navgroup">
+    <button data-v="social" onclick="showView('social')"><span class="ico2">✦</span>Social</button>
   </div>
   <div class="sec">Account</div>
-  <div class="nav">
-    <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'">← Back to Proven Agency</button>
-    <button onclick="openNotifications()">🔔 Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
-    <button onclick="openSettings()">✧ Settings</button>
-    <button onclick="openChangePw()">🔑 Change password</button>
-    <button onclick="showView('tickets')">🎫 Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
-    <button onclick="openSupportTicket()">✉ Submit a Support Ticket</button>
-    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())">→ Sign out</button>
+  <div class="nav navgroup">
+    <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2">←</span>Back to Proven Agency</button>
+    <button onclick="openNotifications()"><span class="ico2">🔔</span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
+    <button onclick="openSettings()"><span class="ico2">✧</span>Settings</button>
+    <button onclick="openChangePw()"><span class="ico2">🔑</span>Change password</button>
+    <button onclick="showView('tickets')"><span class="ico2">🎫</span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
+    <button onclick="openSupportTicket()"><span class="ico2">✉</span>Submit a Support Ticket</button>
+    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())"><span class="ico2">→</span>Sign out</button>
   </div>
   <div class="spacer"></div>
   <div class="sec">Data sources</div>
