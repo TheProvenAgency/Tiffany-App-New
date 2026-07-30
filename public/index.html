@@ -638,7 +638,7 @@ section.view{display:none} section.view.on{display:block}
         <button class="btn primary" onclick="addTaskUI()">Add</button>
       </div>
       <div class="mentionwrap" style="margin:-8px 0 16px">
-        <textarea id="ntNotes" placeholder="Notes for this task… (optional, type @ to mention someone)" oninput="mentionInput(this,'ntNotesMbox')" onkeydown="return mentionKeydown(event,this,'ntNotesMbox')"></textarea>
+        <textarea id="ntNotes" placeholder="Description (optional, type @ to mention someone)" oninput="mentionInput(this,'ntNotesMbox')" onkeydown="return mentionKeydown(event,this,'ntNotesMbox')"></textarea>
         <div class="mentionbox" id="ntNotesMbox" style="display:none"></div>
       </div>
       <div id="taskList"></div>
@@ -1301,7 +1301,11 @@ async function loadTasks(){
         <select id="teAssignee_${t.id}">${assigneeOpts(users)}</select>
         <button class="btn primary" onclick="saveTaskEdit('${t.id}')">Save</button>
       </div>
-      <div class="mentionwrap" style="margin-top:8px"><textarea id="teNotes_${t.id}" placeholder="Notes for this task… (type @ to mention someone)" oninput="mentionInput(this,'teNotesMbox_${t.id}')" onkeydown="return mentionKeydown(event,this,'teNotesMbox_${t.id}')"></textarea><div class="mentionbox" id="teNotesMbox_${t.id}" style="display:none"></div></div>
+      <div class="mentionwrap" style="margin-top:8px"><textarea id="teNotes_${t.id}" placeholder="Task description… (type @ to mention someone)" oninput="mentionInput(this,'teNotesMbox_${t.id}')" onkeydown="return mentionKeydown(event,this,'teNotesMbox_${t.id}')"></textarea><div class="mentionbox" id="teNotesMbox_${t.id}" style="display:none"></div></div>
+      <h4 class="cardtitle" style="margin-top:16px;font-size:13px">Notes</h4>
+      <div id="ttn_${t.id}"></div>
+      <div class="mentionwrap" style="margin-top:8px"><textarea id="ttnNew_${t.id}" placeholder="Add a note… (type @ to mention someone)" oninput="mentionInput(this,'ttnNewMbox_${t.id}')" onkeydown="return mentionKeydown(event,this,'ttnNewMbox_${t.id}')"></textarea><div class="mentionbox" id="ttnNewMbox_${t.id}" style="display:none"></div></div>
+      <div class="dactions" style="margin-top:6px"><button class="btn ghost" onclick="addTaskThreadNote('${t.id}')">+ Add note</button></div>
     </div>`;
   $('taskList').innerHTML=d.open.length?d.open.map(row).join(''):'<div class="cardsub">No open tasks — add one above.</div>';
   $('taskDone').innerHTML=d.done.length?d.done.map(row).join(''):'<div class="cardsub">Nothing completed yet.</div>';
@@ -1314,6 +1318,7 @@ function toggleTaskEdit(id){
     const t=tasksById[id]||{};
     $('teAssignee_'+id).value=t.assignedTo||'';
     $('teNotes_'+id).value=t.notes||'';
+    loadTaskThread(id);
   }
 }
 async function saveTaskEdit(id){
@@ -1321,6 +1326,22 @@ async function saveTaskEdit(id){
   const notes=$('teNotes_'+id).value.trim()||null;
   await fetch('/api/tasks/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({assignedTo,notes})});
   loadTasks();
+}
+async function loadTaskThread(id){
+  const box=$('ttn_'+id);
+  if(!box)return;
+  const notes=await(await fetch(`/api/tasks/${id}/notes`)).json();
+  box.innerHTML=notes.length?notes.map(n=>`<div class="noterow">${escUser(n.text)}<div class="mut">${n.authorName?escUser(n.authorName)+' · ':''}${new Date(n.at).toLocaleString()}
+    <a href="#" onclick="fetch('/api/task-notes/${n.id}',{method:'DELETE'}).then(()=>loadTaskThread('${id}'));return false" style="color:var(--muted)"> · delete</a></div></div>`).join('')
+    :'<div class="cardsub">No notes yet — be the first to leave one.</div>';
+}
+async function addTaskThreadNote(id){
+  const el=$('ttnNew_'+id);
+  const text=el.value.trim();
+  if(!text)return;
+  await fetch(`/api/tasks/${id}/notes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  el.value='';
+  loadTaskThread(id);
 }
 async function addTaskUI(){
   const title=$('ntTitle').value.trim();

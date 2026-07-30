@@ -971,6 +971,31 @@ app.patch('/api/tasks/:id', (req, res) => {
 });
 app.delete('/api/tasks/:id', (req, res) => { store.deleteTask(req.params.id); res.json({ ok: true }); });
 
+// task notes -- a thread so more than one person can leave their own
+// update on a follow-up task, same @mention handling as client notes
+// (see POST /api/clients/:id/notes above).
+app.get('/api/tasks/:id/notes', (req, res) => {
+  res.json(store.getTaskNotes(req.params.id).sort((a, b) => a.at.localeCompare(b.at)));
+});
+app.post('/api/tasks/:id/notes', (req, res) => {
+  const text = (req.body.text || '').trim();
+  if (!text) return res.status(400).json({ error: 'empty note' });
+  const task = store.getTasks().find(t => t.id === req.params.id);
+  if (!task) return res.status(404).json({ error: 'not found' });
+  const author = getUsers().find(u => u.id === req.user.userId);
+  const mentions = resolveMentions(text);
+  const note = store.addTaskNote(req.params.id, text, {
+    authorId: author ? author.id : null,
+    authorName: author ? author.name : null,
+    mentions: mentions.map(u => u.id)
+  });
+  const skip = [author ? author.id : null];
+  if (task.assignedTo) skip.push(task.assignedTo); // they'll see it on the task itself
+  notifyMentions(mentions, { type: 'mention', refType: 'task', refId: task.id, clientId: task.clientId, clientName: task.clientName, text, fromName: author ? author.name : 'Someone' }, skip);
+  res.json(note);
+});
+app.delete('/api/task-notes/:id', (req, res) => { store.deleteTaskNote(req.params.id); res.json({ ok: true }); });
+
 // notifications (in-app bell) — everyone can read/clear their own
 app.get('/api/notifications', (req, res) => {
   const list = store.getNotifications(req.user.userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
