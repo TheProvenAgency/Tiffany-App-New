@@ -786,7 +786,10 @@ app.get('/api/dashboard', async (req, res) => {
     for (const p of payments) if (p.email) perEmailCount[p.email] = (perEmailCount[p.email] || 0) + 1;
     const repeatRevenue = payments.filter(p => perEmailCount[p.email] > 1).reduce((s, p) => s + (p.amount || 0), 0);
     const allEvents = store.getEvents();
-    const lastOf = t => { const es = allEvents.filter(e => e.type === t); return es.length ? (es[es.length - 1].at || es[es.length - 1].receivedAt) : null; };
+    // Feed freshness must reflect when the webhook actually delivered (receivedAt),
+    // not the sale's own date field -- a retest/replay of an older sale otherwise
+    // makes a perfectly live feed look stale.
+    const lastOf = t => { const es = allEvents.filter(e => e.type === t); return es.length ? (es[es.length - 1].receivedAt || es[es.length - 1].at) : null; };
     const snaps = store.getSnapshots();
     const health = {
       lastPaymentEventAt: lastOf('payment'),
