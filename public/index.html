@@ -1095,24 +1095,31 @@ async function loadDashboard(){
   const r=await fetch('/api/dashboard?'+qs);if(r.status===401){location.href='/login.html';return;}
   const d=await r.json();const k=d.kpis;
   $('modePill').textContent=d.mode==='live'?'LIVE':'DEMO';
-  // hero
-  $('heroLabel').textContent='COLLECTED · '+rangeLabel();
+  // hero -- this card lives on the Revenue page now (moved off Dashboard),
+  // so guard every reference: on Dashboard these elements are absent and
+  // must not throw, or the rest of loadDashboard (packages, mentorship,
+  // rounds, churn, social) never runs.
   const okFeed=d.health&&d.health.paymentFeedOk;
-  $('heroBadge').textContent=okFeed?'FANBASIS LIVE':'PAYMENT SYNC DOWN';
-  $('heroBadge').className='badge-soft '+(okFeed?'badge-ok':'badge-warn');
-  const amt=Math.round(k.revenueTotal).toLocaleString();
-  $('heroAmt').innerHTML=`<sup>$</sup>${amt}`;
-  let cmp='';
-  if(k.prevRevenue!=null&&k.prevRevenue>0){
-    const pct=Math.round((k.revenueTotal-k.prevRevenue)/k.prevRevenue*1000)/10;
-    cmp=` · <b class="${pct>=0?'up':'down'}">${pct>=0?'▲':'▼'} ${Math.abs(pct)}%</b> vs previous period`;
+  if($('heroLabel')){
+    $('heroLabel').textContent='COLLECTED · '+rangeLabel();
+    $('heroBadge').textContent=okFeed?'FANBASIS LIVE':'PAYMENT SYNC DOWN';
+    $('heroBadge').className='badge-soft '+(okFeed?'badge-ok':'badge-warn');
+    const amt=Math.round(k.revenueTotal).toLocaleString();
+    $('heroAmt').innerHTML=`<sup>$</sup>${amt}`;
+    let cmp='';
+    if(k.prevRevenue!=null&&k.prevRevenue>0){
+      const pct=Math.round((k.revenueTotal-k.prevRevenue)/k.prevRevenue*1000)/10;
+      cmp=` · <b class="${pct>=0?'up':'down'}">${pct>=0?'▲':'▼'} ${Math.abs(pct)}%</b> vs previous period`;
+    }
+    $('heroNote').innerHTML=`${fmtN(k.paymentsCount)} payments · avg ${fmt$(k.avgPayment)}${cmp} — every dollar from individual Fanbasis sales with exact dates`;
   }
-  $('heroNote').innerHTML=`${fmtN(k.paymentsCount)} payments · avg ${fmt$(k.avgPayment)}${cmp} — every dollar from individual Fanbasis sales with exact dates`;
-  $('railLifetime').textContent=fmt$(k.lifetimeRevenue);
-  $('railLifetimeSub').textContent=`Lifetime collected · ${fmtN(k.distinctPayers)} paying clients`;
-  $('railAvg').textContent=fmt$(k.avgPayment);
-  $('railLtv').textContent=fmt$(k.ltv);
-  $('railNew').textContent=fmtN(k.newClients);
+  if($('railLifetime')){
+    $('railLifetime').textContent=fmt$(k.lifetimeRevenue);
+    $('railLifetimeSub').textContent=`Lifetime collected · ${fmtN(k.distinctPayers)} paying clients`;
+    $('railAvg').textContent=fmt$(k.avgPayment);
+    $('railLtv').textContent=fmt$(k.ltv);
+    $('railNew').textContent=fmtN(k.newClients);
+  }
   // trend arrow: green ▲ trending up, red ▼ trending down, gold ▬ basically
   // flat (within 0.5%) -- so "no real change" reads as neutral instead of
   // a false green/red signal.
@@ -1163,9 +1170,11 @@ async function loadDashboard(){
     borderRadius:2,barPercentage:.7,minBarLength:2}]},options:{maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
   const repeatPct=k.revenueTotal>0?Math.round((k.repeatRevenue||0)/k.revenueTotal*100):0;
-  $('ltvRing').style.setProperty('--pct',repeatPct);
-  $('ltvRing').style.setProperty('--ring-c','#65a30d');
-  $('ltvRingPct').textContent=repeatPct+'%';
+  if($('ltvRing')){
+    $('ltvRing').style.setProperty('--pct',repeatPct);
+    $('ltvRing').style.setProperty('--ring-c','#65a30d');
+    $('ltvRingPct').textContent=repeatPct+'%';
+  }
   mkChart('chHero',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:GREEN,borderWidth:2,
     backgroundColor:c=>grad(c.chart.ctx,GREEN),fill:true,tension:.35,pointRadius:0,pointHitRadius:12}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.y)}}},
