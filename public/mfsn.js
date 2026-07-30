@@ -198,6 +198,24 @@ function mfSparkOpts(period){
     scales:{x:{display:false},y:{display:false}},
     elements:{point:{radius:0,hoverRadius:4,hitRadius:12}}};
 }
+function mfDonutOpts(){
+  return {responsive:true,maintainAspectRatio:false,animation:false,cutout:'60%',
+    plugins:{legend:{display:false},tooltip:{enabled:false,external:function(ctx){
+      var el=sparkTooltipEl(), tt=ctx.tooltip;
+      if(!tt||tt.opacity===0){ el.style.opacity=0; return; }
+      var dp=tt.dataPoints&&tt.dataPoints[0];
+      if(dp){
+        var data=dp.dataset.data, total=data.reduce(function(a,b){return a+b;},0);
+        var val=dp.parsed, pct=total?Math.round(val/total*100):0;
+        el.innerHTML='<div style="opacity:.65;font-size:10px;letter-spacing:.03em;text-transform:uppercase">'+dp.label+'</div>'+
+          '<div style="font-weight:800;font-size:13px;margin-top:1px">'+val.toLocaleString()+' &middot; '+pct+'%</div>';
+      }
+      var rect=ctx.chart.canvas.getBoundingClientRect();
+      el.style.left=(rect.left+tt.caretX)+'px';
+      el.style.top=(rect.top+tt.caretY-8)+'px';
+      el.style.opacity=1;
+    }}}};
+}
 function mfTrendBadge(vals){
   if(!vals||vals.length<2)return null;
   var end=vals.length-1;
@@ -231,6 +249,23 @@ function initMFDashKpis(){
       if(badge){ badgeEl.textContent=badge.text; badgeEl.className='rvktrend '+(badge.up?'up':'down'); }
       else { badgeEl.textContent=''; }
     }
+  });
+  // Enrolled/Upgraded/New-actives don't have a monthly history to spark --
+  // they're a portal snapshot, not a series -- but each one IS really two
+  // real numbers (the headline count plus its natural complement), so a
+  // small hoverable donut shows the actual breakdown instead of a bare
+  // number sitting there with nothing to interact with.
+  var donuts=[
+    {id:'mfkDonutEnrolled', labels:['Active monitoring','Not yet active'], vals:[M.active, Math.max(M.enrolled-M.active,0)], colors:[C.blue,'#e3e7ee']},
+    {id:'mfkDonutUpgraded', labels:['Upgraded','Need upgrade'], vals:[M.upgraded, M.toUpgrade], colors:[C.teal,'#f5e6c4']},
+    {id:'mfkDonutNewActives', labels:['New actives','Remaining to target'], vals:[M.newActives, Math.max(M.targetActives-M.newActives,0)], colors:[C.purple,'#e3e7ee']}
+  ];
+  donuts.forEach(function(d){
+    var el=document.getElementById(d.id); if(!el)return;
+    killChart(d.id);
+    charts[d.id]=new Chart(el.getContext('2d'),{type:'doughnut',
+      data:{labels:d.labels,datasets:[{data:d.vals,backgroundColor:d.colors,borderWidth:2,borderColor:'#fff'}]},
+      options:mfDonutOpts()});
   });
 }
 
@@ -280,7 +315,8 @@ function initMFAll(){
   // sparklines get re-measured after a GridStack drag/resize too, no
   // matter which of mfsn.js/revenue.js's init runs first.
   var _prev=window.__resizeExtraCharts;
-  window.__resizeExtraCharts=function(){ if(_prev)_prev(); for(var k in charts){ if(charts[k]&&(k==='mfkSparkYtd'||k==='mfkSparkLatest')) charts[k].resize(); } };
+  var _dashKeys={mfkSparkYtd:1,mfkSparkLatest:1,mfkDonutEnrolled:1,mfkDonutUpgraded:1,mfkDonutNewActives:1};
+  window.__resizeExtraCharts=function(){ if(_prev)_prev(); for(var k in charts){ if(charts[k]&&_dashKeys[k]) charts[k].resize(); } };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initMFAll);else initMFAll();
 })();

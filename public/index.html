@@ -188,6 +188,8 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .rv-kpi .rvktrend.down{color:#c0392b;background:rgba(192,57,43,.14)}
 .rv-kpi.hero .rvktrend{background:rgba(0,0,0,.14);color:rgba(0,0,0,.7)}
 .rv-kpi.hero .rvktrend.up{color:#0a5c33;background:rgba(0,0,0,.16)}
+.rv-kpi-donut{padding-right:74px}
+.rv-kpi-donut .rvkdonut{position:absolute;right:10px;bottom:10px;top:10px;width:60px;height:auto;max-height:70px;margin:auto 0;cursor:pointer}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
@@ -551,13 +553,13 @@ section.view{display:none} section.view.on{display:block}
         <div class="rv-kpi" style="border-top-color:#f59e0b"><div class="l">Latest month</div><div class="v" id="mfkLatest">—</div><div class="s">most recent payout</div><span class="rvktrend" id="mfkTrendLatest"></span><canvas class="rvkspark" id="mfkSparkLatest"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div></div>
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6"><div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div></div>
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4"><div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div></div>
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6"><div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div>
       </div></div>
 
       <div class="grid-stack-item" gs-id="clientbase" gs-w="7" gs-h="5"><div class="grid-stack-item-content">
