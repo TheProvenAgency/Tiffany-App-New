@@ -268,7 +268,16 @@ function initRV(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
 
-/* keep the Dashboard hero showing combined income even after the app's periodic refresh */
-function startPatch(){ patchDash(); hookPeriods(); setTimeout(hookPeriods,1200); setTimeout(hookPeriods,3000); setInterval(patchDash,1000); setInterval(hookPeriods,4000); }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startPatch);else startPatch();
+/* NOTE: this used to force-patch the main Dashboard's hero/KPI rail with a
+   hardcoded Jul 28 2026 snapshot every second (startPatch below), from back
+   before the dashboard pulled real numbers itself. Now that the KPI rail
+   computes real figures from live data (and has its own mini-charts on
+   every card), that patch does nothing but fight the real numbers -- it
+   was overwriting Avg Payment/LTV with stale $234/$263 forever and
+   re-drawing #chHero with fake data once a second, which is exactly why a
+   redesign of those cards looked like "nothing changed." Left disabled,
+   not deleted, in case Revenue-page-only pieces of this file are still
+   wanted later. */
+// function startPatch(){ patchDash(); hookPeriods(); setTimeout(hookPeriods,1200); setTimeout(hookPeriods,3000); setInterval(patchDash,1000); setInterval(hookPeriods,4000); }
+// if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startPatch);else startPatch();
 })();

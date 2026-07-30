@@ -90,7 +90,7 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .kpi .l{font-size:11px;color:var(--muted);font-weight:600}
 .kpi b{display:block;font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-top:2px}
 .kpi .delta{font-size:11px;font-weight:700;margin-top:3px;display:inline-flex;align-items:center;gap:3px}
-.kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--muted)}
+.kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--gold)}
 .kpi .spark{display:block;width:60px!important;max-width:60px;height:34px!important;max-height:34px;flex:0 0 auto}
 .kpi .miniring{width:44px;height:44px;border-radius:50%;padding:5px;flex:0 0 auto;
   background:conic-gradient(var(--ring-c,var(--green)) calc(var(--pct,0)*1%),#eef4ee 0)}
@@ -865,7 +865,13 @@ function applyCustom(){preset='';from=$('fromD').value||null;to=$('toD').value||
 Chart.defaults.color='#8d8577';Chart.defaults.borderColor='#eef0f5';
 Chart.defaults.font.family="-apple-system,'Segoe UI',Inter,sans-serif";
 const charts={};
-function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
+/* Chart.js throws "Canvas is already in use" if a chart is still attached
+   to the canvas -- our own charts{} bookkeeping only knows about charts WE
+   created, so it misses one created by something else (e.g. the legacy
+   revenue.js hero-chart patch, which also draws on #chHero). Chart.getChart()
+   asks Chart.js itself who currently owns the canvas, so this destroys
+   whatever's actually there, not just what we remember creating. */
+function mkChart(id,cfg){const el=$(id);if(!el)return;const existing=charts[id]||Chart.getChart(el);if(existing)existing.destroy();charts[id]=new Chart(el,cfg);}
 /* vibrant, brand-leaning chart palette -- money stays the same green used
    everywhere else in the app; everything else moves from the old muted
    olive/tan set to punchier blue/purple/pink so charts read at a glance
@@ -941,12 +947,17 @@ async function loadDashboard(){
   $('railAvg').textContent=fmt$(k.avgPayment);
   $('railLtv').textContent=fmt$(k.ltv);
   $('railNew').textContent=fmtN(k.newClients);
+  // trend arrow: green ▲ trending up, red ▼ trending down, gold ▬ basically
+  // flat (within 0.5%) -- so "no real change" reads as neutral instead of
+  // a false green/red signal.
   const setDelta=(id,cur,prev)=>{
     const el=$(id); if(!el)return;
     if(prev==null||prev<=0){ el.textContent=''; el.className='delta'; return; }
     const pct=Math.round((cur-prev)/prev*1000)/10;
-    el.innerHTML=`${pct>=0?'▲':'▼'} ${Math.abs(pct)}% vs previous period`;
-    el.className='delta '+(pct>=0?'up':'down');
+    const dir=Math.abs(pct)<0.5?'flat':(pct>=0?'up':'down');
+    const arrow=dir==='flat'?'▬':(dir==='up'?'▲':'▼');
+    el.innerHTML=`${arrow} ${Math.abs(pct)}% vs previous period`;
+    el.className='delta '+dir;
   };
   setDelta('railLifetimeDelta',k.revenueTotal,k.prevRevenue);
   setDelta('railAvgDelta',k.avgPayment,k.prevAvgPayment);
