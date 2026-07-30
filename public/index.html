@@ -74,19 +74,30 @@ header h1{font-size:19px;margin:0;font-weight:700}
 /* gradient KPI stat cards -- the "at a glance" headline numbers, in
    Tiffany's brand colors (pink/rose) plus a couple of complementary
    accents so four in a row don't read as one flat block. */
-.kpirow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;
-  box-shadow:0 1px 3px rgba(20,20,30,.04);display:flex;align-items:center;justify-content:space-between;gap:10px}
-.kpi>div{display:flex;flex-direction:column}
+/* minmax(0,1fr), not plain 1fr -- without the 0 minimum, a grid track
+   sizes to its content's max-content width, and a Chart.js canvas
+   (which carries its own width/height attributes independent of CSS)
+   can blow a track out far past the viewport, shoving the other three
+   cards off-screen to the right. min-width:0 on the card itself and a
+   hard max-width on the sparkline close the same hole from the other
+   side. */
+.kpirow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-top-width:3px;border-top-style:solid;border-radius:16px;padding:16px 18px;
+  box-shadow:0 1px 3px rgba(20,20,30,.04);display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;overflow:hidden}
+.kpi>div{display:flex;flex-direction:column;min-width:0}
 .kpi .ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:10px;flex:0 0 auto}
 .kpi .l{font-size:11px;color:var(--muted);font-weight:600}
 .kpi b{display:block;font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-top:2px}
 .kpi .delta{font-size:11px;font-weight:700;margin-top:3px;display:inline-flex;align-items:center;gap:3px}
 .kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--muted)}
-.kpi .spark{width:60px;height:34px;flex:0 0 auto}
+.kpi .spark{display:block;width:60px!important;max-width:60px;height:34px!important;max-height:34px;flex:0 0 auto}
+.kpi.pink{border-top-color:#e4157f}
 .kpi.pink .ico{background:var(--pink-soft);color:#c2185b}
+.kpi.purple{border-top-color:#7c3aed}
 .kpi.purple .ico{background:#ece5ff;color:#7c3aed}
+.kpi.blue{border-top-color:#2563eb}
 .kpi.blue .ico{background:var(--blue-soft);color:#2563eb}
+.kpi.dark{border-top-color:var(--green)}
 .kpi.dark .ico{background:var(--green-soft);color:var(--green)}
 /* progress ring -- a lightweight donut gauge (conic-gradient, no chart
    library needed) for the handful of "% of something" figures. */
