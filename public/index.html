@@ -123,6 +123,13 @@ h3.cardtitle .sub{display:block}
 .hero .note{color:var(--muted);font-size:12.5px}
 .hero .note b.up{color:var(--green)} .hero .note b.down{color:var(--red)}
 .hero .cwrap{height:190px;margin-top:14px}
+/* thinner variant -- now that MyFreeScoreNow sits above it (parallel to
+   the KPI row) instead of beside it, this card doesn't need to carry as
+   much vertical weight. */
+.card.hero.thin{padding-top:16px;padding-bottom:14px}
+.card.hero.thin .cwrap{height:120px;margin-top:10px}
+.card.hero.thin .big{font-size:38px}
+.card.hero.thin .big sup{vertical-align:19px;font-size:19px}
 .rail{border-left:1px solid var(--line);padding-left:20px;display:flex;flex-direction:column;justify-content:space-around}
 .rail .item{display:flex;gap:11px;align-items:flex-start;padding:8px 0}
 .rail .ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--green-soft)}
@@ -309,14 +316,21 @@ section.view{display:none} section.view.on{display:block}
 
   <!-- ================= DASHBOARD ================= -->
   <section class="view on" id="view-dash">
-    <div class="kpirow">
-      <div class="kpi pink"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>
-      <div class="kpi purple"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b><span class="delta" id="railAvgDelta"></span></div></div>
-      <div class="kpi blue"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b><span class="delta" id="railLtvDelta"></span></div></div>
-      <div class="kpi dark"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div></div>
-    </div>
     <div class="grid" style="grid-template-columns:1.55fr 1fr">
-      <div class="card hero">
+      <div class="kpirow" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:0">
+        <div class="kpi pink"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>
+        <div class="kpi purple"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b><span class="delta" id="railAvgDelta"></span></div></div>
+        <div class="kpi blue"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b><span class="delta" id="railLtvDelta"></span></div></div>
+        <div class="kpi dark"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div></div>
+      </div>
+      <div class="card moneycard">
+        <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:20px;width:20px;border-radius:5px;vertical-align:-4px;margin-right:6px">MyFreeScoreNow — affiliate gap</h3>
+        <div class="cardsub">Clients not enrolled under her affiliate link</div>
+        <div id="affiliateGap" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr;margin-top:14px">
+      <div class="card hero thin">
         <div>
           <div style="display:flex;gap:10px;align-items:center">
             <span class="eyebrow" id="heroLabel">COLLECTED</span>
@@ -326,11 +340,6 @@ section.view{display:none} section.view.on{display:block}
           <div class="note" id="heroNote">—</div>
           <div class="cwrap"><canvas id="chHero"></canvas></div>
         </div>
-      </div>
-      <div class="card moneycard">
-        <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:20px;width:20px;border-radius:5px;vertical-align:-4px;margin-right:6px">MyFreeScoreNow — affiliate gap</h3>
-        <div class="cardsub">Clients not enrolled under her affiliate link</div>
-        <div id="affiliateGap" style="margin-top:10px"></div>
       </div>
     </div>
 
