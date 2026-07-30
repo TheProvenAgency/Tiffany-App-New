@@ -144,9 +144,26 @@ test('an employee may reach the Deal Production routes', () => {
 
 test('an employee is denied the money and admin routes', () => {
   for (const p of ['/api/dashboard', '/api/config', '/api/clients', '/api/pipeline',
-                   '/api/reactivation', '/api/tasks', '/api/social']) {
+                   '/api/reactivation', '/api/social']) {
     assert.equal(auth.canAccess('employee', 'GET', p), false, `employee must not reach ${p}`);
   }
+});
+
+test('an employee may use Follow-Ups (a shared team to-do list, not scoped per user)', () => {
+  assert.ok(auth.canAccess('employee', 'GET', '/api/tasks'));
+  assert.ok(auth.canAccess('employee', 'POST', '/api/tasks'));
+  assert.ok(auth.canAccess('employee', 'PATCH', '/api/tasks/t1'));
+  assert.ok(auth.canAccess('employee', 'DELETE', '/api/tasks/t1'));
+  assert.ok(auth.canAccess('employee', 'GET', '/api/tasks/t1/notes'));
+  assert.ok(auth.canAccess('employee', 'POST', '/api/tasks/t1/notes'));
+  assert.ok(auth.canAccess('employee', 'DELETE', '/api/task-notes/n1'));
+});
+
+test('an employee may read the login directory (for assignee/@mention lookups) but not manage it', () => {
+  assert.ok(auth.canAccess('employee', 'GET', '/api/users'));
+  assert.equal(auth.canAccess('employee', 'POST', '/api/users'), false);
+  assert.equal(auth.canAccess('employee', 'PATCH', '/api/users/u1'), false);
+  assert.equal(auth.canAccess('employee', 'DELETE', '/api/users/u1'), false);
 });
 
 test('an employee is denied the bulk production overwrite', () => {

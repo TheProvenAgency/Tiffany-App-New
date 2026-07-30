@@ -39,16 +39,18 @@
   // The sidebar is a two-tier icon-rail + expandable-panel: an icon rail
   // (.railbtn, one per group) always visible on the far left, plus a panel
   // of grouped .navgroup containers (Overview/Clients/Production/Finance/
-  // Marketing/Account). An employee still gets only Deal Production, so
-  // this has to hide every button/rail-icon across every group except
-  // Production's, not just the one #nav held back when the sidebar was a
-  // single flat list.
+  // Marketing/Account). An employee gets Deal Production and Follow-Ups
+  // (both live under Production, and both are in EMPLOYEE_API -- see
+  // lib/auth.js), so this has to hide every button/rail-icon across every
+  // group except those two, not just the one #nav held back when the
+  // sidebar was a single flat list.
+  var EMPLOYEE_NAV_BTNS = ['pvNavBtn', 'fuNavBtn'];
   function gateNav() {
     var prodBtn = document.getElementById('pvNavBtn');
     if (!prodBtn) return false;
 
     Array.prototype.forEach.call(document.querySelectorAll('.navgroup button'), function (b) {
-      if (b.id !== 'pvNavBtn') b.style.display = 'none';
+      if (EMPLOYEE_NAV_BTNS.indexOf(b.id) === -1) b.style.display = 'none';
     });
     // A group heading with nothing left visible under it just reads as a
     // dangling label ("Finance" over a blank box) -- hide those too.

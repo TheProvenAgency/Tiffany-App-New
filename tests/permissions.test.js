@@ -95,6 +95,40 @@ test('an employee cannot create users', async () => {
   assert.equal(r.status, 403);
 });
 
+test('an employee can read the login directory, for the assignee dropdown', async () => {
+  const r = await req('/api/users', { cookie: employeeCookie });
+  assert.equal(r.status, 200);
+  const list = await r.json();
+  assert.ok(Array.isArray(list));
+  assert.ok(!('password' in (list[0] || {})), 'no password field leaks to an employee');
+});
+
+test('an employee can create, note, and complete a Follow-Ups task', async () => {
+  const created = await req('/api/tasks', {
+    method: 'POST', cookie: employeeCookie,
+    body: { title: 'employee follow-up' }
+  });
+  assert.equal(created.status, 200);
+  const task = await created.json();
+
+  const noted = await req(`/api/tasks/${task.id}/notes`, {
+    method: 'POST', cookie: employeeCookie,
+    body: { text: 'left a note as an employee' }
+  });
+  assert.equal(noted.status, 200);
+
+  const listed = await req(`/api/tasks/${task.id}/notes`, { cookie: employeeCookie });
+  assert.equal(listed.status, 200);
+  const notes = await listed.json();
+  assert.equal(notes.length, 1);
+  assert.equal(notes[0].authorName, 'VA One');
+
+  const patched = await req(`/api/tasks/${task.id}`, {
+    method: 'PATCH', cookie: employeeCookie, body: { done: true }
+  });
+  assert.equal(patched.status, 200);
+});
+
 // ------------------------- admin still works -------------------------
 
 test('an admin reaches the dashboard and config', async () => {
