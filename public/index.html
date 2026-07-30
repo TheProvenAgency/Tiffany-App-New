@@ -349,7 +349,7 @@ section.view{display:none} section.view.on{display:block}
 <aside id="sidebar">
   <div class="navrail" id="navrail">
     <img class="brandmark" src="/logo.png" alt="MSFS">
-    <button class="railbtn on" data-g="ov" style="--rc:#ff2e9a" title="Overview" onclick="setNavGroup('ov')">▦</button>
+    <button class="railbtn on" data-g="ov" style="--rc:#ff2e9a" title="Overview" onclick="setNavGroup('ov')">⌂</button>
     <button class="railbtn" data-g="cl" style="--rc:#7c5cff" title="Clients" onclick="setNavGroup('cl')">◉</button>
     <button class="railbtn" data-g="pr" style="--rc:#2f8fd6" title="Production" onclick="setNavGroup('pr')">▤</button>
     <button class="railbtn" data-g="fi" style="--rc:#0e9e56" title="Finance" onclick="setNavGroup('fi')">$</button>
@@ -365,18 +365,19 @@ section.view{display:none} section.view.on{display:block}
   </div>
   <div class="sec" data-g="ov">Overview</div>
   <div class="nav navgroup on" data-g="ov" id="nav" style="--rc:#ff2e9a">
-    <button data-v="dash" class="on" onclick="showView('dash')"><span class="ico2" style="--ic:#ff2e9a">▦</span>Dashboard</button>
+    <button data-v="dash" class="on" onclick="showView('dash')"><span class="ico2" style="--ic:#ff2e9a">⌂</span>Dashboard</button>
   </div>
   <div class="sec" data-g="cl">Clients</div>
   <div class="nav navgroup" data-g="cl" style="--rc:#7c5cff">
     <button data-v="pipeline" onclick="showView('pipeline')"><span class="ico2" style="--ic:#7c5cff">⚲</span>Pipeline</button>
     <button data-v="clients" onclick="showView('clients')"><span class="ico2" style="--ic:#7c5cff">◉</span>Clients</button>
     <button data-v="react" onclick="showView('react')"><span class="ico2" style="--ic:#7c5cff">↻</span>Reactivation <span class="badge" id="reactBadge"></span></button>
-    <button data-v="tasks" onclick="showView('tasks')"><span class="ico2" style="--ic:#7c5cff">☰</span>Follow-Ups</button>
   </div>
   <!-- Deal Production + Credit Monitoring inject themselves here (production.js, mfsn.js) -->
   <div class="sec" data-g="pr">Production</div>
-  <div class="nav navgroup" data-g="pr" id="navProduction" style="--rc:#2f8fd6"></div>
+  <div class="nav navgroup" data-g="pr" id="navProduction" style="--rc:#2f8fd6">
+    <button data-v="tasks" onclick="showView('tasks')"><span class="ico2" style="--ic:#2f8fd6">☰</span>Follow-Ups</button>
+  </div>
   <!-- Revenue + Personal Finances inject themselves here (revenue.js, personal-finances.js) -- money, so green -->
   <div class="sec" data-g="fi">Finance</div>
   <div class="nav navgroup" data-g="fi" id="navFinance" style="--rc:#0e9e56"></div>
@@ -1155,7 +1156,7 @@ function openProspectsModal(){
 // Which group each base view belongs to -- production.js/mfsn.js/revenue.js/
 // personal-finances.js add their own views ('production','mfsn','rev',
 // 'personal') and call setNavGroup themselves since they load after this.
-const VIEW_GROUP={dash:'ov',pipeline:'cl',clients:'cl',react:'cl',tasks:'cl',social:'ma',tickets:'ac'};
+const VIEW_GROUP={dash:'ov',pipeline:'cl',clients:'cl',react:'cl',tasks:'pr',social:'ma',tickets:'ac'};
 // Switches which group's panel is visible (and lights the matching rail
 // icon). expand=true also un-collapses the panel if it was closed -- used
 // when the user deliberately clicks a rail icon; navigation-driven calls
