@@ -444,17 +444,34 @@ section.view{display:none} section.view.on{display:block}
         <div class="kpi g4"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div><canvas class="spark" id="sparkNew"></canvas></div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="hero" gs-w="12" gs-h="6"><div class="grid-stack-item-content">
-        <div class="card hero thin">
-          <div>
-            <div style="display:flex;gap:10px;align-items:center">
-              <span class="eyebrow" id="heroLabel">COLLECTED</span>
-              <span class="badge-soft badge-ok" id="heroBadge">FANBASIS LIVE</span>
+      <!-- "Total collected" moved to the Revenue page under Finance -- see
+           revenue.js sectionHTML (its ids are unchanged so loadDashboard()
+           below still finds and fills it in from there). In its place: the
+           Revenue page's income KPI band and Sales trend chart, minus
+           Payment methods, now also live here -- see revenue.js for the
+           chart wiring on #dashTrend and the shared #rvGran/#rvGranDash
+           tab-sync logic. -->
+      <div class="grid-stack-item" gs-id="rev-kpis" gs-w="12" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpis">
+          <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div></div>
+          <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div></div>
+          <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div></div>
+          <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div></div>
+          <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div></div>
+        </div>
+      </div></div>
+
+      <div class="grid-stack-item" gs-id="rev-trend" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
+        <div class="rv-card">
+          <div class="rv-head">
+            <div><h3>Sales trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>
+            <div class="rv-tabs" id="rvGranDash">
+              <button data-g="daily">Daily</button>
+              <button data-g="weekly">Weekly</button>
+              <button data-g="monthly" class="on">Monthly</button>
             </div>
-            <div class="big" id="heroAmt"><sup>$</sup>0</div>
-            <div class="note" id="heroNote">—</div>
-            <div class="cwrap"><canvas id="chHero"></canvas></div>
           </div>
+          <div class="rv-wrap"><canvas id="dashTrend"></canvas></div>
         </div>
       </div></div>
 
@@ -1831,7 +1848,13 @@ let dashGridStack=null, dashLayoutEditing=false, dashLayoutSaveTimer=null;
 // whatever size it was created at. rAF so it reads the box after GridStack
 // (and the browser) have actually applied the new layout, not mid-drag.
 function resizeDashCharts(){
-  requestAnimationFrame(()=>{ for(const id in charts){ const c=charts[id]; if(c) c.resize(); } });
+  requestAnimationFrame(()=>{
+    for(const id in charts){ const c=charts[id]; if(c) c.resize(); }
+    // #dashTrend (the Sales-trend card moved onto the Dashboard from
+    // Revenue) is drawn and owned by revenue.js's own chart registry, not
+    // this file's -- give it the same resize-on-drag treatment.
+    if(window.__resizeExtraCharts) window.__resizeExtraCharts();
+  });
 }
 function initDashGrid(){
   const el=$('dashGrid'); if(!el||dashGridStack)return;

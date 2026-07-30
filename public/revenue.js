@@ -104,32 +104,64 @@ var css=''+
 '#view-rev .rv-sub{color:var(--muted);font-size:12.5px;margin:2px 0 16px;max-width:1000px;line-height:1.6}'+
 '#view-rev .rv-band{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6f6857;margin:22px 0 12px;display:flex;align-items:center;gap:9px}'+
 '#view-rev .rv-band .ic{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px}'+
-'#view-rev .rv-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}'+
-'#view-rev .rv-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;border-top:3px solid var(--line)}'+
-'#view-rev .rv-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
-'#view-rev .rv-kpi .v{font-size:23px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
-'#view-rev .rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
-'#view-rev .rv-kpi.hero{background:var(--ink);border-top-color:#b98a2f}#view-rev .rv-kpi.hero .l{color:#c7c0b4}#view-rev .rv-kpi.hero .v{color:#fff;font-size:25px}#view-rev .rv-kpi.hero .s{color:#a49c8e}'+
+/* .rv-kpi/.rv-card/.rv-head/.rv-wrap/.rv-tabs are left unscoped (no
+   "#view-rev " prefix) on purpose -- the Sales-trend card and the income
+   KPI band now also render as Dashboard grid-stack cards (see index.html
+   #dashGrid, gs-id="rev-kpis"/"rev-trend"), so the same rules have to
+   apply outside #view-rev too. */
+'.rv-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}'+
+'.rv-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;border-top:3px solid var(--line)}'+
+'.rv-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
+'.rv-kpi .v{font-size:23px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
+'.rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
+'.rv-kpi.hero{background:var(--ink);border-top-color:#b98a2f}.rv-kpi.hero .l{color:#c7c0b4}.rv-kpi.hero .v{color:#fff;font-size:25px}.rv-kpi.hero .s{color:#a49c8e}'+
 '#view-rev .rv-grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}'+
 '#view-rev .rv-grid11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}'+
-'#view-rev .rv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
-'#view-rev .rv-card h3{margin:0 0 3px;font-size:14px}#view-rev .rv-card .cap{color:var(--muted);font-size:12px;margin:0 0 12px}'+
-'#view-rev .rv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}'+
-'#view-rev .rv-wrap{position:relative;height:280px}#view-rev .rv-wrap.sm{height:230px}'+
-'#view-rev .rv-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}'+
-'#view-rev .rv-tabs button{border:none;background:var(--card);padding:6px 15px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}'+
-'#view-rev .rv-tabs button:last-child{border-right:none}#view-rev .rv-tabs button.on{background:var(--ink);color:#fff}'+
+'.rv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
+'.rv-card h3{margin:0 0 3px;font-size:14px}.rv-card .cap{color:var(--muted);font-size:12px;margin:0 0 12px}'+
+'.rv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}'+
+'.rv-wrap{position:relative;height:280px}.rv-wrap.sm{height:230px}'+
+'.rv-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}'+
+'.rv-tabs button{border:none;background:var(--card);padding:6px 15px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}'+
+'.rv-tabs button:last-child{border-right:none}.rv-tabs button.on{background:var(--ink);color:#fff}'+
 '#view-rev .rv-mrow{display:grid;grid-template-columns:1.1fr 1fr 74px;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-mrow:last-child{border-bottom:none}'+
 '#view-rev .rv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle}'+
 '#view-rev .rv-mn{font-weight:700;font-size:13px}#view-rev .rv-ma{font-variant-numeric:tabular-nums;font-weight:700}'+
 '#view-rev .rv-prog{height:8px;background:#efe9df;border-radius:6px;overflow:hidden}#view-rev .rv-prog>i{display:block;height:100%;border-radius:6px}'+
 '#view-rev .rv-disp{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-disp:last-child{border-bottom:none}'+
 '#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:#8a6516;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
-'#view-rev .rv-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}';
+'#view-rev .rv-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}'+
+// sizing for the two cards when they live inside a GridStack item on the
+// Dashboard instead of the free-flowing Revenue page
+'.grid-stack-item-content>.rv-card{height:100%;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column}'+
+'.grid-stack-item-content>.rv-card>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important}'+
+'.grid-stack-item-content>.rv-kpis{height:100%}'+
+// the relocated "Total collected" hero card (moved out of #dashGrid, see
+// index.html) needs the flex rule that used to key off
+// .grid-stack-item-content>.card.hero -- it's a plain block on the Revenue
+// page now, so give it an equivalent here instead.
+'#view-rev .card.hero{margin-bottom:16px}';
 
-/* ---------- section shell ---------- */
+/* ---------- section shell ----------
+   The "Total collected" hero card used to live on the Dashboard
+   (#dashGrid, gs-id="hero"); it's moved here, under the Revenue page's own
+   heading, per request. Its ids (heroLabel/heroBadge/heroAmt/heroNote/
+   chHero) are unchanged, so index.html's loadDashboard() -- which runs on
+   a timer regardless of which view is showing, see its boot section --
+   still finds and fills it in exactly as before. */
 var sectionHTML=''+
 '<div class="rv-sub"><b>Revenue.</b> Total business income — Commas sales plus MyFreeScoreNow affiliate commissions — by day, week and month, with the full payment-method mix.</div>'+
+'<div class="card hero thin">'+
+  '<div>'+
+    '<div style="display:flex;gap:10px;align-items:center">'+
+      '<span class="eyebrow" id="heroLabel">COLLECTED</span>'+
+      '<span class="badge-soft badge-ok" id="heroBadge">FANBASIS LIVE</span>'+
+    '</div>'+
+    '<div class="big" id="heroAmt"><sup>$</sup>0</div>'+
+    '<div class="note" id="heroNote">—</div>'+
+    '<div class="cwrap"><canvas id="chHero"></canvas></div>'+
+  '</div>'+
+'</div>'+
 '<div id="rvBody"></div>';
 
 function render(){
@@ -186,7 +218,7 @@ function render(){
   '<div class="rv-foot">Commas sales and MyFreeScoreNow affiliate commissions, updated Jul 28, 2026.</div>';
   document.getElementById('rvBody').innerHTML=html;
   drawTrend(); drawMethods(); drawCust(); drawMf(); drawPeriods();
-  document.querySelectorAll('#rvGran button').forEach(function(b){b.onclick=function(){gran=b.getAttribute('data-g');document.querySelectorAll('#rvGran button').forEach(function(x){x.classList.toggle('on',x===b);});drawTrend();};});
+  wireGranTabs('rvGran');
 }
 function methodRows(){
   return METHODS.map(function(m){
@@ -203,11 +235,36 @@ function trendData(){
   if(gran==='weekly')return {labels:CO_WEEKLY.labels,vals:CO_WEEKLY.rev,color:C.purple,fill:'rgba(107,91,208,.12)'};
   return {labels:CO_MONTHLY.labels,vals:CO_MONTHLY.rev,color:C.blue,fill:'rgba(53,99,168,.12)'};
 }
-function drawTrend(){
-  if(!window.Chart)return;var el=document.getElementById('rvTrend');if(!el)return;killChart('t');
+// targetId lets the same Sales-trend chart draw into either the Revenue
+// page's own canvas (#rvTrend) or the copy that now also lives on the
+// Dashboard (#dashTrend, see index.html gs-id="rev-trend") -- whichever of
+// the two is present and asked for.
+function drawTrend(targetId){
+  targetId=targetId||'rvTrend';
+  if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
   var d=trendData();
-  charts.t=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?3:0,pointBackgroundColor:d.color,borderWidth:2.5}]},
+  charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?3:0,pointBackgroundColor:d.color,borderWidth:2.5}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:12}}}}});
+}
+// redraws whichever of the two Sales-trend canvases currently exist in the
+// document -- the Revenue page's isn't in the DOM unless that view has
+// been rendered at least once, the Dashboard's is always there.
+function redrawAllTrends(){
+  ['rvTrend','dashTrend'].forEach(function(id){ if(document.getElementById(id)) drawTrend(id); });
+}
+// wires a set of Daily/Weekly/Monthly tab buttons (there are now two --
+// one on the Revenue page, one on the Dashboard card); clicking either
+// updates the single shared `gran`, syncs the .on state across BOTH tab
+// sets, and redraws both trend charts, so the two copies never disagree.
+function wireGranTabs(containerId){
+  var c=document.getElementById(containerId); if(!c)return;
+  c.querySelectorAll('button').forEach(function(b){
+    b.onclick=function(){
+      gran=b.getAttribute('data-g');
+      document.querySelectorAll('.rv-tabs button').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-g')===gran);});
+      redrawAllTrends();
+    };
+  });
 }
 function drawMethods(){
   if(!window.Chart)return;var el=document.getElementById('rvMethods');if(!el)return;killChart('m');
@@ -265,6 +322,16 @@ function initRV(){
       }
     };
   }
+  // #dashTrend (Sales trend, moved onto the Dashboard grid -- see
+  // index.html gs-id="rev-trend") is static HTML present from page load,
+  // not something render() builds, so it needs its own one-time draw +
+  // tab wiring here instead of waiting for the Revenue view to be opened.
+  drawTrend('dashTrend');
+  wireGranTabs('rvGranDash');
+  // resizeDashCharts() in index.html only knows about its own chart
+  // registry; this lets it also nudge the chart this file owns after a
+  // GridStack drag/resize.
+  window.__resizeExtraCharts=function(){ if(charts.dashTrend) charts.dashTrend.resize(); };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
 
