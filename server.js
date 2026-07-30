@@ -721,7 +721,19 @@ app.get('/api/dashboard', async (req, res) => {
     const byProductAllTime = getProductBreakdownAllTime(payments);
     const mentorshipBuyersAllTime = getMentorshipBuyersAllTime(payments);
     const mentorshipRow = byProductAllTime.find(p => /mentorship/i.test(p.key)) || { count: 0, revenue: 0 };
-    const mentorshipRangeEvents = paysIn.filter(p => /mentorship/i.test(p.product || ''));
+    // "range" means "within the selected date range" -- and since almost
+    // all real mentorship money lives in the historical Commas snapshot
+    // (the live Fanbasis feed only just started carrying per-event data),
+    // pull from both: live payment events tagged mentorship, plus
+    // historical buyers whose sale date falls inside the selected range.
+    // Dedupe by email so a buyer who's both in the snapshot AND has since
+    // shown up as a live event isn't double-counted.
+    const mentorshipRangeEvents = [
+      ...paysIn.filter(p => /mentorship/i.test(p.product || '')),
+      ...mentorshipBuyersAllTime.filter(b => b.date && inRange(b.date, from, to) &&
+        !paysIn.some(p => p.email && b.email && p.email.toLowerCase() === b.email.toLowerCase() && /mentorship/i.test(p.product || '')))
+        .map(b => ({ amount: b.amount, at: b.date }))
+    ];
 
     // churn recency for inactive clients
     const now = new Date();
