@@ -1136,7 +1136,56 @@ function checkSecret(req, res) {
   res.status(401).json({ error: 'bad secret' });
   return false;
 }
-app.post('/webhooks/fanbasis', (req, res) => {
+// Given a sale, make sure the payer exists as a GHL contact (status:active)
+// and has a Deal Production record in "Onboarding" -- so a payment shows up
+// as a tracked client here without depending on a second, separate
+// Fanbasis->GHL Zap (that hop is exactly what went quiet on 2026-07-20).
+// Idempotent: createContact's own duplicate detection, plus a ghlId/email
+// check against the current Deal Production roster, both no-op on a repeat
+// call for the same person instead of creating a second copy.
+async function ensureClientFromPayment(ev) {
+  const cfg = store.getConfig();
+  const parts = (ev.name || '').trim().split(/\s+/).filter(Boolean);
+  const firstName = parts[0] || (ev.email ? ev.email.split('@')[0] : 'New');
+  const lastName = parts.slice(1).join(' ') || undefined;
+
+  const r = await ghl.createContact(cfg, {
+    firstName, lastName, email: ev.email || null, phone: ev.phone || null,
+    tags: ['status:active']
+  });
+
+  let contact;
+  if (r.duplicate) {
+    // already a GHL contact -- pull the real record so Deal Production gets
+    // an actual name/round/deal instead of guessing from the webhook body
+    const clients = await getClients();
+    contact = clients.find(c => c.id === r.existingId)
+      || { id: r.existingId, name: ev.name || ev.email, email: ev.email, phone: ev.phone, round: null, deal: null };
+  } else {
+    contact = r.contact;
+    store.clearCache(); // brand-new contact -- next /api/clients read should see it
+  }
+
+  const prod = readProd() || [];
+  const already = prod.some(c => c.ghlId === contact.id
+    || (ev.email && c.email && c.email.toLowerCase() === ev.email.toLowerCase()));
+  if (!already) {
+    const rec = makeProdRecordFromGhl(contact);
+    rec.stage = 'Onboarding'; // a brand-new payer always starts here, regardless of any stale round/deal tag
+    rec.notes = [{
+      when: new Date().toISOString().slice(0, 10), who: 'System',
+      text: `Auto-added from a Commas/Fanbasis payment ($${ev.amount}${ev.product ? ' · ' + ev.product : ''}) — verify package, stage, and documents.`
+    }];
+    writeProd(prod.concat([rec]));
+  }
+  return { ghlId: contact.id, duplicate: !!r.duplicate, addedToProduction: !already };
+}
+
+// FanBasis New Sale -> here. Same handler under /webhooks/commas too, since
+// that's what Tiffany's team actually calls this payment platform day to
+// day -- point a new Zap or n8n workflow at whichever name reads clearer,
+// same secret, identical behavior either way.
+async function handlePaymentWebhook(req, res) {
   if (!checkSecret(req, res)) return;
   const b = req.body || {};
   const ev = {
@@ -1145,6 +1194,7 @@ app.post('/webhooks/fanbasis', (req, res) => {
     amount: parseFloat(String(b.amount || b.total || b.price || '').replace(/[$,]/g, '')) || 0,
     email: (b.email || b.customer_email || '').toLowerCase(),
     name: b.name || b.customer_name || '',
+    phone: b.phone || b.customer_phone || '',
     product: b.product || b.product_name || b.offer || ''
   };
   // dedupe: same email + amount + same day = same sale (protects webhook+backfill overlap)
@@ -1153,8 +1203,19 @@ app.post('/webhooks/fanbasis', (req, res) => {
     && Math.abs((e.amount || 0) - ev.amount) < 0.01 && localDay(e.at || e.receivedAt) === day);
   if (dup) return res.json({ ok: true, id: dup.id, deduped: true });
   const saved = store.addEvent(ev);
-  res.json({ ok: true, id: saved.id });
-});
+
+  let client = null;
+  // READ_ONLY (dev-against-real-keys safety switch) skips the GHL write,
+  // same as every other live write in this file; the payment itself is
+  // still recorded either way.
+  if (liveMode() && !READ_ONLY && (ev.email || ev.phone)) {
+    try { client = await ensureClientFromPayment(ev); }
+    catch (e) { console.error('payment webhook: client/production sync failed:', e.message); }
+  }
+  res.json({ ok: true, id: saved.id, client });
+}
+app.post('/webhooks/fanbasis', handlePaymentWebhook);
+app.post('/webhooks/commas', handlePaymentWebhook);
 
 // admin cleanup: remove payment events by email (test data etc.) — login-gated like all /api routes
 app.post('/api/events/cleanup', (req, res) => {

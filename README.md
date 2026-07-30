@@ -45,11 +45,27 @@ The Test button names the real problem instead of guessing. Common results:
 3. Get the **Page ID** and the **Instagram Business User ID** (Graph Explorer: `me/accounts` then `{page-id}?fields=instagram_business_account`).
 4. Paste all three in Settings → **Test Meta connection**. The app snapshots follower counts every 6 hours to build the growth chart.
 
-### Fanbasis payments (per-day revenue history)
-Fanbasis has no public API — but it has Zapier (already authorized as msfinancialsolutions@outlook.com).
-Add a second Zap: **FanBasis New Sale → Webhooks by Zapier (POST)** to
+### Fanbasis / Commas payments (per-day revenue history + auto-onboarding)
+Fanbasis (a.k.a. Commas — same payment platform, whichever name reads clearer
+in your Zap/n8n) has no public API, but it has Zapier (already authorized as
+msfinancialsolutions@outlook.com) or works fine from n8n's HTTP node.
+Point a Zap or workflow — **New Sale → Webhooks (POST)** — at either of these
+(identical behavior, just two names for the same route):
 `https://YOUR-APP.onrender.com/webhooks/fanbasis?secret=YOUR_SECRET`
-with fields: `email`, `name`, `amount`, `product`, `sale_date`. Every sale then lands in the dashboard within seconds. (Until that history builds up, the revenue chart approximates from GHL last-payment data — flagged "approx" on the KPI.)
+`https://YOUR-APP.onrender.com/webhooks/commas?secret=YOUR_SECRET`
+with fields: `email`, `name`, `phone` (optional), `amount`, `product`, `sale_date`.
+
+Every sale lands in the dashboard within seconds — and, in live mode, the
+payer is now also created as a GoHighLevel contact (`status:active`) and
+dropped into Deal Production under **Onboarding**, automatically, no second
+Fanbasis→GHL Zap required. It's idempotent: a repeat sale for the same
+person (GHL's own duplicate-contact detection, plus a check against the
+existing Deal Production roster) just records the additional payment
+without creating a second contact or a second Deal Production row. If GHL
+write access isn't configured (demo mode) or `READ_ONLY=1` is set, only the
+payment event itself is recorded, same as before. (Until 20+ payments have
+landed, the revenue chart approximates from GHL last-payment data — flagged
+"approx" on the KPI.)
 
 ### DisputeFox dispute activity
 DisputeFox also exposes Zapier only (Settings → Email/SMS/Zapier → Zapier Configuration → Generate key).
