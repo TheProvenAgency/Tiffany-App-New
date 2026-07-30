@@ -227,29 +227,13 @@ function mfTrendBadge(vals){
   return {text:(up?'▲ ':'▼ ')+Math.abs(pct2).toFixed(0)+'%', up:up};
 }
 function initMFDashKpis(){
-  if(!document.getElementById('mfkYtd'))return;
-  document.getElementById('mfkYtd').textContent=money0(M.ytd);
-  document.getElementById('mfkLatest').textContent=money0(M.latestMonth);
+  if(!document.getElementById('mfkEnrolled'))return;
   document.getElementById('mfkEnrolled').textContent=M.enrolled.toLocaleString();
   document.getElementById('mfkEnrolledSub').textContent=M.active+' active';
   document.getElementById('mfkUpgraded').textContent=M.upgraded.toLocaleString();
   document.getElementById('mfkNewActives').textContent=M.newActives.toLocaleString();
   document.getElementById('mfkNewActivesSub').textContent='of '+M.targetActives+' target';
   if(!window.Chart)return;
-  var defs=[
-    {id:'mfkSparkYtd', trendId:'mfkTrendYtd', labels:COMM_TREND.labels, vals:COMM_TREND.vals, color:C.ink},
-    {id:'mfkSparkLatest', trendId:'mfkTrendLatest', labels:COMM_TREND.labels.slice(-6), vals:COMM_TREND.vals.slice(-6), color:C.gold}
-  ];
-  defs.forEach(function(d){
-    var el=document.getElementById(d.id); if(!el)return;
-    killChart(d.id);
-    charts[d.id]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,borderWidth:2,tension:.4,fill:false}]},options:mfSparkOpts('monthly commissions')});
-    var badge=mfTrendBadge(d.vals), badgeEl=document.getElementById(d.trendId);
-    if(badgeEl){
-      if(badge){ badgeEl.textContent=badge.text; badgeEl.className='rvktrend '+(badge.up?'up':'down'); }
-      else { badgeEl.textContent=''; }
-    }
-  });
   // Enrolled/Upgraded/New-actives don't have a monthly history to spark --
   // they're a portal snapshot, not a series -- but each one IS really two
   // real numbers (the headline count plus its natural complement), so a
@@ -315,7 +299,7 @@ function initMFAll(){
   // sparklines get re-measured after a GridStack drag/resize too, no
   // matter which of mfsn.js/revenue.js's init runs first.
   var _prev=window.__resizeExtraCharts;
-  var _dashKeys={mfkSparkYtd:1,mfkSparkLatest:1,mfkDonutEnrolled:1,mfkDonutUpgraded:1,mfkDonutNewActives:1};
+  var _dashKeys={mfkDonutEnrolled:1,mfkDonutUpgraded:1,mfkDonutNewActives:1};
   window.__resizeExtraCharts=function(){ if(_prev)_prev(); for(var k in charts){ if(charts[k]&&_dashKeys[k]) charts[k].resize(); } };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initMFAll);else initMFAll();
