@@ -92,14 +92,22 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .kpi .delta{font-size:11px;font-weight:700;margin-top:3px;display:inline-flex;align-items:center;gap:3px}
 .kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--muted)}
 .kpi .spark{display:block;width:60px!important;max-width:60px;height:34px!important;max-height:34px;flex:0 0 auto}
-.kpi.pink{border-top-color:#e4157f}
-.kpi.pink .ico{background:var(--pink-soft);color:#c2185b}
-.kpi.purple{border-top-color:#7c3aed}
-.kpi.purple .ico{background:#ece5ff;color:#7c3aed}
-.kpi.blue{border-top-color:#2563eb}
-.kpi.blue .ico{background:var(--blue-soft);color:#2563eb}
-.kpi.dark{border-top-color:var(--green)}
-.kpi.dark .ico{background:var(--green-soft);color:var(--green)}
+.kpi .miniring{width:44px;height:44px;border-radius:50%;padding:5px;flex:0 0 auto;
+  background:conic-gradient(var(--ring-c,var(--green)) calc(var(--pct,0)*1%),#eef4ee 0)}
+.kpi .miniring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+.kpi .miniring .hole b{font-size:10.5px;font-weight:800;color:var(--ink)}
+/* money-dashboard reference: every KPI card lives in the same green family
+   (green is money) instead of the old pink/purple/blue rainbow -- each card
+   just gets its own shade + a small chart so four cards in a row still read
+   as distinct at a glance. */
+.kpi.g1{border-top-color:#0e9e56}
+.kpi.g1 .ico{background:#dff7ea;color:#0e9e56}
+.kpi.g2{border-top-color:#0f9488}
+.kpi.g2 .ico{background:#dbf3f0;color:#0f9488}
+.kpi.g3{border-top-color:#65a30d}
+.kpi.g3 .ico{background:#eaf5d6;color:#65a30d}
+.kpi.g4{border-top-color:#166534}
+.kpi.g4 .ico{background:#dcf0e2;color:#166534}
 /* progress ring -- a lightweight donut gauge (conic-gradient, no chart
    library needed) for the handful of "% of something" figures. */
 .ring{width:92px;height:92px;border-radius:50%;padding:8px;flex:0 0 auto;
@@ -361,16 +369,16 @@ section.view{display:none} section.view.on{display:block}
     </div>
     <div class="grid-stack" id="dashGrid">
       <div class="grid-stack-item" gs-id="kpi-lifetime" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="kpi pink"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>
+        <div class="kpi g1"><div><div class="ico">◈</div><span class="l" id="railLifetimeSub">Lifetime collected</span><b id="railLifetime">—</b><span class="delta" id="railLifetimeDelta"></span></div><canvas class="spark" id="sparkLifetime"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="kpi-avg" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="kpi purple"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b><span class="delta" id="railAvgDelta"></span></div></div>
+        <div class="kpi g2"><div><div class="ico">▤</div><span class="l">Avg payment · per transaction</span><b id="railAvg">—</b><span class="delta" id="railAvgDelta"></span></div><canvas class="spark" id="sparkAvg"></canvas></div>
       </div></div>
       <div class="grid-stack-item" gs-id="kpi-ltv" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="kpi blue"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b><span class="delta" id="railLtvDelta"></span></div></div>
+        <div class="kpi g3"><div><div class="ico">◎</div><span class="l">LTV · per paying client</span><b id="railLtv">—</b><span class="delta" id="railLtvDelta"></span></div><div class="miniring" id="ltvRing" style="--pct:0"><div class="hole"><b id="ltvRingPct">0%</b></div></div></div>
       </div></div>
       <div class="grid-stack-item" gs-id="kpi-new" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="kpi dark"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div></div>
+        <div class="kpi g4"><div><div class="ico">✚</div><span class="l">New clients · joined in period</span><b id="railNew">—</b><span class="delta" id="railNewDelta"></span></div><canvas class="spark" id="sparkNew"></canvas></div>
       </div></div>
 
       <div class="grid-stack-item" gs-id="hero" gs-w="12" gs-h="6"><div class="grid-stack-item-content">
@@ -945,9 +953,23 @@ async function loadDashboard(){
   setDelta('railLtvDelta',k.ltv,k.prevLtv);
   setDelta('railNewDelta',k.newClients,k.prevNewClients);
   const s=d.series;const labels=x=>x.map(p=>p.label),vals=x=>x.map(p=>p.value);
-  mkChart('sparkLifetime',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:'#e4157f',
-    borderWidth:2,tension:.4,pointRadius:0,fill:false}]},options:{maintainAspectRatio:false,
+  // KPI rail mini-charts -- every card in its own green shade (g1..g4, see
+  // CSS) instead of the old pink/purple/blue mix, each paired with a small
+  // chart so the row reads like the reference money dashboard rather than
+  // four bare numbers.
+  mkChart('sparkLifetime',{type:'bar',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),backgroundColor:'#0e9e56',
+    borderRadius:2,barPercentage:.7}]},options:{maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+  mkChart('sparkAvg',{type:'line',data:{labels:labels(s.payments),datasets:[{data:vals(s.payments),borderColor:'#0f9488',
+    borderWidth:2,tension:.5,pointRadius:0,fill:false}]},options:{maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+  mkChart('sparkNew',{type:'bar',data:{labels:labels(s.newClients),datasets:[{data:vals(s.newClients),backgroundColor:'#166534',
+    borderRadius:2,barPercentage:.7}]},options:{maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+  const repeatPct=k.revenueTotal>0?Math.round((k.repeatRevenue||0)/k.revenueTotal*100):0;
+  $('ltvRing').style.setProperty('--pct',repeatPct);
+  $('ltvRing').style.setProperty('--ring-c','#65a30d');
+  $('ltvRingPct').textContent=repeatPct+'%';
   mkChart('chHero',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:GREEN,borderWidth:2,
     backgroundColor:c=>grad(c.chart.ctx,GREEN),fill:true,tension:.35,pointRadius:0,pointHitRadius:12}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.parsed.y)}}},
