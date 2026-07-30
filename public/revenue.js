@@ -426,7 +426,11 @@ function initRV(){
   // Sales-trend copy and the 5 KPI sparklines) after a GridStack
   // drag/resize, so they don't stay stretched/squished from whatever size
   // they were created at.
-  window.__resizeExtraCharts=function(){ for(var k in charts){ if(charts[k]) charts[k].resize(); } };
+  // Chain rather than overwrite: mfsn.js (loaded before this file, see
+  // index.html's script order) sets this same hook for its own Dashboard
+  // sparklines, and a straight assignment here would clobber that.
+  var _prevResizeExtra=window.__resizeExtraCharts;
+  window.__resizeExtraCharts=function(){ if(_prevResizeExtra)_prevResizeExtra(); for(var k in charts){ if(charts[k]) charts[k].resize(); } };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
 

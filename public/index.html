@@ -537,6 +537,29 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
+      <!-- MyFreeScoreNow — Affiliate Income: the same "Overview" figures
+           from the Credit Monitoring page's mf-kpis band (see mfsn.js),
+           split into 5 independent grid-stack-items so each one can be
+           moved/resized on its own, same treatment as the 5 income tiles
+           above. mfsn.js's initMFDashKpis() fills the numbers in and draws
+           the two sparklines from its own real M/COMM_TREND data -- nothing
+           here is hardcoded twice, the markup below is just the shell. -->
+      <div class="grid-stack-item" gs-id="mf-kpi-ytd" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi hero"><div class="l">MFSN commissions · YTD</div><div class="v" id="mfkYtd">—</div><div class="s">2026 affiliate income</div><span class="rvktrend" id="mfkTrendYtd"></span><canvas class="rvkspark" id="mfkSparkYtd"></canvas></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="mf-kpi-latest" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#f59e0b"><div class="l">Latest month</div><div class="v" id="mfkLatest">—</div><div class="s">most recent payout</div><span class="rvktrend" id="mfkTrendLatest"></span><canvas class="rvkspark" id="mfkSparkLatest"></canvas></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div></div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
+        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div></div>
+      </div></div>
+
       <div class="grid-stack-item" gs-id="clientbase" gs-w="7" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">◉ Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
@@ -1927,7 +1950,15 @@ async function loadDashLayout(){
     const r=await fetch('/api/dashboard-layout');
     if(!r.ok)return;
     const d=await r.json();
-    if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length) dashGridStack.load(d.layout.nodes);
+    // addAndRemove:false -- a saved layout only repositions/resizes the
+    // cards it already knows about. Without this, GridStack.load() deletes
+    // any grid-stack-item whose gs-id isn't in the saved node list, which
+    // is exactly what happens the first time a brand-new card ships after
+    // someone already has a personal (or shared-default) layout saved --
+    // the new card would silently vanish for them. Leaving addAndRemove
+    // off means a newly-added card just keeps its shipped default spot
+    // until the person drags it, instead of disappearing.
+    if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length) dashGridStack.load(d.layout.nodes,false);
   }catch(e){ /* keep the shipped default layout from the HTML */ }
   resizeDashCharts();
 }

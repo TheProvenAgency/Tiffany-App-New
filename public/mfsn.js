@@ -158,6 +158,82 @@ function setSub(v){
   renderSub();
 }
 
+/* ---------- Dashboard KPI band (index.html gs-id="mf-kpi-*") ----------
+   The same Overview figures above, mirrored onto the main Dashboard as 5
+   independently movable/resizable grid-stack-items (matching the income
+   row's treatment). Real M/COMM_TREND data, not re-typed numbers -- if the
+   affiliate portal figures at the top of this file change, these change
+   with them. Only the two commission cards (which have an actual monthly
+   history) get a sparkline; Enrolled/Upgraded/New actives are point-in-time
+   counts with no time series behind them, so they stay plain. */
+function sparkTooltipEl(){
+  var el=document.getElementById('rvkTooltip');
+  if(!el){
+    el=document.createElement('div');
+    el.id='rvkTooltip';
+    el.style.cssText='position:fixed;pointer-events:none;z-index:9999;background:#20222b;color:#fff;'+
+      'font-size:11.5px;line-height:1.45;padding:7px 11px;border-radius:9px;box-shadow:0 8px 22px rgba(0,0,0,.28);'+
+      'opacity:0;transition:opacity .08s ease;white-space:nowrap;transform:translate(-50%,-100%)';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function mfSparkOpts(period){
+  return {responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{enabled:false,external:function(ctx){
+      var el=sparkTooltipEl(), tt=ctx.tooltip;
+      if(!tt||tt.opacity===0){ el.style.opacity=0; return; }
+      var dp=tt.dataPoints&&tt.dataPoints[0];
+      if(dp){
+        var y=dp.parsed&&(dp.parsed.y!=null?dp.parsed.y:dp.parsed);
+        el.innerHTML='<div style="opacity:.65;font-size:10px;letter-spacing:.03em;text-transform:uppercase">'+dp.label+' &middot; '+period+'</div>'+
+          '<div style="font-weight:800;font-size:13px;margin-top:1px">'+money0(y)+'</div>';
+      }
+      var rect=ctx.chart.canvas.getBoundingClientRect();
+      el.style.left=(rect.left+tt.caretX)+'px';
+      el.style.top=(rect.top+tt.caretY-8)+'px';
+      el.style.opacity=1;
+    }}},
+    scales:{x:{display:false},y:{display:false}},
+    elements:{point:{radius:0,hoverRadius:4,hitRadius:12}}};
+}
+function mfTrendBadge(vals){
+  if(!vals||vals.length<2)return null;
+  var end=vals.length-1;
+  while(end>0 && !vals[end]) end--;
+  var first=vals[0], last=vals[end];
+  if(!first || end<1)return null;
+  var pct2=((last-first)/Math.abs(first))*100;
+  var up=pct2>=0;
+  return {text:(up?'▲ ':'▼ ')+Math.abs(pct2).toFixed(0)+'%', up:up};
+}
+function initMFDashKpis(){
+  if(!document.getElementById('mfkYtd'))return;
+  document.getElementById('mfkYtd').textContent=money0(M.ytd);
+  document.getElementById('mfkLatest').textContent=money0(M.latestMonth);
+  document.getElementById('mfkEnrolled').textContent=M.enrolled.toLocaleString();
+  document.getElementById('mfkEnrolledSub').textContent=M.active+' active';
+  document.getElementById('mfkUpgraded').textContent=M.upgraded.toLocaleString();
+  document.getElementById('mfkNewActives').textContent=M.newActives.toLocaleString();
+  document.getElementById('mfkNewActivesSub').textContent='of '+M.targetActives+' target';
+  if(!window.Chart)return;
+  var defs=[
+    {id:'mfkSparkYtd', trendId:'mfkTrendYtd', labels:COMM_TREND.labels, vals:COMM_TREND.vals, color:C.ink},
+    {id:'mfkSparkLatest', trendId:'mfkTrendLatest', labels:COMM_TREND.labels.slice(-6), vals:COMM_TREND.vals.slice(-6), color:C.gold}
+  ];
+  defs.forEach(function(d){
+    var el=document.getElementById(d.id); if(!el)return;
+    killChart(d.id);
+    charts[d.id]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,borderWidth:2,tension:.4,fill:false}]},options:mfSparkOpts('monthly commissions')});
+    var badge=mfTrendBadge(d.vals), badgeEl=document.getElementById(d.trendId);
+    if(badgeEl){
+      if(badge){ badgeEl.textContent=badge.text; badgeEl.className='rvktrend '+(badge.up?'up':'down'); }
+      else { badgeEl.textContent=''; }
+    }
+  });
+}
+
 /* ---------- init ---------- */
 function initMF(){
   if(document.getElementById('view-mfsn'))return;
@@ -192,5 +268,19 @@ function initMF(){
     };
   }
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initMF);else initMF();
+function initMFAll(){
+  initMF();
+  // Dashboard's mf-kpi-* cards are static HTML in index.html itself (not
+  // built by this file the way the Credit Monitoring page's own band is),
+  // so they need filling in once up front regardless of which page loads
+  // first -- unlike the guarded initMF() above, this has no "already ran"
+  // early return to worry about.
+  initMFDashKpis();
+  // Chain onto the shared resize hook (see revenue.js) so these two
+  // sparklines get re-measured after a GridStack drag/resize too, no
+  // matter which of mfsn.js/revenue.js's init runs first.
+  var _prev=window.__resizeExtraCharts;
+  window.__resizeExtraCharts=function(){ if(_prev)_prev(); for(var k in charts){ if(charts[k]&&(k==='mfkSparkYtd'||k==='mfkSparkLatest')) charts[k].resize(); } };
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initMFAll);else initMFAll();
 })();
