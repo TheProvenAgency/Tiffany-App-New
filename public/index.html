@@ -140,11 +140,11 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .kpi.g4 .ico{background:#dcf0e2;color:#166534}
 /* progress ring -- a lightweight donut gauge (conic-gradient, no chart
    library needed) for the handful of "% of something" figures. */
-.ring{width:92px;height:92px;border-radius:50%;padding:8px;flex:0 0 auto;
+.ring{width:clamp(56px,20cqw,92px);height:clamp(56px,20cqw,92px);border-radius:50%;padding:clamp(5px,1.6cqw,8px);flex:0 0 auto;
   background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),#eef0f5 0)}
 .ring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ring .hole b{font-size:17px;font-weight:800;color:var(--ink)}
-.ring .hole span{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+.ring .hole b{font-size:clamp(11px,4.5cqw,17px);font-weight:800;color:var(--ink)}
+.ring .hole span{font-size:clamp(6.5px,2.2cqw,8.5px);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
 .grid{display:grid;gap:14px}
 /* ============ customizable dashboard grid (GridStack.js) ============
    True free-form drag-anywhere + drag-resize, with other cards pushed
@@ -283,34 +283,34 @@ h3.cardtitle .sub{display:block}
 .moneypop{color:var(--green);font-weight:800}
 .moneychip{display:inline-block;background:var(--green-soft);color:var(--green);font-weight:800;
   padding:3px 10px;border-radius:8px;font-size:inherit}
-.dstat .v.money{color:var(--green);font-size:18px}
+.dstat .v.money{color:var(--green);font-size:clamp(12.5px,4.4cqw,18px)}
 /* client base */
 .segbar{display:flex;height:14px;border-radius:8px;overflow:hidden;margin:14px 0 12px;background:#eee}
 .segbar div{height:100%}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.tile{border:1px solid var(--line);border-radius:13px;padding:11px 13px;cursor:pointer;transition:transform .15s ease,border-color .15s ease}
+.tile{border:1px solid var(--line);border-radius:13px;padding:clamp(7px,2.4cqh,11px) clamp(8px,2.6cqw,13px);cursor:pointer;transition:transform .15s ease,border-color .15s ease;min-width:0}
 .tile:hover{border-color:#c9cedb;transform:translateY(-2px)}
 .tile .dot2{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
-.tile b{font-size:19px}
-.tile span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.tile b{font-size:clamp(13px,4.4cqw,19px)}
+.tile span{display:block;font-size:clamp(8.5px,2.6cqw,11px);color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* delivery-status-style row list: dot + label left, count right */
 .statlist{display:flex;flex-direction:column}
-.statrow{display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.statrow{display:flex;align-items:center;gap:9px;padding:clamp(5px,1.8cqh,8px) 2px;border-bottom:1px solid var(--line);cursor:pointer}
 .statrow:last-child{border-bottom:none}
 .statrow:hover{background:var(--bg)}
 .statrow .dot2{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 .statrow .lbl{flex:1;font-size:12.5px;color:var(--ink)}
-.statrow b{font-size:13px;font-weight:800}
+.statrow b{font-size:clamp(11px,3.4cqw,13px);font-weight:800}
 /* attention */
 .att{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
 .att:last-child{border-bottom:none}
-.att .ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--gold-soft);font-size:13px}
-.att b{font-size:13px;display:block}
+.att .ico{width:clamp(24px,7cqw,30px);height:clamp(24px,7cqw,30px);border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--gold-soft);font-size:13px;flex:0 0 auto}
+.att b{font-size:clamp(11px,3.2cqw,13px);display:block}
 .att span{font-size:11.5px;color:var(--muted)}
 .att .act{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .att .act.dark{background:#20222b;color:#fff;border-color:#20222b}
 /* feed */
-.feeditem{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.feeditem{display:flex;gap:10px;align-items:center;padding:clamp(5px,1.6cqh,8px) 0;border-bottom:1px solid var(--line);font-size:clamp(10.5px,3cqw,12.5px)}
 .feeditem:last-child{border:none}
 .feeditem .k{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px}
 .k.sale{background:var(--green-soft)} .k.client{background:var(--blue-soft)} .k.dispute{background:var(--gold-soft)}
@@ -320,7 +320,7 @@ h3.cardtitle .sub{display:block}
 /* conversations + charts */
 .cwrap2{height:210px}
 .convtotals{display:flex;gap:34px;margin:6px 0 8px}
-.convtotals b{font-size:26px}
+.convtotals b{font-size:clamp(16px,7.5cqw,26px)}
 .convtotals .rep{background:var(--green-soft);color:var(--green);font-size:10.5px;font-weight:700;border-radius:10px;padding:2px 8px;margin-left:6px}
 .convtotals span{display:block;font-size:11px;color:var(--muted)}
 /* tables (clients etc.) */
@@ -353,11 +353,11 @@ section.view{display:none} section.view.on{display:block}
 /* soft tinted stat tiles -- no hard border, just a color wash so the eye
    can tell "this is money" (green), "this needs attention" (red/gold),
    or "this is just a count" (neutral) without reading the label first. */
-.dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
-.dstat div{background:#f2f4f8;border-radius:14px;padding:12px 14px;transition:transform .15s ease}
+.dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,2cqw,10px);margin-top:clamp(8px,2.6cqh,14px)}
+.dstat div{background:#f2f4f8;border-radius:14px;padding:clamp(7px,2.2cqh,12px) clamp(8px,2.6cqw,14px);transition:transform .15s ease;min-width:0}
 .dstat div[onclick]:hover{transform:translateY(-2px)}
-.dstat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.dstat .v{font-size:17px;font-weight:800;margin-top:3px}
+.dstat .l{font-size:clamp(8px,2.4cqw,10px);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dstat .v{font-size:clamp(12.5px,4.2cqw,17px);font-weight:800;margin-top:3px}
 .dstat div.tone-green{background:var(--green-soft)}
 .dstat div.tone-red{background:var(--red-soft)}
 .dstat div.tone-gold{background:var(--gold-soft)}
@@ -543,8 +543,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="mfsn" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
         <div class="card moneycard">
-          <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:20px;width:20px;border-radius:5px;vertical-align:-4px;margin-right:6px">MyFreeScoreNow — affiliate gap</h3>
-          <div class="cardsub">Clients not enrolled under her affiliate link</div>
+          <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:26px;width:26px;border-radius:6px;vertical-align:-6px;margin-right:6px">MyFreeScoreNow — Affiliate Report</h3>
           <div id="affiliateGap" style="margin-top:10px"></div>
         </div>
       </div></div>
