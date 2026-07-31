@@ -31,42 +31,33 @@ html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-family:-apple-system,'Segoe UI',Inter,system-ui,sans-serif;font-size:14px;display:flex}
 button{font-family:inherit}
 /* ============ sidebar ============ */
-/* Two-tier nav, matching the Admina-style reference: a slim always-visible
-   icon rail (one button per group) plus a wider panel that shows that
-   group's actual pages. Clicking a rail icon switches which group's panel
-   is showing; the whole panel can also be collapsed down to just the rail
-   so it "lives on the left edge" out of the way. Each group carries its
-   own accent color -- money (Finance) is green, everything else gets its
-   own color so groups stay visually distinct even collapsed to icons only. */
+/* Single always-visible panel -- every group's pages sit right on the page,
+   grouped under their section headings, no separate icon rail to click
+   through first. Each nav row keeps its own small icon; the panel can still
+   be tucked away via the floating collapse tab if someone wants the room
+   back, but nothing is hidden behind a click by default. */
 aside{display:flex;height:100vh;position:sticky;top:0}
-.navrail{width:72px;min-width:72px;background:var(--sidebar);display:flex;flex-direction:column;align-items:center;
-  padding:16px 0;gap:10px;border-right:1px solid rgba(255,255,255,.06)}
-/* Admina reference: a floating rail of plain circular icon buttons -- only
-   the active one is a filled, colored circle (with a soft glow), everything
-   else stays flat/neutral until hovered. Round (50%), not rounded-square. */
-.navrail .brandmark{width:38px;height:38px;border-radius:50%;margin-bottom:8px;object-fit:contain}
-.railbtn{width:46px;height:46px;border:none;border-radius:50%;background:rgba(255,255,255,.05);color:var(--sidebar-dim);
-  display:flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer;flex:0 0 auto;transition:background .12s ease,color .12s ease}
-.railbtn:hover{background:color-mix(in srgb, var(--rc) 26%, transparent);color:#fff}
-.railbtn.on{background:var(--rc);color:#fff;box-shadow:0 4px 14px color-mix(in srgb, var(--rc) 60%, transparent)}
-.railbtn.collapse{margin-top:auto;background:rgba(255,255,255,.06);color:var(--sidebar-dim);font-size:17px}
-.railbtn.collapse:hover{background:rgba(255,255,255,.12);color:#fff}
-.navpanel{width:216px;min-width:216px;background:var(--sidebar);color:var(--sidebar-ink);height:100%;
+/* Floating tab that opens/closes the whole sidebar -- lives outside the
+   aside so it's still reachable even when the panel is fully collapsed. */
+.navCollapseToggle{position:fixed;top:18px;left:260px;z-index:70;width:26px;height:26px;border:none;border-radius:50%;
+  background:var(--sidebar);color:var(--sidebar-dim);display:flex;align-items:center;justify-content:center;
+  font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);transition:left .16s ease}
+.navCollapseToggle:hover{color:#fff}
+body:has(#sidebar.collapsed) .navCollapseToggle{left:10px}
+.navpanel{width:238px;min-width:238px;background:var(--sidebar);color:var(--sidebar-ink);height:100%;
   display:flex;flex-direction:column;padding:14px 0;overflow-y:auto;transition:margin-left .16s ease,opacity .16s ease}
-aside.collapsed .navpanel{margin-left:-216px;opacity:0;pointer-events:none}
+aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 .brand{display:flex;align-items:center;gap:10px;padding:8px 16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
 .brand .chip{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blush),var(--rose));color:#20222b;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .brand b{display:block;font-size:13px;color:#f1ece4}
 .brand span{font-size:10.5px;color:var(--sidebar-dim)}
 .sec{font-size:11px;letter-spacing:.16em;color:var(--sidebar-dim);text-transform:uppercase;padding:18px 18px 6px;font-weight:600}
-.navgroup{display:none}
-.navgroup.on{display:block}
-/* Only the active group's heading shows -- clicking a rail icon reveals
-   that one category's pages, not every heading stacked with only one
-   populated (the "Data sources" heading has no data-g and always shows). */
-.sec[data-g]{display:none}
-.sec[data-g].on{display:block}
+/* Every group and every heading stays visible all the time now -- no .on
+   gating. (role.js still explicitly hides individual headings/buttons for
+   the employee role by setting inline display:none, which overrides this.) */
+.navgroup{display:block}
+.sec[data-g]{display:block}
 /* Admina reference: the active row is one solid, fully-rounded pill that
    spans the row edge-to-edge (not a thin left accent bar) -- icon and label
    both pick up the group's color, everything inactive stays flat/neutral. */
@@ -401,18 +392,8 @@ section.view{display:none} section.view.on{display:block}
 </head>
 <body>
 
+<button class="navCollapseToggle" id="railCollapseBtn" title="Collapse sidebar" onclick="toggleNavPanel()">«</button>
 <aside id="sidebar">
-  <div class="navrail" id="navrail">
-    <img class="brandmark" src="/logo.png" alt="MSFS">
-    <button class="railbtn on" data-g="ov" style="--rc:#ff2e9a" title="Overview" onclick="setNavGroup('ov')">⌂</button>
-    <button class="railbtn" data-g="cl" style="--rc:#7c5cff" title="Clients" onclick="setNavGroup('cl')">◉</button>
-    <button class="railbtn" data-g="pr" style="--rc:#2f8fd6" title="Production" onclick="setNavGroup('pr')">▤</button>
-    <button class="railbtn" data-g="fi" style="--rc:#0e9e56" title="Finance" onclick="setNavGroup('fi')">$</button>
-    <button class="railbtn" data-g="ma" style="--rc:#e08a3c" title="Marketing" onclick="setNavGroup('ma')">✦</button>
-    <button class="railbtn" data-g="ac" style="--rc:#8b93a3" title="Account" onclick="setNavGroup('ac')">⚙</button>
-    <div class="spacer"></div>
-    <button class="railbtn collapse" id="railCollapseBtn" title="Collapse sidebar" onclick="toggleNavPanel()">«</button>
-  </div>
   <div class="navpanel" id="navpanel">
   <div class="brand">
     <img src="/logo.png" alt="Ms. Financial Solutions" style="height:56px;width:auto;margin:0 auto;display:block">
@@ -1284,11 +1265,13 @@ const VIEW_GROUP={dash:'ov',pipeline:'cl',clients:'cl',react:'cl',tasks:'pr',soc
 // when the user deliberately clicks a rail icon; navigation-driven calls
 // pass false so jumping to a view doesn't yank an intentionally-collapsed
 // sidebar back open.
+// Kept as a no-op-ish shell (rather than deleted) because production.js,
+// mfsn.js, personal-finances.js, revenue.js and role.js all still call
+// window.setNavGroup(...) when they inject their own nav buttons -- now
+// that every group is visible all the time there's nothing left to show or
+// hide, so this just remembers the "last active" group for the record.
 function setNavGroup(g,expand){
   if(expand===undefined)expand=true;
-  document.querySelectorAll('.railbtn[data-g]').forEach(b=>b.classList.toggle('on',b.dataset.g===g));
-  document.querySelectorAll('.sec[data-g]').forEach(s=>s.classList.toggle('on',s.dataset.g===g));
-  document.querySelectorAll('.navgroup[data-g]').forEach(nv=>nv.classList.toggle('on',nv.dataset.g===g));
   try{localStorage.setItem('navGroup',g);}catch(e){}
   if(expand)setNavCollapsed(false);
 }
