@@ -499,7 +499,7 @@ section.view{display:none} section.view.on{display:block}
            kept live by updateTotalIncomeCard() in revenue.js, which is
            wired into loadDashboard() so it recomputes on every date-range
            change, same as every other card on this page. */-->
-      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="rv-kpi hero" style="padding-bottom:12px">
           <div class="l" id="rvkTotalL">Total income</div>
           <div class="v" id="rvkTotalV">$0</div>
@@ -1970,6 +1970,17 @@ async function loadDashLayout(){
     // until the person drags it, instead of disappearing.
     if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length) dashGridStack.load(d.layout.nodes,false);
   }catch(e){ /* keep the shipped default layout from the HTML */ }
+  // Self-heal the Total income card's size. Its content changed shape a lot
+  // (5 small tiles merged into one card with a legend + stacked bar chart),
+  // so anyone with an existing saved layout -- personal or the shared
+  // default -- is still sized for the old cramped 3-wide/3-tall tile and
+  // the new content clips/overflows. Bump just this one card up to a
+  // sane minimum on load without touching anything else they've arranged.
+  const totalEl=document.querySelector('[gs-id="rev-kpi-total"]');
+  if(totalEl&&totalEl.gridstackNode){
+    const node=totalEl.gridstackNode;
+    if(node.w<6||node.h<6) dashGridStack.update(totalEl,{w:Math.max(node.w,6),h:Math.max(node.h,6)});
+  }
   resizeDashCharts();
 }
 function saveDashLayout(){
