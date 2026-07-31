@@ -1072,15 +1072,13 @@ async function renderAffiliateGap(){
         <div class="ring" style="--pct:${enrolledPct};--ring-c:${enrolledColor}"><div class="hole"><b style="color:${enrolledColor}">${enrolledPct}%</b><span>enrolled</span></div></div>
         <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} clients are enrolled under her affiliate link and generating commission. The rest below are the gap.</div>
       </div>
-      <div class="dstat" style="margin-bottom:10px">
+      <div class="dstat" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
         <div class="tone-gold" style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v" style="font-size:20px;color:var(--ink)">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
-        <div class="${rev.notAffiliate?'tone-red':''}" style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
         <div class="tone-red" style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
-      ${o?`<div class="dstat">
+      ${o?`<div class="dstat" style="grid-template-columns:1fr 1fr">
         <div class="tone-red"><div class="l">Still on Smart Credit (active)</div><div class="v">${o.active.toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">of ${o.activeTotal.toLocaleString()} active · ~${fmtMoney(o.active*13.3)} at risk</div></div>
         <div class="tone-gold"><div class="l">Still on Smart Credit (paused/closed)</div><div class="v">${o.paused.toLocaleString()}</div><div class="cardsub">dormant · lower priority</div></div>
-        <div class="tone-blue"><div class="l">Relinking (Old)</div><div class="v">${o.relinking.toLocaleString()}</div><div class="cardsub">mid-transition right now</div></div>
       </div>
       <div class="cardsub" style="margin-top:8px;font-style:italic">Smart Credit audit as of ${new Date(o.auditedAt).toLocaleDateString()} — pulled by hand from MyFreeScoreNow's Member List (Member Type = Old); MFSN's sync feed doesn't carry that flag yet, so this refreshes only when the audit is re-run.</div>`:''}`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
