@@ -497,6 +497,20 @@ section.view{display:none} section.view.on{display:block}
        everywhere) still works off the full-width mobile box, while height
        is left to the content like any normal element. */
     container-type:inline-size!important}
+  /* The 3 MFSN KPI donut rings (.rv-kpi-donut) size themselves off
+     min(cqw,cqh) so they never outgrow whichever axis is tighter -- but on
+     mobile, cqh isn't measuring the tile's real (short) height at all: with
+     only inline-size containment here (see above), cqh falls back to some
+     much taller ancestor and reads as huge, so min(cqw,cqh) just picks
+     cqw's already-oversized value and the ring hits its max regardless of
+     how short the actual card is -- overlapping the number again, the
+     opposite failure mode from the one this same ring had on desktop.
+     Fixed pixel size sidesteps the unreliable cqh entirely: mobile cards
+     are consistently short regardless of phone width, so a fixed size (and
+     a fixed padding-bottom to match) is more correct here than any cq-unit
+     math, not less. */
+  .rv-kpi-donut{padding-right:18px!important;padding-bottom:58px!important}
+  .rv-kpi-donut .rvkdonut-wrap{width:46px!important;height:46px!important}
 }
 </style>
 </head>
