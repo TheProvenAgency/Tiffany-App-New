@@ -987,6 +987,29 @@ app.post('/api/clients/:id/status', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Update a contact's email/phone/name. Used to fix records where a client
+// paid for something (e.g. Mentorship, via Commas) under a different email
+// than the one on file in GoHighLevel -- the Mentorship "Total mentees"
+// drill-down matches by email, so a stale/mismatched email silently hides a
+// real client from that filter. Admin-only, same write-gating as the rest
+// of this section.
+app.post('/api/clients/:id/contact', async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim() || undefined;
+    const phone = (req.body.phone || '').trim() || undefined;
+    if (!email && !phone) return res.status(400).json({ error: 'email or phone required' });
+    if (READ_ONLY && liveMode()) return refuseWrite(res, 'updateContact', `${req.params.id} -> ${email || phone}`);
+    if (liveMode()) {
+      const c = await ghl.updateContact(store.getConfig(), req.params.id, { email, phone });
+      store.clearCache();
+      return res.json({ ok: true, client: c });
+    }
+    const c = demoData().clients.find(x => x.id === req.params.id);
+    if (c) { if (email) c.email = email; if (phone) c.phone = phone; }
+    res.json({ ok: true, demo: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Add/remove arbitrary GHL tags on a contact. Used to fix contacts whose
 // tags fell out of sync with reality -- e.g. a contact still marked
 // status:lead in GHL after Deal Production shows the client well into
