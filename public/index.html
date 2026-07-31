@@ -193,6 +193,14 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .rvk-split-legend{display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:rgba(0,0,0,.65)}
 .rvk-split-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
 .rvk-split-legend b{color:var(--ink);font-weight:800}
+/* Two-column product list under the Revenue by package gauge, replacing
+   Chart.js's own single-row legend so all six packages read as a clean
+   list instead of a wrapping strip. */
+.pkg-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-top:12px;font-size:12px}
+.pkg-legend .pl-row{display:flex;align-items:center;gap:7px;min-width:0}
+.pkg-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.pkg-legend .pl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(0,0,0,.7)}
+.pkg-legend b{margin-left:auto;flex:0 0 auto;color:var(--ink);font-weight:800}
 /* Chart sits on its own white panel, not directly on the green card --
    Chart.js's default gray axis labels were nearly invisible against green,
    and there's no readable gray/green combo that works on a solid color
@@ -592,11 +600,12 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="revenue-package" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="revenue-package" gs-w="6" gs-h="8"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle">◈ Revenue by package</h3>
           <div class="cardsub">All-time · Commas + Fanbasis sales</div>
-          <div class="cwrap2"><canvas id="chDeals"></canvas></div>
+          <div class="cwrap2" style="height:170px"><canvas id="chDeals"></canvas></div>
+          <div id="dealsLegend" class="pkg-legend"></div>
         </div>
       </div></div>
 
@@ -1210,14 +1219,18 @@ async function loadDashboard(){
         <span>${x.name||x.email||'—'}</span><span style="opacity:.6">${fmt$(x.amount)}</span></div>`).join('')):'';
   }
   // Half-donut "gauge" style (per Tiffany's reference screenshot) instead of
-  // a full ring -- rotation/circumference cut it to the top semicircle, and
-  // the centerTotal plugin below draws the all-time revenue total + label
-  // into the empty space that opens up in the middle/bottom of the arc.
-  // Percent-of-total is appended to each legend entry and to the tooltip so
-  // the split reads at a glance, not just the raw dollar figure.
-  const dealsTotal=prod.slice(0,6).reduce((s,x)=>s+x.revenue,0)||1;
-  mkChart('chDeals',{type:'doughnut',data:{labels:prod.slice(0,6).map(x=>x.key),datasets:[{data:prod.slice(0,6).map(x=>x.revenue),
-    backgroundColor:[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa'],borderWidth:0,hoverOffset:6}]},
+  // a full ring -- rotation/circumference cut it to the top semicircle. The
+  // centerTotal plugin draws the all-time revenue total up inside the arc's
+  // own band (not down in the empty space below it), sliceLabels puts every
+  // package's percentage right on its own slice (even the two thin 4% ones),
+  // and the built-in Chart.js legend is turned off in favor of a real
+  // two-column HTML list (#dealsLegend) underneath, built from this same
+  // prod/dealsTotal data right after the chart.
+  const pkgData=prod.slice(0,6);
+  const pkgColors=[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa'];
+  const dealsTotal=pkgData.reduce((s,x)=>s+x.revenue,0)||1;
+  mkChart('chDeals',{type:'doughnut',data:{labels:pkgData.map(x=>x.key),datasets:[{data:pkgData.map(x=>x.revenue),
+    backgroundColor:pkgColors,borderWidth:0,hoverOffset:6}]},
     options:{
       cutout:'70%',
       // rotation:-90 starts the arc pointing left (9 o'clock); circumference:180
@@ -1225,41 +1238,38 @@ async function loadDashboard(){
       // that's the gauge look from Tiffany's reference screenshot.
       rotation:-90,circumference:180,
       maintainAspectRatio:false,
-      layout:{padding:{top:4,bottom:0}},
+      layout:{padding:{top:4,bottom:26}},
       plugins:{
-        legend:{position:'bottom',labels:{boxWidth:9,padding:10,font:{size:10.5},
-          generateLabels:chart=>chart.data.labels.map((l,i)=>({
-            text:`${l} (${Math.round(chart.data.datasets[0].data[i]/dealsTotal*100)}%)`,
-            fillStyle:chart.data.datasets[0].backgroundColor[i],
-            strokeStyle:chart.data.datasets[0].backgroundColor[i],index:i}))
-        }},
+        legend:{display:false},
         tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmt$(ctx.parsed)+' ('+Math.round(ctx.parsed/dealsTotal*100)+'%)'}}
       }
     },
     plugins:[{id:'centerTotal',afterDraw(chart){
       const meta=chart.getDatasetMeta(0); if(!meta.data.length)return;
       const {x:cx,y:cy}=meta.data[0];
+      const inner=meta.data[0].innerRadius||0;
+      // Pulled up into the hollow of the arc (roughly its vertical middle)
+      // instead of sitting right on the flat baseline where the two ends meet.
+      const ty=cy-inner*0.55;
       const {ctx}=chart;
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillStyle='#8d8577';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
-      ctx.fillText('Total revenue',cx,cy-11);
+      ctx.fillText('Total revenue',cx,ty-11);
       ctx.fillStyle='#211d18';ctx.font='700 20px -apple-system,Segoe UI,Inter,sans-serif';
-      ctx.fillText(fmt$(dealsTotal),cx,cy+9);
+      ctx.fillText(fmt$(dealsTotal),cx,ty+9);
       ctx.restore();
     }},
     {id:'sliceLabels',afterDraw(chart){
-      // Percentage on the arc itself, not just the legend -- drawn at the
-      // midpoint angle/radius of each slice using the arc element's own
-      // geometry (startAngle/endAngle/inner+outerRadius), so it stays
-      // correct no matter how the gauge is rotated or resized. Skipped
-      // below 6% since the arc is too thin there to hold readable text.
+      // Percentage on every slice, including the thin ones (Upgrade to
+      // Diamond / Round Table Partnership at 4% each) -- smaller font under
+      // 8% so the label has a chance of fitting a narrow arc.
       const meta=chart.getDatasetMeta(0); if(!meta.data.length)return;
       const {ctx}=chart;
       const data=chart.data.datasets[0].data;
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.font='700 11px -apple-system,Segoe UI,Inter,sans-serif';
       meta.data.forEach((arc,i)=>{
-        const pct=data[i]/dealsTotal*100; if(pct<6)return;
+        const pct=data[i]/dealsTotal*100;
+        ctx.font='700 '+(pct<8?9:11)+'px -apple-system,Segoe UI,Inter,sans-serif';
         const mid=(arc.startAngle+arc.endAngle)/2;
         const r=(arc.innerRadius+arc.outerRadius)/2;
         const x=arc.x+Math.cos(mid)*r, y=arc.y+Math.sin(mid)*r;
@@ -1268,6 +1278,12 @@ async function loadDashboard(){
       });
       ctx.restore();
     }}]});
+  const dealsLegendEl=$('dealsLegend');
+  if(dealsLegendEl){
+    dealsLegendEl.innerHTML=pkgData.map((x,i)=>`<div class="pl-row">
+      <i style="background:${pkgColors[i]}"></i><span class="pl-name">${x.key}</span>
+      <b>${Math.round(x.revenue/dealsTotal*100)}%</b></div>`).join('');
+  }
   mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{data:b.byRound.map(x=>x.count),
     backgroundColor:c=>grad(c.chart.ctx,PURPLE,210),borderColor:PURPLE,borderWidth:1.5,borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
@@ -2041,6 +2057,14 @@ async function loadDashLayout(){
   if(totalEl&&totalEl.gridstackNode){
     const node=totalEl.gridstackNode;
     if(node.w<6||node.h<6) dashGridStack.update(totalEl,{w:Math.max(node.w,6),h:Math.max(node.h,6)});
+  }
+  // Same self-heal for Revenue by package: it grew a two-column product
+  // list under the gauge, so a layout saved before that change is too
+  // short and clips the new list.
+  const pkgEl=document.querySelector('[gs-id="revenue-package"]');
+  if(pkgEl&&pkgEl.gridstackNode){
+    const node=pkgEl.gridstackNode;
+    if(node.h<8) dashGridStack.update(pkgEl,{h:Math.max(node.h,8)});
   }
   resizeDashCharts();
 }
