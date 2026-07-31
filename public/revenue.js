@@ -82,14 +82,26 @@ function updateTotalIncomeCard(){
   var cv=document.getElementById('rvkSparkTotal'); if(!cv||!window.Chart)return;
   killChart('rvkSparkTotal');
   var labels=r.months.map(function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]+' '+ym.slice(2,4); });
-  charts.rvkSparkTotal=new Chart(cv.getContext('2d'),{type:'bar',
+  var coVals=r.months.map(function(ym){return INCOME_BY_MONTH[ym].co||0;});
+  var mfVals=r.months.map(function(ym){return INCOME_BY_MONTH[ym].mf||0;});
+  var totVals=coVals.map(function(v,i){return v+mfVals[i];});
+  // Chart now draws on its own white panel (see .rvk-split-wrap), so tick
+  // labels get normal dark/gray colors instead of fighting the green card
+  // background -- plus a red total line laid over the two-color stacked
+  // bars, same combo-chart look Tiffany pointed to.
+  charts.rvkSparkTotal=new Chart(cv.getContext('2d'),{
     data:{labels:labels,datasets:[
-      {label:'Commas',data:r.months.map(function(ym){return INCOME_BY_MONTH[ym].co||0;}),backgroundColor:C.blue,stack:'s',borderRadius:3},
-      {label:'MFSN',data:r.months.map(function(ym){return INCOME_BY_MONTH[ym].mf||0;}),backgroundColor:C.green,stack:'s',borderRadius:3}
+      {type:'bar',label:'Commas',data:coVals,backgroundColor:C.blue,stack:'s',borderRadius:3,order:2},
+      {type:'bar',label:'MFSN',data:mfVals,backgroundColor:C.green,stack:'s',borderRadius:3,order:2},
+      {type:'line',label:'Total',data:totVals,borderColor:'#e11d48',backgroundColor:'#e11d48',borderWidth:2.5,
+        tension:.35,pointRadius:0,pointHoverRadius:4,fill:false,order:1}
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},
-      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,ticks:{callback:function(x){return moneyK(x);},font:{size:10}},grid:{color:'#efe9df'}}}}});
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#6b7280',font:{size:10.5,weight:'600'}}},
+        y:{stacked:true,ticks:{color:'#6b7280',callback:function(x){return moneyK(x);},font:{size:10}},grid:{color:'#eef0f4'}}
+      }}});
 }
 
 var DISPUTES=[
