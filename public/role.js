@@ -44,7 +44,7 @@
   // lib/auth.js), so this has to hide every button/rail-icon across every
   // group except those two, not just the one #nav held back when the
   // sidebar was a single flat list.
-  var EMPLOYEE_NAV_BTNS = ['pvNavBtn', 'fuNavBtn'];
+  var EMPLOYEE_NAV_BTNS = ['pvNavBtn', 'fuNavBtn', 'msgNavBtn'];
   function gateNav() {
     var prodBtn = document.getElementById('pvNavBtn');
     if (!prodBtn) return false;

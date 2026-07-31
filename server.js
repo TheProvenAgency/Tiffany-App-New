@@ -1617,6 +1617,51 @@ app.post('/api/production', (req, res) => {
   res.json({ ok: true, count: c.length });
 });
 
+// ------------------------- unified inbox: every GHL conversation channel -------------------------
+// One feed for SMS, Email, and whatever else is wired up as a Conversation
+// Provider inside this GHL sub-account (Facebook Messenger / Instagram DMs
+// show up here too once connected in GHL's own Settings > Integrations --
+// there's no separate Meta messaging API to build, GHL already unifies it).
+// Fanbasis/Commas and DisputeFox are payment/dispute systems, not chat
+// platforms, so they don't feed this list; DisputeFox's own client-portal
+// messaging is a separate product with its own API key Tiffany would need
+// to hand over before that can be added here too.
+app.get('/api/messages', async (req, res) => {
+  try {
+    let list;
+    if (!liveMode()) {
+      list = demoData().messages;
+    } else {
+      const cfg = store.getConfig();
+      list = await store.cached('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 }));
+    }
+    const channel = (req.query.channel || '').toUpperCase();
+    const q = (req.query.q || '').trim().toLowerCase();
+    const unreadOnly = req.query.unread === '1';
+    let filtered = list;
+    if (channel && channel !== 'ALL') filtered = filtered.filter(m => m.channelKey === channel);
+    if (unreadOnly) filtered = filtered.filter(m => m.unread > 0);
+    if (q) filtered = filtered.filter(m =>
+      (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q) || (m.phone || '').includes(q));
+    const channels = [...new Set(list.map(m => m.channelKey))].sort();
+    res.json({ conversations: filtered, total: filtered.length, channels, mode: liveMode() ? 'live' : 'demo' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Full thread for one conversation.
+app.get('/api/messages/:id', async (req, res) => {
+  try {
+    if (!liveMode()) {
+      const thread = demoData().messagesByConvo[req.params.id];
+      if (!thread) return res.status(404).json({ error: 'no such conversation' });
+      return res.json({ messages: thread, mode: 'demo' });
+    }
+    const cfg = store.getConfig();
+    const raw = await ghl.fetchMessages(cfg, req.params.id);
+    res.json({ messages: raw.map(ghl.normalizeMessage), mode: 'live' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Build a fresh Deal Production record for a GHL client that has never been
 // tracked here before. ghlId is stored so a later reconcile run recognizes
 // this record on sight (exact match) instead of falling back to the coarser
