@@ -1504,9 +1504,28 @@ app.get('/api/affiliate-gap', async (req, res) => {
       notOnMfsn: gap.notOnMfsn.map(brief), // no match on MFSN at all
       prospects: gap.prospects, // [{email, name}] on MFSN, matching no GHL contact by email or name
       syncedAt: store.getMfsnSyncedAt(),
+      // Members already on MyFreeScoreNow but still flagged "Old" (Smart
+      // Credit, not yet migrated) on MFSN's own Member List -- see
+      // store.getMfsnOldStatus() for why this is a manual audit rather than
+      // part of the live sync above.
+      oldStatus: store.getMfsnOldStatus(),
       mode: liveMode() ? 'live' : 'demo'
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Re-run of the Member List (Member Type = Old) audit -- see
+// store.getMfsnOldStatus(). Admin-only. Body: any subset of
+// { active, activeTotal, paused, relinking }; auditedAt is always stamped
+// to now by store.setMfsnOldStatus().
+app.post('/api/mfsn-old-status', (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const b = req.body || {};
+  const patch = {};
+  for (const k of ['active', 'activeTotal', 'paused', 'relinking']) {
+    if (b[k] != null && Number.isFinite(Number(b[k]))) patch[k] = Number(b[k]);
+  }
+  res.json({ ok: true, oldStatus: store.setMfsnOldStatus(patch) });
 });
 
 // Which Deal Production clients are (not) enrolled under her MyFreeScoreNow

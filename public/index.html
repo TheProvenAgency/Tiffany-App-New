@@ -1055,12 +1055,11 @@ async function renderAffiliateGap(){
     }
     const c=d.counts;
     const rev=d.revenue||{};
+    const o=d.oldStatus||null; // Smart Credit (Old) manual audit -- see store.getMfsnOldStatus()
     const fmtMoney=n=>n==null?'':'$'+Math.round(n).toLocaleString()+'/mo';
-    lastAffiliateProspects=d.prospects||[]; // used by the "On MFSN, not a client" modal
-    // Each box is a drill-down: the first four route into the Clients
-    // table pre-filtered; "On MFSN, not a client" has no client record to
-    // route to, so it opens a modal listing the full prospect list instead.
-    // $ figures (rev.*) use each matched member's real plan-based
+    lastAffiliateProspects=d.prospects||[];
+    // Each of the first three boxes is a drill-down into the Clients table
+    // pre-filtered by status. $ figures (rev.*) use each matched member's real plan-based
     // commission where known, falling back to the blended rate — see
     // lib/affiliate.js affiliateGap() for the full explanation.
     const enrolledPct=c.total?Math.round(c.affiliate/c.total*100):0;
@@ -1078,10 +1077,12 @@ async function renderAffiliateGap(){
         <div class="${rev.notAffiliate?'tone-red':''}" style="cursor:pointer" onclick="goClientsAffiliate('not_affiliate')"><div class="l">Not affiliate (on MFSN)</div><div class="v">${c.notAffiliate.toLocaleString()}</div><div class="cardsub" style="color:${rev.notAffiliate?'var(--red)':'var(--muted)'};font-weight:${rev.notAffiliate?'700':'400'}">missing ${fmtMoney(rev.notAffiliate)}</div></div>
         <div class="tone-red" style="cursor:pointer" onclick="goClientsAffiliate('not_on_mfsn')"><div class="l">Not on MyFreeScoreNow</div><div class="v">${c.notOnMfsn.toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">potential ${fmtMoney(rev.notOnMfsn)}</div></div>
       </div>
-      <div class="dstat" style="grid-template-columns:1fr 1fr">
-        <div class="tone-green" style="cursor:pointer" onclick="goClientsAffiliate('')"><div class="l">Clients</div><div class="v">${c.total.toLocaleString()}</div><div class="cardsub">ceiling ${fmtMoney(rev.total)}</div></div>
-        <div class="tone-red" style="cursor:pointer" onclick="openProspectsModal()"><div class="l">On MFSN, not a client</div><div class="v">${(c.prospects||0).toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">reach out ASAP</div></div>
-      </div>`;
+      ${o?`<div class="dstat">
+        <div class="tone-red"><div class="l">Still on Smart Credit (active)</div><div class="v">${o.active.toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">of ${o.activeTotal.toLocaleString()} active · ~${fmtMoney(o.active*13.3)} at risk</div></div>
+        <div class="tone-gold"><div class="l">Still on Smart Credit (paused/closed)</div><div class="v">${o.paused.toLocaleString()}</div><div class="cardsub">dormant · lower priority</div></div>
+        <div class="tone-blue"><div class="l">Relinking (Old)</div><div class="v">${o.relinking.toLocaleString()}</div><div class="cardsub">mid-transition right now</div></div>
+      </div>
+      <div class="cardsub" style="margin-top:8px;font-style:italic">Smart Credit audit as of ${new Date(o.auditedAt).toLocaleDateString()} — pulled by hand from MyFreeScoreNow's Member List (Member Type = Old); MFSN's sync feed doesn't carry that flag yet, so this refreshes only when the audit is re-run.</div>`:''}`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
 }
 async function loadDashboard(){
