@@ -1215,30 +1215,38 @@ async function loadDashboard(){
   // into the empty space that opens up in the middle/bottom of the arc.
   // Percent-of-total is appended to each legend entry and to the tooltip so
   // the split reads at a glance, not just the raw dollar figure.
+  const dealsTotal=prod.slice(0,6).reduce((s,x)=>s+x.revenue,0)||1;
   mkChart('chDeals',{type:'doughnut',data:{labels:prod.slice(0,6).map(x=>x.key),datasets:[{data:prod.slice(0,6).map(x=>x.revenue),
     backgroundColor:[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa'],borderWidth:0,hoverOffset:6}]},
-    options:{cutout:'70%',rotation:-180,circumference:180,maintainAspectRatio:false,
-    layout:{padding:{top:4,bottom:0}},
-    plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:10,font:{size:10.5},
-      generateLabels:chart=>{
-        const ds=chart.data.datasets[0];const total=ds.data.reduce((a,b)=>a+b,0)||1;
-        return chart.data.labels.map((l,i)=>({text:`${l} (${Math.round(ds.data[i]/total*100)}%)`,
-          fillStyle:ds.backgroundColor[i],strokeStyle:ds.backgroundColor[i],index:i}));
-      }}},
-    tooltip:{callbacks:{label:c=>{const ds=c.dataset.data;const total=ds.reduce((a,b)=>a+b,0)||1;
-      return c.label+': '+fmt$(c.parsed)+' ('+Math.round(c.parsed/total*100)+'%)';}}}},
+    options:{
+      cutout:'70%',
+      // rotation:-90 starts the arc pointing left (9 o'clock); circumference:180
+      // sweeps it clockwise across the TOP only, leaving the bottom half open --
+      // that's the gauge look from Tiffany's reference screenshot.
+      rotation:-90,circumference:180,
+      maintainAspectRatio:false,
+      layout:{padding:{top:4,bottom:0}},
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:9,padding:10,font:{size:10.5},
+          generateLabels:chart=>chart.data.labels.map((l,i)=>({
+            text:`${l} (${Math.round(chart.data.datasets[0].data[i]/dealsTotal*100)}%)`,
+            fillStyle:chart.data.datasets[0].backgroundColor[i],
+            strokeStyle:chart.data.datasets[0].backgroundColor[i],index:i}))
+        }},
+        tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmt$(ctx.parsed)+' ('+Math.round(ctx.parsed/dealsTotal*100)+'%)'}}
+      }
+    },
     plugins:[{id:'centerTotal',afterDraw(chart){
       const meta=chart.getDatasetMeta(0); if(!meta.data.length)return;
-      const total=chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
       const {x:cx,y:cy}=meta.data[0];
       const {ctx}=chart;
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillStyle='#8d8577';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText('Total revenue',cx,cy-11);
       ctx.fillStyle='#211d18';ctx.font='700 20px -apple-system,Segoe UI,Inter,sans-serif';
-      ctx.fillText(fmt$(total),cx,cy+9);
+      ctx.fillText(fmt$(dealsTotal),cx,cy+9);
       ctx.restore();
-    }}]}});
+    }}]});
   mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{data:b.byRound.map(x=>x.count),
     backgroundColor:c=>grad(c.chart.ctx,PURPLE,210),borderColor:PURPLE,borderWidth:1.5,borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
