@@ -430,6 +430,18 @@ section.view{display:none} section.view.on{display:block}
 .modal .row{display:flex;gap:12px}.modal .row>div{flex:1}
 .hookurl{background:#f8f9fc;border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:11.5px;color:#7a6a3d;margin-top:6px;word-break:break-all}
 @media(max-width:1150px){.hero{grid-template-columns:1fr}.rail{border-left:none;padding-left:0;flex-direction:row}.tiles{grid-template-columns:repeat(2,1fr)}}
+/* Phone/small-tablet: the fixed 238px sidebar reserving that same margin
+   on `main` would leave almost nothing for actual content on a ~375px
+   screen. Below this width the sidebar floats above content instead of
+   pushing it (opened via the existing collapse toggle, which starts
+   collapsed by default here -- see the boot logic near setNavCollapsed),
+   and every card in the dashboard grid goes full width via GridStack's
+   columnOpts (see initDashGrid) so nothing needs to squeeze sideways. */
+@media(max-width:760px){
+  main{margin-left:0!important;padding:0 14px 30px}
+  aside{z-index:150;box-shadow:6px 0 24px rgba(0,0,0,.25)}
+  header{padding-left:34px}
+}
 </style>
 </head>
 <body>
@@ -1392,7 +1404,14 @@ function setNavCollapsed(collapsed){
 function toggleNavPanel(){setNavCollapsed(!$('sidebar').classList.contains('collapsed'));}
 (function initNavRail(){
   let g='ov',collapsed=false;
-  try{g=localStorage.getItem('navGroup')||'ov';collapsed=localStorage.getItem('navCollapsed')==='1';}catch(e){}
+  try{
+    g=localStorage.getItem('navGroup')||'ov';
+    const saved=localStorage.getItem('navCollapsed');
+    // No explicit preference saved yet -- default collapsed on phone-size
+    // screens (fixed 238px sidebar would otherwise eat most of the
+    // viewport), default open everywhere else, same as before.
+    collapsed=saved!=null?saved==='1':window.innerWidth<=760;
+  }catch(e){}
   setNavGroup(g,false);
   setNavCollapsed(collapsed);
 })();
@@ -2048,7 +2067,19 @@ function initDashGrid(){
   dashGridStack=GridStack.init({
     column:12, cellHeight:50, margin:8, float:false, animate:true,
     disableDrag:true, disableResize:true,
-    resizable:{handles:'e, se, s, sw, w'}
+    resizable:{handles:'e, se, s, sw, w'},
+    // The saved/default layout is a 12-column desktop arrangement -- cramming
+    // that same 12-column grid into a phone or half-a-monitor window just
+    // makes every card too narrow to render (the donut-KPI overlap bug
+    // reported from a teammate's screen was exactly this: a card's box got
+    // so thin that even its smallest allowed content size didn't fit).
+    // columnOpts switches to fewer columns below each breakpoint and,
+    // critically, layout:'list' makes every card go full-width and stack
+    // top-to-bottom at 1 column instead of trying to preserve x/y positions
+    // that only make sense at 12-wide -- so nothing can overlap or run off
+    // the edge on any screen size.
+    columnOpts:{breakpointForWindow:true,layout:'list',columnMax:12,
+      breakpoints:[{w:640,c:1},{w:1024,c:6}]}
   },'#dashGrid');
   dashGridStack.on('change',()=>{saveDashLayout();resizeDashCharts();});
   dashGridStack.on('resize',resizeDashCharts);

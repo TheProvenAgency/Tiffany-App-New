@@ -1203,7 +1203,14 @@ app.post('/api/dashboard-layout/default', (req, res) => {
   const layout = req.body && req.body.layout;
   if (!layout || !Array.isArray(layout.nodes)) return res.status(400).json({ error: 'layout.nodes (array) is required' });
   store.setDefaultDashboardLayout(layout);
-  res.json({ ok: true });
+  // resetEveryone -- also drop everyone's *personal* saved layout so this
+  // actually takes effect for people who already dragged/resized something
+  // themselves, not just new logins. Without this, "set as default" is a
+  // no-op for anyone who'd ever touched their own layout, since a personal
+  // override always wins over the site default (see getDashboardLayout).
+  let clearedCount = 0;
+  if (req.body && req.body.resetEveryone) clearedCount = store.clearAllPersonalDashboardLayouts();
+  res.json({ ok: true, clearedCount });
 });
 
 // reactivation queue: inactive clients, most recently lapsed first (hottest leads)
