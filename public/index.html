@@ -36,7 +36,14 @@ button{font-family:inherit}
    through first. Each nav row keeps its own small icon; the panel can still
    be tucked away via the floating collapse tab if someone wants the room
    back, but nothing is hidden behind a click by default. */
-aside{display:flex;height:100vh;position:sticky;top:0}
+/* position:sticky here used to rely on the whole document scrolling and
+   the sidebar "catching up" to top:0 -- fine in theory, but this app's
+   layout doesn't actually give aside a taller scrolling ancestor than
+   itself, so in practice it just scrolled away with the rest of the page.
+   position:fixed guarantees it never moves regardless of how tall the
+   dashboard grid gets; main gets a matching margin-left so its content
+   doesn't render underneath it (see main{} below). */
+aside{display:flex;height:100vh;position:fixed;top:0;left:0;z-index:50}
 /* Floating tab that opens/closes the whole sidebar -- lives outside the
    aside so it's still reachable even when the panel is fully collapsed. */
 .navCollapseToggle{position:fixed;top:18px;left:206px;z-index:70;width:26px;height:26px;border:1px solid rgba(255,255,255,.1);border-radius:50%;
@@ -80,7 +87,11 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 .dot.bad{background:#c0392b}
 .src .fix{margin-left:auto;color:#d98d84;font-size:10.5px;cursor:pointer}
 /* ============ main ============ */
-main{flex:1;min-width:0;padding:0 26px 40px}
+/* margin-left reserves the space the now-fixed aside occupies (238px, its
+   .navpanel width) so content doesn't render underneath it; collapses back
+   to 0 in lockstep with the sidebar via the body:has() rule below. */
+main{flex:1;min-width:0;padding:0 26px 40px;margin-left:238px;transition:margin-left .16s ease}
+body:has(#sidebar.collapsed) main{margin-left:0}
 header{display:flex;align-items:center;gap:14px;padding:16px 0 10px;position:sticky;top:0;background:var(--bg);z-index:40}
 header h1{font-size:19px;margin:0;font-weight:700}
 .livepill{background:var(--green-soft);color:var(--green);font-size:10.5px;font-weight:700;letter-spacing:.05em;
@@ -145,6 +156,14 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .ring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ring .hole b{font-size:clamp(11px,4.5cqw,17px);font-weight:800;color:var(--ink)}
 .ring .hole span{font-size:clamp(6.5px,2.2cqw,8.5px);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+/* Client base card: the "% active" ring used to sit big and front-and-
+   center to the left of the status list -- moved to a small badge tucked
+   in the card's bottom-right corner instead, out of the way of the list
+   it's summarizing. */
+.cb-wrap{padding-right:calc(clamp(38px,14cqw,56px) + 10px);padding-bottom:calc(clamp(38px,14cqw,56px) + 4px)}
+.cb-ring.ring{position:absolute;right:0;bottom:0;width:clamp(38px,14cqw,56px);height:clamp(38px,14cqw,56px);padding:clamp(3px,1cqw,5px)}
+.cb-ring.ring .hole b{font-size:clamp(8.5px,3cqw,12px)}
+.cb-ring.ring .hole span{font-size:clamp(5px,1.6cqw,6.5px)}
 .grid{display:grid;gap:14px}
 /* ============ customizable dashboard grid (GridStack.js) ============
    True free-form drag-anywhere + drag-resize, with other cards pushed
@@ -572,12 +591,10 @@ section.view{display:none} section.view.on{display:block}
         <div class="card">
           <h3 class="cardtitle">◉ Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
           <div class="cardsub">Where every client sits right now</div>
-          <div style="display:flex;gap:18px;align-items:center;margin-top:10px">
-            <div class="ring" id="activeRing" style="--pct:0;--ring-c:var(--green)"><div class="hole"><b id="activeRingPct">—</b><span>active</span></div></div>
-            <div style="flex:1;min-width:0">
-              <div class="segbar" id="segbar"></div>
-              <div class="statlist" id="tiles"></div>
-            </div>
+          <div class="cb-wrap" style="position:relative;margin-top:10px">
+            <div class="segbar" id="segbar"></div>
+            <div class="statlist" id="tiles"></div>
+            <div class="ring cb-ring" id="activeRing" style="--pct:0;--ring-c:var(--green)"><div class="hole"><b id="activeRingPct">—</b><span>active</span></div></div>
           </div>
         </div>
       </div></div>
