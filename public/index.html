@@ -203,9 +203,21 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .rv-kpi .rvktrend.down{color:#c0392b;background:rgba(192,57,43,.14)}
 .rv-kpi.hero .rvktrend{background:rgba(0,0,0,.14);color:rgba(0,0,0,.7)}
 .rv-kpi.hero .rvktrend.up{color:#0a5c33;background:rgba(0,0,0,.16)}
-.rv-kpi-donut{padding-right:calc(clamp(52px,34cqw,100px) + 14px)}
-.rv-kpi-donut .rvkdonut{position:absolute;right:10px;bottom:10px;
-  width:clamp(52px,34cqw,100px);height:clamp(52px,34cqh,100px);cursor:pointer}
+/* Chart.js (responsive:true, maintainAspectRatio:false) sizes a canvas to
+   fill its DIRECT parent's box -- when the canvas sat straight inside the
+   whole tile, Chart.js resized it to nearly the tile's full width/height
+   (ignoring the CSS width/height we put on the canvas itself, since Chart.js
+   sets its own inline style on the canvas that wins over an external
+   stylesheet), which is exactly why the ring ballooned over the numbers on
+   a narrower window. Fix: give the canvas its own small wrapper div sized
+   with cqw/cqh, pinned to the tile's bottom-right corner -- Chart.js then
+   sizes against THAT small box instead, and its own ResizeObserver picks up
+   any further cqw/cqh change automatically, so it keeps shrinking in step
+   with the tile with no extra JS. */
+.rv-kpi-donut{padding-right:calc(clamp(30px,18cqw,52px) + 10px);padding-bottom:calc(clamp(30px,18cqh,52px) + 2px)}
+.rv-kpi-donut .rvkdonut-wrap{position:absolute;right:8px;bottom:8px;
+  width:clamp(30px,18cqw,52px);height:clamp(30px,18cqh,52px);overflow:hidden}
+.rv-kpi-donut .rvkdonut{width:100%!important;height:100%!important;cursor:pointer;display:block}
 /* Total income card: a small color-key row (Commas blue / MFSN green, each
    with its own dollar figure for the selected range) plus a stacked bar
    chart underneath -- one bar per month in range, each split into its
@@ -625,15 +637,15 @@ section.view{display:none} section.view.on{display:block}
            here is hardcoded twice, the markup below is just the shell. -->
       <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6" title="MyFreeScoreNow affiliate book: total members enrolled under Tiffany's affiliate link. Ring shows how many are actively using credit monitoring vs. not yet active.">
-          <div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div>
+          <div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div></div>
       </div></div>
       <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4" title="MyFreeScoreNow affiliate book: members migrated from MFSN's old member platform to the new one. Ring shows upgraded vs. still on the old platform.">
-          <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div>
+          <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div></div>
       </div></div>
       <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6" title="MyFreeScoreNow affiliate book: members newly active on MFSN's new portal, counting toward MFSN's bonus-tier incentive target for affiliates.">
-          <div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div>
+          <div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div></div>
       </div></div>
 
       <div class="grid-stack-item" gs-id="clientbase" gs-w="7" gs-h="5"><div class="grid-stack-item-content">
