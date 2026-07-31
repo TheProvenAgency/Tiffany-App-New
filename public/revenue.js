@@ -84,23 +84,21 @@ function updateTotalIncomeCard(){
   var labels=r.months.map(function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]+' '+ym.slice(2,4); });
   var coVals=r.months.map(function(ym){return INCOME_BY_MONTH[ym].co||0;});
   var mfVals=r.months.map(function(ym){return INCOME_BY_MONTH[ym].mf||0;});
-  var totVals=coVals.map(function(v,i){return v+mfVals[i];});
-  // Chart now draws on its own white panel (see .rvk-split-wrap), so tick
-  // labels get normal dark/gray colors instead of fighting the green card
-  // background -- plus a red total line laid over the two-color stacked
-  // bars, same combo-chart look Tiffany pointed to.
-  charts.rvkSparkTotal=new Chart(cv.getContext('2d'),{
+  // Chart draws on its own white panel (see .rvk-split-wrap) so tick labels
+  // get normal dark/gray colors instead of fighting the green card
+  // background. Two plain side-by-side bars per month -- no stacking, no
+  // trend line -- Commas and MFSN each get their own bar so the two are
+  // directly comparable at a glance, not just a color-coded slice of one bar.
+  charts.rvkSparkTotal=new Chart(cv.getContext('2d'),{type:'bar',
     data:{labels:labels,datasets:[
-      {type:'bar',label:'Commas',data:coVals,backgroundColor:C.blue,stack:'s',borderRadius:3,order:2},
-      {type:'bar',label:'MFSN',data:mfVals,backgroundColor:C.green,stack:'s',borderRadius:3,order:2},
-      {type:'line',label:'Total',data:totVals,borderColor:'#e11d48',backgroundColor:'#e11d48',borderWidth:2.5,
-        tension:.35,pointRadius:0,pointHoverRadius:4,fill:false,order:1}
+      {label:'Commas',data:coVals,backgroundColor:C.blue,borderRadius:4,borderSkipped:false},
+      {label:'MFSN',data:mfVals,backgroundColor:C.green,borderRadius:4,borderSkipped:false}
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},
       scales:{
-        x:{stacked:true,grid:{display:false},ticks:{color:'#6b7280',font:{size:10.5,weight:'600'}}},
-        y:{stacked:true,ticks:{color:'#6b7280',callback:function(x){return moneyK(x);},font:{size:10}},grid:{color:'#eef0f4'}}
+        x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10.5,weight:'600'}}},
+        y:{ticks:{color:'#6b7280',callback:function(x){return moneyK(x);},font:{size:10}},grid:{color:'#eef0f4'}}
       }}});
 }
 
