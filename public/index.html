@@ -613,8 +613,7 @@ section.view{display:none} section.view.on{display:block}
         <div class="card">
           <h3 class="cardtitle">🎓 Mentorship program</h3>
           <div class="cardsub">All-time mentorship sales</div>
-          <div class="dstat" style="grid-template-columns:1fr 1fr;margin-top:14px" id="mentorStats"></div>
-          <div id="mentorBuyers" style="margin-top:10px;max-height:120px;overflow:auto;font-size:12.5px"></div>
+          <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:14px" id="mentorStats"></div>
         </div>
       </div></div>
 
@@ -1206,18 +1205,17 @@ async function loadDashboard(){
   const b=d.breakdowns;
   const prod=(b.byProductAllTime&&b.byProductAllTime.length)?b.byProductAllTime:((b.byProduct&&b.byProduct.length)?b.byProduct:b.byDeal);
   const m=k.mentorship||{};
+  // "Total mentees" is clickable -- goClientsDeal('Mentorship') routes to
+  // the Clients page pre-filtered to real mentorship buyers (matched by
+  // email against getMentorshipBuyersAllTime server-side, since these
+  // buyers aren't tracked via Deal Production's `deal` field -- see the
+  // /api/clients special-case in server.js). Payments·range and the raw
+  // buyer list underneath were dropped per Tiffany's request; the buyer
+  // detail now only lives on the Clients page itself, not duplicated here.
   $('mentorStats').innerHTML=`
     <div class="tone-green"><div class="l">Collected · range</div><div class="v money">${fmt$(m.rangeRevenue)}</div></div>
-    <div><div class="l">Payments · range</div><div class="v">${fmtN(m.rangeCount)}</div></div>
     <div class="tone-green"><div class="l">Lifetime</div><div class="v money">${fmt$(m.lifetimeRevenue)}</div></div>
-    <div><div class="l">Total mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
-  const mentorBuyersEl=$('mentorBuyers');
-  if(mentorBuyersEl){
-    const buyers=b.mentorshipBuyers||[];
-    mentorBuyersEl.innerHTML=buyers.length?('<div style="opacity:.55;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Mentorship clients</div>'+
-      buyers.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--line,#eee)">
-        <span>${x.name||x.email||'—'}</span><span style="opacity:.6">${fmt$(x.amount)}</span></div>`).join('')):'';
-  }
+    <div style="cursor:pointer" onclick="goClientsDeal('Mentorship')"><div class="l">Total mentees</div><div class="v">${fmtN(m.activeClients)}</div></div>`;
   // Half-donut "gauge" style (per Tiffany's reference screenshot) instead of
   // a full ring -- rotation/circumference cut it to the top semicircle. The
   // centerTotal plugin draws the all-time revenue total up inside the arc's
@@ -1299,6 +1297,11 @@ async function loadDashboard(){
   renderAttention(d);renderSources(d);
   if($('fDeal').options.length<=1){
     for(const x of b.byDeal)$('fDeal').add(new Option(x.key,x.key));
+    // Mentorship isn't a Deal Production package (it's matched separately by
+    // email server-side -- see /api/clients), so it never shows up in
+    // b.byDeal on its own. Add it by hand so the filter dropdown -- and
+    // the Mentorship card's "Total mentees" click-through -- both work.
+    if(!Array.from($('fDeal').options).some(o=>o.value==='Mentorship')) $('fDeal').add(new Option('Mentorship','Mentorship'));
     for(const x of b.byRound)$('fRound').add(new Option(x.key,x.key.replace('Round ','')));
   }
   loadFeed();
@@ -1331,6 +1334,7 @@ async function loadFeed(){
 function goClients(status){showView('clients');$('fStatus').value=(status==='active'||status==='inactive')?status:'';page=1;loadClients();}
 // Drill-down from the MyFreeScoreNow affiliate-gap card: seg is 'enrolled', 'needs', or '' (all clients).
 function goClientsAffiliate(seg){showView('clients');$('fAffiliate').value=seg;page=1;loadClients();}
+function goClientsDeal(deal){showView('clients');$('fDeal').value=deal;page=1;loadClients();}
 // These prospects have no GoHighLevel contact at all, so there's no client
 // record to route into the Clients table -- show the full list in a modal
 // instead of just the first 12 the card itself renders.

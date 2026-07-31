@@ -883,7 +883,19 @@ app.get('/api/clients', async (req, res) => {
     const ql = q.toLowerCase();
     if (ql) list = list.filter(c => (c.name || '').toLowerCase().includes(ql) || (c.email || '').toLowerCase().includes(ql) || (c.phone || '').includes(ql));
     if (status) list = list.filter(c => c.status === status);
-    if (deal) list = list.filter(c => c.deal === deal);
+    if (deal === 'Mentorship') {
+      // Mentorship buyers aren't tracked via Deal Production's `deal` field --
+      // they live in the Commas-derived historical snapshot + live Fanbasis
+      // events tagged mentorship (see getMentorshipBuyersAllTime, used by the
+      // Mentorship program card's "Total mentees" stat). Match by email
+      // against that real buyer list instead of the usual c.deal===deal
+      // check, so the Clients page shows the actual people who bought it.
+      const mentorEmails = new Set(getMentorshipBuyersAllTime(getPaymentEvents())
+        .map(b => (b.email || '').toLowerCase().trim()).filter(Boolean));
+      list = list.filter(c => c.email && mentorEmails.has(c.email.toLowerCase().trim()));
+    } else if (deal) {
+      list = list.filter(c => c.deal === deal);
+    }
     if (round) list = list.filter(c => c.round === round);
     if (affiliateFilter === 'affiliate' || affiliateFilter === 'not_affiliate' || affiliateFilter === 'not_on_mfsn') {
       list = list.filter(c => c.mfsnStatus === affiliateFilter);
