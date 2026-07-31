@@ -1435,7 +1435,6 @@ function setNavGroup(g,expand){
 }
 function setNavCollapsed(collapsed){
   $('sidebar').classList.toggle('collapsed',collapsed);
-  $('railCollapseBtn').textContent=collapsed?'»':'«';
   try{localStorage.setItem('navCollapsed',collapsed?'1':'0');}catch(e){}
 }
 function toggleNavPanel(){setNavCollapsed(!$('sidebar').classList.contains('collapsed'));}
