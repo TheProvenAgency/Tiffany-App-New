@@ -452,6 +452,31 @@ section.view{display:none} section.view.on{display:block}
      to dismiss it besides hunting for the small toggle circle. */
   body:has(#sidebar:not(.collapsed))::before{content:'';position:fixed;inset:0;left:238px;
     background:rgba(20,16,10,.45);z-index:140}
+  /* Dashboard grid at phone/tablet width: bypass GridStack's absolute
+     x/y/w/h positioning (a 12-column desktop layout's row heights don't
+     mean anything once every card is full width and its content reflows
+     taller or shorter) and just let every card stack in normal document
+     flow, sized to its own actual content. !important is required --
+     GridStack sets left/top/width/height as inline styles, which normally
+     beat a stylesheet rule, but an !important stylesheet rule still wins
+     over a plain (non-!important) inline style. This is what actually
+     fixes the cards bleeding into each other that a teammate screenshotted
+     -- see the initDashGrid() comment above for why columnOpts wasn't the
+     right tool for this. */
+  .grid-stack{height:auto!important;position:static!important}
+  .grid-stack-item{position:static!important;left:auto!important;top:auto!important;
+    width:100%!important;height:auto!important;transform:none!important;
+    margin-bottom:14px!important}
+  .grid-stack-item-content{position:static!important;inset:auto!important;height:auto!important;
+    min-height:120px;
+    /* container-type:size (set above, for the desktop cqw/cqh sizing) needs
+       an explicit/constrained height to contain against -- on an
+       height:auto box that computes to a 0px container, which would
+       silently collapse every ring/number/chart inside it to nothing.
+       inline-size containment only, so cqw-based clamp() sizing (used
+       everywhere) still works off the full-width mobile box, while height
+       is left to the content like any normal element. */
+    container-type:inline-size!important}
 }
 </style>
 </head>
@@ -2091,19 +2116,19 @@ function initDashGrid(){
   dashGridStack=GridStack.init({
     column:12, cellHeight:50, margin:8, float:false, animate:true,
     disableDrag:true, disableResize:true,
-    resizable:{handles:'e, se, s, sw, w'},
-    // The saved/default layout is a 12-column desktop arrangement -- cramming
-    // that same 12-column grid into a phone or half-a-monitor window just
-    // makes every card too narrow to render (the donut-KPI overlap bug
-    // reported from a teammate's screen was exactly this: a card's box got
-    // so thin that even its smallest allowed content size didn't fit).
-    // columnOpts switches to fewer columns below each breakpoint and,
-    // critically, layout:'list' makes every card go full-width and stack
-    // top-to-bottom at 1 column instead of trying to preserve x/y positions
-    // that only make sense at 12-wide -- so nothing can overlap or run off
-    // the edge on any screen size.
-    columnOpts:{breakpointForWindow:true,layout:'list',columnMax:12,
-      breakpoints:[{w:640,c:1},{w:1024,c:6}]}
+    resizable:{handles:'e, se, s, sw, w'}
+    // Mobile/tablet responsiveness is handled entirely in CSS below (see the
+    // max-width:760px block) instead of GridStack's own columnOpts/'list'
+    // responsive mode -- that was tried first and made things worse: it
+    // kept each card's original gs-h (a row-height chosen for its content at
+    // 6-of-12-columns-wide), then reflowed the SAME height at full mobile
+    // width, so cards whose content needed more room at that new width
+    // visually bled into the next one (the nested-looking green/purple/blue
+    // cards a teammate screenshotted). It also fired GridStack's 'change'
+    // event on every breakpoint crossing, which would have silently saved
+    // that mangled mobile arrangement as the person's personal desktop
+    // layout too. Keeping column:12 fixed and overriding the positioning
+    // with plain CSS at narrow widths sidesteps both problems -- see below.
   },'#dashGrid');
   dashGridStack.on('change',()=>{saveDashLayout();resizeDashCharts();});
   dashGridStack.on('resize',resizeDashCharts);
