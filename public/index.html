@@ -1246,6 +1246,27 @@ async function loadDashboard(){
       ctx.fillStyle='#211d18';ctx.font='700 20px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText(fmt$(dealsTotal),cx,cy+9);
       ctx.restore();
+    }},
+    {id:'sliceLabels',afterDraw(chart){
+      // Percentage on the arc itself, not just the legend -- drawn at the
+      // midpoint angle/radius of each slice using the arc element's own
+      // geometry (startAngle/endAngle/inner+outerRadius), so it stays
+      // correct no matter how the gauge is rotated or resized. Skipped
+      // below 6% since the arc is too thin there to hold readable text.
+      const meta=chart.getDatasetMeta(0); if(!meta.data.length)return;
+      const {ctx}=chart;
+      const data=chart.data.datasets[0].data;
+      ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font='700 11px -apple-system,Segoe UI,Inter,sans-serif';
+      meta.data.forEach((arc,i)=>{
+        const pct=data[i]/dealsTotal*100; if(pct<6)return;
+        const mid=(arc.startAngle+arc.endAngle)/2;
+        const r=(arc.innerRadius+arc.outerRadius)/2;
+        const x=arc.x+Math.cos(mid)*r, y=arc.y+Math.sin(mid)*r;
+        ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillText(Math.round(pct)+'%',x,y+1);
+        ctx.fillStyle='#fff';ctx.fillText(Math.round(pct)+'%',x,y);
+      });
+      ctx.restore();
     }}]});
   mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{data:b.byRound.map(x=>x.count),
     backgroundColor:c=>grad(c.chart.ctx,PURPLE,210),borderColor:PURPLE,borderWidth:1.5,borderRadius:5}]},
