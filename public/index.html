@@ -441,6 +441,17 @@ section.view{display:none} section.view.on{display:block}
   main{margin-left:0!important;padding:0 14px 30px}
   aside{z-index:150;box-shadow:6px 0 24px rgba(0,0,0,.25)}
   header{padding-left:34px}
+  /* Bug from the first mobile pass: aside's z-index (150, so it overlays
+     content) ended up ABOVE the collapse toggle's (70), so the toggle sat
+     underneath the open sidebar and became untappable -- there was no way
+     to actually collapse it once open on a phone. Toggle now always wins. */
+  .navCollapseToggle{z-index:200}
+  /* Dark tap-to-close backdrop behind the open sidebar, same pattern as
+     the client drawer/overlay elsewhere in this file -- makes it obvious
+     the panel is temporary/floating on top, and gives a big, easy target
+     to dismiss it besides hunting for the small toggle circle. */
+  body:has(#sidebar:not(.collapsed))::before{content:'';position:fixed;inset:0;left:238px;
+    background:rgba(20,16,10,.45);z-index:140}
 }
 </style>
 </head>
@@ -1402,6 +1413,19 @@ function setNavCollapsed(collapsed){
   try{localStorage.setItem('navCollapsed',collapsed?'1':'0');}catch(e){}
 }
 function toggleNavPanel(){setNavCollapsed(!$('sidebar').classList.contains('collapsed'));}
+// Tapping the dark backdrop behind the open sidebar on phone/tablet (see
+// the body:has(#sidebar:not(.collapsed))::before rule in the 760px media
+// query) collapses it, same as tapping the toggle circle -- a bigger,
+// easier target than hunting for the small toggle button, and matches how
+// the client drawer/overlay elsewhere in this app already close on an
+// outside click.
+document.addEventListener('click', e => {
+  if (window.innerWidth > 760) return;
+  const sidebar = $('sidebar');
+  if (!sidebar || sidebar.classList.contains('collapsed')) return;
+  if (sidebar.contains(e.target) || e.target.closest('.navCollapseToggle')) return;
+  setNavCollapsed(true);
+});
 (function initNavRail(){
   let g='ov',collapsed=false;
   try{
