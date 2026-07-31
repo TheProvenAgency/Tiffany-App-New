@@ -27,6 +27,71 @@ var MF_MONTHLY={ labels:['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','
 
 var TOTAL_YTD = CO.ytd + MF.ytd; // combined business income YTD
 
+/* ---------- Total income card: real month-by-month Commas/MFSN split ----------
+   Same two source snapshots as above, just keyed to actual calendar months
+   so the Total income card can sum whichever months fall inside whatever
+   date range is currently selected (Today/7D/30D/90D/YTD/All, or a custom
+   range) instead of always showing a fixed "YTD" figure. Commas is tracked
+   Jan-Jul 2026 (CO_MONTHLY); MFSN commissions are tracked back further,
+   Sep 2025-Jun 2026 (MF_MONTHLY) -- both real monthly totals already pulled
+   from each platform, just not (yet) reported for the current month. */
+var CO_YM=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07'];
+var MF_YM=['2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
+var INCOME_BY_MONTH=(function(){
+  var m={};
+  CO_YM.forEach(function(ym,i){ m[ym]=m[ym]||{co:0,mf:0}; m[ym].co=CO_MONTHLY.rev[i]; });
+  MF_YM.forEach(function(ym,i){ m[ym]=m[ym]||{co:0,mf:0}; m[ym].mf=MF_MONTHLY.vals[i]; });
+  return m;
+})();
+var INCOME_YMS=Object.keys(INCOME_BY_MONTH).sort();
+function parseYMD(s){ if(!s)return null; var p=String(s).split('-'); return new Date(+p[0],+p[1]-1,+(p[2]||1)); }
+// Sums whichever tracked months overlap [fromStr,toStr] (either bound can be
+// null/omitted, meaning "open ended" -- that's how the "All" preset works).
+// Whole-month granularity is the honest limit of the data itself (MFSN
+// commissions are only ever reported per month, not per day), so a month
+// counts if any part of it falls in range, same as any monthly statement.
+function incomeForRange(fromStr,toStr){
+  var fromD=parseYMD(fromStr), toD=parseYMD(toStr);
+  var co=0,mf=0,months=[];
+  INCOME_YMS.forEach(function(ym){
+    var y=+ym.slice(0,4), mo=+ym.slice(5,7);
+    var monthStart=new Date(y,mo-1,1), monthEnd=new Date(y,mo,0);
+    if((!fromD||monthEnd>=fromD)&&(!toD||monthStart<=toD)){
+      co+=INCOME_BY_MONTH[ym].co||0; mf+=INCOME_BY_MONTH[ym].mf||0; months.push(ym);
+    }
+  });
+  return {co:co,mf:mf,total:co+mf,months:months};
+}
+var MONTH_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Redraws the Total income card (#rvkTotalV/#rvkTotalSub/#rvkSplitLegend +
+// the stacked bar in #rvkSparkTotal) for whatever range is currently
+// selected on the Dashboard -- called once on load and again every time
+// loadDashboard() runs (see the window.loadDashboard wrap in initRV, below),
+// so it always tracks the Today/7D/30D/90D/YTD/All/custom picker up top.
+function updateTotalIncomeCard(){
+  var v=document.getElementById('rvkTotalV'); if(!v)return;
+  var f=(typeof from!=='undefined')?from:null, t=(typeof to!=='undefined')?to:null;
+  var r=incomeForRange(f,t);
+  var lbl=(typeof rangeLabel==='function')?rangeLabel():'';
+  document.getElementById('rvkTotalL').textContent='Total income'+(lbl?' · '+lbl:'');
+  v.textContent=money0(r.total);
+  var sub=document.getElementById('rvkTotalSub');
+  if(sub) sub.textContent=r.months.length?('Commas '+money0(r.co)+' + MFSN '+money0(r.mf)):'No tracked months in this range yet';
+  var lc=document.getElementById('rvkSplitCommas'); if(lc)lc.textContent=money0(r.co);
+  var lm=document.getElementById('rvkSplitMfsn'); if(lm)lm.textContent=money0(r.mf);
+  var cv=document.getElementById('rvkSparkTotal'); if(!cv||!window.Chart)return;
+  killChart('rvkSparkTotal');
+  var labels=r.months.map(function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]+' '+ym.slice(2,4); });
+  charts.rvkSparkTotal=new Chart(cv.getContext('2d'),{type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'Commas',data:r.months.map(function(ym){return INCOME_BY_MONTH[ym].co||0;}),backgroundColor:C.blue,stack:'s',borderRadius:3},
+      {label:'MFSN',data:r.months.map(function(ym){return INCOME_BY_MONTH[ym].mf||0;}),backgroundColor:C.green,stack:'s',borderRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,ticks:{callback:function(x){return moneyK(x);},font:{size:10}},grid:{color:'#efe9df'}}}}});
+}
+
 var DISPUTES=[
   {amt:100, kind:'General', due:'6 days to respond'},
   {amt:100, kind:'General', due:'11 days to respond'},
@@ -345,34 +410,11 @@ function trendBadge(vals){
   var up=pct>=0;
   return {text:(up?'▲ ':'▼ ')+Math.abs(pct).toFixed(0)+'%', up:up};
 }
-function drawKpiSparklines(){
-  if(!window.Chart)return;
-  var defs=[
-    // Total income (hero, green bg) -- combined Commas+MFSN by month
-    {id:'rvkSparkTotal', trendId:'rvkTrendTotal', labels:HERO_MONTH.labels, vals:HERO_MONTH.vals, type:'line', color:C.ink, period:'monthly total'},
-    // Commas sales YTD -- Commas gross by month
-    {id:'rvkSparkCommasYtd', trendId:'rvkTrendCommasYtd', labels:CO_MONTHLY.labels, vals:CO_MONTHLY.rev, type:'bar', color:C.blue, period:'monthly gross'},
-    // MFSN commissions YTD -- MFSN payout, last 7 months to match the others
-    {id:'rvkSparkMfsnYtd', trendId:'rvkTrendMfsnYtd', labels:MF_MONTHLY.labels.slice(-7), vals:MF_MONTHLY.vals.slice(-7), type:'bar', color:C.green, period:'monthly commissions'},
-    // Commas this month -- daily trend within the current month
-    {id:'rvkSparkCommasMonth', trendId:'rvkTrendCommasMonth', labels:CO_DAILY.labels, vals:CO_DAILY.rev, type:'line', color:C.teal, period:'daily gross'},
-    // MFSN latest month -- recent-months trend leading into the latest payout
-    {id:'rvkSparkMfsnMonth', trendId:'rvkTrendMfsnMonth', labels:MF_MONTHLY.labels.slice(-6), vals:MF_MONTHLY.vals.slice(-6), type:'bar', color:C.purple, period:'monthly commissions'}
-  ];
-  defs.forEach(function(d){
-    var el=document.getElementById(d.id); if(!el)return;
-    killChart(d.id);
-    var cfg = d.type==='line'
-      ? {type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,borderWidth:2,tension:.4,fill:false}]},options:sparkOpts(d.period)}
-      : {type:'bar',data:{labels:d.labels,datasets:[{data:d.vals,backgroundColor:d.color,borderRadius:2,barPercentage:.7,minBarLength:2}]},options:sparkOpts(d.period)};
-    charts[d.id]=new Chart(el.getContext('2d'),cfg);
-    var badge=trendBadge(d.vals), badgeEl=document.getElementById(d.trendId);
-    if(badgeEl){
-      if(badge){ badgeEl.textContent=badge.text; badgeEl.className='rvktrend '+(badge.up?'up':'down'); }
-      else { badgeEl.textContent=''; }
-    }
-  });
-}
+// Kept as a thin wrapper (rather than renaming every call site) -- the 4
+// separate Commas/MFSN KPI tiles this used to redraw sparklines for are
+// gone; the one remaining Total income tile now gets a real range-aware
+// stacked bar from updateTotalIncomeCard() instead of a fixed sparkline.
+function drawKpiSparklines(){ updateTotalIncomeCard(); }
 function drawPeriods(){
   if(!window.Chart)return;var el=document.getElementById('rvPeriods');if(!el)return;killChart('p');
   var labels=['This week','This month','Last 6 mo','Year to date'];
@@ -421,6 +463,20 @@ function initRV(){
   drawTrend('dashTrend');
   drawKpiSparklines();
   wireGranTabs('rvGranDash');
+  // Total income card needs to redraw every time the Today/7D/30D/90D/YTD/
+  // All picker (or a custom Apply) changes the selected range -- every one
+  // of those routes through loadDashboard() (see index.html setPreset/
+  // applyCustom), so wrap it once here, the same pattern already used above
+  // for window.showView. Guarded against double-wrapping if initRV somehow
+  // runs twice.
+  if(typeof window.loadDashboard==='function'&&!window.__rvLoadWrap){
+    window.__rvLoadWrap=true;var _ld=window.loadDashboard;
+    window.loadDashboard=function(){
+      var p=_ld.apply(this,arguments);
+      if(p&&typeof p.then==='function') p.then(updateTotalIncomeCard); else updateTotalIncomeCard();
+      return p;
+    };
+  }
   // resizeDashCharts() in index.html only knows about its own chart
   // registry; this lets it also nudge every chart this file owns (the
   // Sales-trend copy and the 5 KPI sparklines) after a GridStack

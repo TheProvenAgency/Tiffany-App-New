@@ -186,6 +186,14 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .rv-kpi-donut{padding-right:calc(clamp(72px,44cqw,140px) + 14px)}
 .rv-kpi-donut .rvkdonut{position:absolute;right:12px;top:50%;transform:translateY(-50%);
   width:clamp(72px,44cqw,140px);height:clamp(72px,44cqh,140px);cursor:pointer}
+/* Total income card: a small color-key row (Commas blue / MFSN green, each
+   with its own dollar figure for the selected range) plus a stacked bar
+   chart underneath -- one bar per month in range, each split into its
+   Commas + MFSN portion so the two sources are visible at a glance. */
+.rvk-split-legend{display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:rgba(0,0,0,.65)}
+.rvk-split-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
+.rvk-split-legend b{color:var(--ink);font-weight:800}
+.rvk-split-wrap{position:relative;height:clamp(60px,26cqh,120px);margin-top:10px}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
@@ -482,25 +490,26 @@ section.view{display:none} section.view.on{display:block}
            Payment methods, now also live here -- see revenue.js for the
            chart wiring on #dashTrend and the shared #rvGran/#rvGranDash
            tab-sync logic. -->
-      <!-- These 5 used to be one bundled "rev-kpis" block that dragged and
-           resized as a single unit. Split into 5 separate grid-stack-items
-           so each tile can be moved/resized on its own, same as any other
-           card. Widths sum to 12 (3+2+2+2+3) so the row still spans the
-           full grid at the default layout. -->
-      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi hero"><div class="l">Total income · YTD</div><div class="v">$982,657</div><div class="s">Commas sales + MFSN commissions</div><span class="rvktrend" id="rvkTrendTotal"></span><canvas class="rvkspark" id="rvkSparkTotal"></canvas></div>
-      </div></div>
-      <div class="grid-stack-item" gs-id="rev-kpi-commas-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#3b82f6"><div class="l">Commas sales · YTD</div><div class="v">$874,877</div><div class="s">3,729 paying customers</div><span class="rvktrend" id="rvkTrendCommasYtd"></span><canvas class="rvkspark" id="rvkSparkCommasYtd"></canvas></div>
-      </div></div>
-      <div class="grid-stack-item" gs-id="rev-kpi-mfsn-ytd" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#0e9e56"><div class="l">MFSN commissions · YTD</div><div class="v">$107,780</div><div class="s">203 active members</div><span class="rvktrend" id="rvkTrendMfsnYtd"></span><canvas class="rvkspark" id="rvkSparkMfsnYtd"></canvas></div>
-      </div></div>
-      <div class="grid-stack-item" gs-id="rev-kpi-commas-month" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#06b6d4"><div class="l">Commas · this month</div><div class="v">$29,100</div><div class="s">176 new customers</div><span class="rvktrend" id="rvkTrendCommasMonth"></span><canvas class="rvkspark" id="rvkSparkCommasMonth"></canvas></div>
-      </div></div>
-      <div class="grid-stack-item" gs-id="rev-kpi-mfsn-month" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi" style="border-top-color:#8b5cf6"><div class="l">MFSN · latest month</div><div class="v">$17,192</div><div class="s">recurring affiliate income</div><span class="rvktrend" id="rvkTrendMfsnMonth"></span><canvas class="rvkspark" id="rvkSparkMfsnMonth"></canvas></div>
+      <!-- The Commas-YTD / MFSN-YTD / Commas-this-month / MFSN-latest-month
+           tiles were removed per Tiffany's request -- one Total income card
+           now carries the whole picture: the combined figure for whatever
+           date range is selected up top (Today/7D/30D/90D/YTD/All or a
+           custom range), plus a two-color stacked bar (Commas vs MFSN,
+           per month in range) so the split is visible at a glance. Built +
+           kept live by updateTotalIncomeCard() in revenue.js, which is
+           wired into loadDashboard() so it recomputes on every date-range
+           change, same as every other card on this page. */-->
+      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
+        <div class="rv-kpi hero" style="padding-bottom:12px">
+          <div class="l" id="rvkTotalL">Total income</div>
+          <div class="v" id="rvkTotalV">$0</div>
+          <div class="s" id="rvkTotalSub">Commas sales + MFSN commissions</div>
+          <div class="rvk-split-legend" id="rvkSplitLegend">
+            <span><i style="background:#3b82f6"></i>Commas <b id="rvkSplitCommas">$0</b></span>
+            <span><i style="background:#0e9e56"></i>MFSN <b id="rvkSplitMfsn">$0</b></span>
+          </div>
+          <div class="rvk-split-wrap"><canvas id="rvkSparkTotal"></canvas></div>
+        </div>
       </div></div>
 
       <div class="grid-stack-item" gs-id="rev-trend" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
