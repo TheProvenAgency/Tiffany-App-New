@@ -644,6 +644,36 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
+      <!-- MyFreeScoreNow — Affiliate Income: the same "Overview" figures
+           from the Credit Monitoring page's mf-kpis band (see mfsn.js),
+           split into 3 independent grid-stack-items so each one can be
+           moved/resized on its own, same treatment as Total income above.
+           mfsn.js's initMFDashKpis() fills the numbers in and draws the
+           sparklines from its own real M/COMM_TREND data -- nothing here
+           is hardcoded twice, the markup below is just the shell.
+           Kept immediately next to rev-kpi-total (instead of after the
+           Sales trend / Affiliate Report cards) so all 4 top-line KPI
+           tiles compact into one clean 2x2 block, matching Admina's own
+           top-row KPI layout -- GridStack's auto-placement packs items in
+           DOM order, so if these sat after rev-trend/mfsn in the markup
+           they'd get shoved down below those taller cards instead of
+           sitting flush against rev-kpi-total. -->
+      <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6;--kc:#3b82f6" title="MyFreeScoreNow affiliate book: total members enrolled under Tiffany's affiliate link. Ring shows how many are actively using credit monitoring vs. not yet active.">
+          <div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div>
+        </div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4;--kc:#06b6d4" title="MyFreeScoreNow affiliate book: members migrated from MFSN's old member platform to the new one. Ring shows upgraded vs. still on the old platform.">
+          <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div>
+        </div>
+      </div></div>
+      <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6;--kc:#8b5cf6" title="MyFreeScoreNow affiliate book: members newly active on MFSN's new portal, counting toward MFSN's bonus-tier incentive target for affiliates.">
+          <div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div>
+        </div>
+      </div></div>
+
       <div class="grid-stack-item" gs-id="rev-trend" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
@@ -665,25 +695,6 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <!-- MyFreeScoreNow — Affiliate Income: the same "Overview" figures
-           from the Credit Monitoring page's mf-kpis band (see mfsn.js),
-           split into 5 independent grid-stack-items so each one can be
-           moved/resized on its own, same treatment as the 5 income tiles
-           above. mfsn.js's initMFDashKpis() fills the numbers in and draws
-           the two sparklines from its own real M/COMM_TREND data -- nothing
-           here is hardcoded twice, the markup below is just the shell. -->
-      <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
-        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6;--kc:#3b82f6" title="MyFreeScoreNow affiliate book: total members enrolled under Tiffany's affiliate link. Ring shows how many are actively using credit monitoring vs. not yet active.">
-          <div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div></div>
-      </div></div>
-      <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
-        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4;--kc:#06b6d4" title="MyFreeScoreNow affiliate book: members migrated from MFSN's old member platform to the new one. Ring shows upgraded vs. still on the old platform.">
-          <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div></div>
-      </div></div>
-      <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
-        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6;--kc:#8b5cf6" title="MyFreeScoreNow affiliate book: members newly active on MFSN's new portal, counting toward MFSN's bonus-tier incentive target for affiliates.">
-          <div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div></div>
-      </div></div>
 
       <div class="grid-stack-item" gs-id="clientbase" gs-w="7" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
