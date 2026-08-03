@@ -649,7 +649,7 @@ section.view{display:none} section.view.on{display:block}
            kept live by updateTotalIncomeCard() in revenue.js, which is
            wired into loadDashboard() so it recomputes on every date-range
            change, same as every other card on this page. */-->
-      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-x="0" gs-y="0" gs-w="2" gs-h="5"><div class="grid-stack-item-content">
         <div class="rv-kpi hero" style="padding-bottom:12px">
           <div class="l" id="rvkTotalL">Total income</div>
           <div class="v" id="rvkTotalV">$0</div>
@@ -675,23 +675,23 @@ section.view{display:none} section.view.on{display:block}
            DOM order, so if these sat after rev-trend/mfsn in the markup
            they'd get shoved down below those taller cards instead of
            sitting flush against rev-kpi-total. -->
-      <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-x="2" gs-y="0" gs-w="2" gs-h="5"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6;--kc:#3b82f6" title="MyFreeScoreNow affiliate book: total members enrolled under Tiffany's affiliate link. Ring shows how many are actively using credit monitoring vs. not yet active.">
           <div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div>
         </div>
       </div></div>
-      <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-x="0" gs-y="5" gs-w="2" gs-h="4"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4;--kc:#06b6d4" title="MyFreeScoreNow affiliate book: members migrated from MFSN's old member platform to the new one. Ring shows upgraded vs. still on the old platform.">
           <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s" id="mfkUpgradedSub">to new platform</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div>
         </div>
       </div></div>
-      <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-x="2" gs-y="5" gs-w="2" gs-h="4"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6;--kc:#8b5cf6" title="MyFreeScoreNow affiliate book: members newly active on MFSN's new portal, counting toward MFSN's bonus-tier incentive target for affiliates.">
           <div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div>
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="rev-trend" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rev-trend" gs-x="4" gs-y="0" gs-w="8" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
             <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#3563a8"><i class="ri-line-chart-line"></i></span>Sales trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>
@@ -719,7 +719,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="mfsn" gs-w="12" gs-h="7"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mfsn" gs-x="0" gs-y="9" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
         <div class="card moneycard">
           <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:26px;width:26px;border-radius:6px;vertical-align:-6px;margin-right:6px">MyFreeScoreNow — Affiliate Report</h3>
           <div id="affiliateGap" style="margin-top:10px"></div>
@@ -727,7 +727,7 @@ section.view{display:none} section.view.on{display:block}
       </div></div>
 
 
-      <div class="grid-stack-item" gs-id="clientbase" gs-w="7" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="clientbase" gs-x="6" gs-y="24" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#7c5cff"><i class="ri-team-line"></i></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
           <div class="cardsub">Where every client sits right now</div>
@@ -739,7 +739,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="attention" gs-w="5" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="attention" gs-x="3" gs-y="27" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><i class="ri-alert-line"></i></span> Needs attention</h3>
           <div class="cardsub">Fix these before trusting the numbers</div>
@@ -747,7 +747,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="conversations" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="conversations" gs-x="0" gs-y="21" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#3563a8"><i class="ri-message-3-line"></i></span> Conversations <button class="linklike" onclick="showView('messages')">Open inbox →</button></h3>
           <div class="cardsub">SMS volume · inbound above the line, outbound below</div>
@@ -759,7 +759,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="revenue-package" gs-w="6" gs-h="8"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="revenue-package" gs-x="6" gs-y="9" gs-w="6" gs-h="8"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><i class="ri-vip-diamond-line"></i></span> Revenue by package</h3>
           <div class="cardsub">All-time · Commas + Fanbasis sales</div>
@@ -768,7 +768,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="mentorship" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mentorship" gs-x="0" gs-y="27" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><i class="ri-graduation-cap-line"></i></span> Mentorship program</h3>
           <div class="cardsub">All-time mentorship sales</div>
@@ -776,7 +776,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="rounds" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rounds" gs-x="6" gs-y="17" gs-w="6" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#8b5cf6"><i class="ri-filter-3-line"></i></span> Active by dispute round</h3>
           <div class="cardsub">Credit repair delivery stages</div>
@@ -784,7 +784,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="social-growth" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="social-growth" gs-x="6" gs-y="31" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><i class="ri-sparkling-2-line"></i></span> Social growth</h3>
           <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
@@ -792,7 +792,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="churn" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="churn" gs-x="6" gs-y="36" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#b3372f"><i class="ri-refresh-line"></i></span> Churn recency</h3>
           <div class="cardsub">How long ago inactive clients lapsed</div>
@@ -800,7 +800,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="social-snapshot" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="social-snapshot" gs-x="9" gs-y="31" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><i class="ri-sparkling-2-line"></i></span> Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
           <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
@@ -812,7 +812,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="top-content" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="top-content" gs-x="9" gs-y="24" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><i class="ri-trophy-line"></i></span> Top performing content</h3>
           <div class="cardsub">Public engagement · read Jul 14, 2026</div>
@@ -820,7 +820,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="activity" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="activity" gs-x="0" gs-y="33" gs-w="6" gs-h="13"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#ff2e9a"><i class="ri-flashlight-line"></i></span> Activity</h3>
           <div class="cardsub">Latest sales, disputes & new clients</div>
