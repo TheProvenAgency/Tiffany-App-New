@@ -106,6 +106,19 @@ function updateTotalIncomeCard(){
       }}});
 }
 
+// Fills the two stat tiles that sit to the left of the Dashboard's Sales
+// trend chart (see index.html gs-id="rev-trend", .rv-trend-stats) --
+// same incomeForRange() split the Total income KPI card already computes
+// for whatever date range is selected up top, just also surfaced here so
+// the card matches Admina's own "two stat tiles + chart" layout instead of
+// a bare chart with nothing next to it.
+function updateTrendStats(){
+  var co=document.getElementById('rvTrendStatCo'); if(!co)return;
+  var f=(typeof from!=='undefined')?from:null, t=(typeof to!=='undefined')?to:null;
+  var r=incomeForRange(f,t);
+  co.textContent=money0(r.co);
+  var mf=document.getElementById('rvTrendStatMf'); if(mf)mf.textContent=money0(r.mf);
+}
 var DISPUTES=[
   {amt:100, kind:'General', due:'6 days to respond'},
   {amt:100, kind:'General', due:'11 days to respond'},
@@ -213,7 +226,14 @@ var css=''+
 // sizing for the two cards when they live inside a GridStack item on the
 // Dashboard instead of the free-flowing Revenue page
 '.grid-stack-item-content>.rv-card{height:100%;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column}'+
-'.grid-stack-item-content>.rv-card>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important}'+
+'.grid-stack-item-content>.rv-card>.rv-trend-body{flex:1 1 auto;min-height:0;display:flex;gap:16px}'+
+'.rv-trend-stats{display:flex;flex-direction:column;gap:10px;flex:0 0 148px;min-width:0}'+
+'.rv-trend-stat{border-radius:12px;padding:14px 16px;flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;min-height:0}'+
+'.rv-trend-stat .tv{font-size:clamp(15px,2.2cqw,20px);font-weight:800;color:var(--ink);line-height:1.15}'+
+'.rv-trend-stat .tl{font-size:11.5px;color:var(--muted);margin-top:3px}'+
+'.rv-trend-stat.tile-a{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--pink)}'+
+'.rv-trend-stat.tile-b{background:var(--gold-soft);border-left:3px solid var(--gold)}.rv-trend-stat.tile-b .tl{color:#8a6a1f}'+
+'.grid-stack-item-content>.rv-card>.rv-trend-body>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important;min-width:0}'+
 '.grid-stack-item-content>.rv-kpis{height:100%}'+
 // the Lifetime collected / Avg payment / LTV / New clients KPI rail, moved
 // here from the Dashboard -- .kpi/.spark/.miniring are all global classes
@@ -333,7 +353,12 @@ function drawTrend(targetId){
   targetId=targetId||'rvTrend';
   if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
   var d=trendData();
-  charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?3:0,pointBackgroundColor:d.color,borderWidth:2.5}]},
+  // Admina reference: each point on its own Sales-trend line is colored by
+  // whether that period was up or down vs the one before it (green/gold),
+  // not a single flat color for the whole line -- real month-over-month
+  // direction from the same data, not a decorative fabrication.
+  var dotColors=d.vals.map(function(v,i){ if(i===0)return d.color; return v>=d.vals[i-1]?C.green:C.gold; });
+  charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?4:0,pointBackgroundColor:dotColors,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:12}}}}});
 }
 // redraws whichever of the two Sales-trend canvases currently exist in the
@@ -428,7 +453,7 @@ function trendBadge(vals){
 // separate Commas/MFSN KPI tiles this used to redraw sparklines for are
 // gone; the one remaining Total income tile now gets a real range-aware
 // stacked bar from updateTotalIncomeCard() instead of a fixed sparkline.
-function drawKpiSparklines(){ updateTotalIncomeCard(); }
+function drawKpiSparklines(){ updateTotalIncomeCard(); updateTrendStats(); }
 function drawPeriods(){
   if(!window.Chart)return;var el=document.getElementById('rvPeriods');if(!el)return;killChart('p');
   var labels=['This week','This month','Last 6 mo','Year to date'];
@@ -487,7 +512,7 @@ function initRV(){
     window.__rvLoadWrap=true;var _ld=window.loadDashboard;
     window.loadDashboard=function(){
       var p=_ld.apply(this,arguments);
-      if(p&&typeof p.then==='function') p.then(updateTotalIncomeCard); else updateTotalIncomeCard();
+      if(p&&typeof p.then==='function') p.then(function(){updateTotalIncomeCard();updateTrendStats();}); else {updateTotalIncomeCard();updateTrendStats();}
       return p;
     };
   }
