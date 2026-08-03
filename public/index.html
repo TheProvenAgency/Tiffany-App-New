@@ -81,6 +81,7 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 .nav button .ico2{width:20px;height:20px;flex:0 0 auto;display:flex;align-items:center;
   justify-content:center;font-size:15px;color:var(--ic,var(--pink));background:none}
 .nav button.on .ico2{color:#fff}
+.ico2 svg{width:16px;height:16px;display:block}
 .spacer{flex:1}
 .sources{padding:0 18px 8px}
 .src{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sidebar-dim);padding:3.5px 0}
@@ -291,6 +292,8 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .badge-ok{background:var(--green-soft);color:var(--green)}
 .badge-warn{background:var(--gold-soft);color:var(--gold)}
 h3.cardtitle{margin:0;font-size:14.5px;display:flex;align-items:center;gap:8px}
+.cardtitle .cico{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:color-mix(in srgb, var(--ic,#6b7280) 16%, white);color:var(--ic,#6b7280)}
+.cardtitle .cico svg{width:15px;height:15px}
 h3.cardtitle .sub{display:block}
 .cardsub{color:var(--muted);font-size:12px;margin-top:2px}
 .linklike{margin-left:auto;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none}
@@ -342,6 +345,7 @@ h3.cardtitle .sub{display:block}
 .att{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
 .att:last-child{border-bottom:none}
 .att .ico{width:clamp(24px,7cqw,30px);height:clamp(24px,7cqw,30px);border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--gold-soft);font-size:13px;flex:0 0 auto}
+.att .ico svg{width:14px;height:14px}
 .att b{font-size:clamp(11px,3.2cqw,13px);display:block}
 .att span{font-size:11.5px;color:var(--muted)}
 .att .act{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
@@ -523,35 +527,35 @@ section.view{display:none} section.view.on{display:block}
   </div>
   <div class="sec" data-g="ov">Overview</div>
   <div class="nav navgroup on" data-g="ov" id="nav" style="--rc:#ff2e9a">
-    <button data-v="dash" class="on" onclick="showView('dash')"><span class="ico2" style="--ic:#ff2e9a">⌂</span>Dashboard</button>
+    <button data-v="dash" class="on" onclick="showView('dash')"><span class="ico2" style="--ic:#ff2e9a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>Dashboard</button>
   </div>
   <div class="sec" data-g="cl">Clients</div>
   <div class="nav navgroup" data-g="cl" style="--rc:#7c5cff">
-    <button data-v="pipeline" onclick="showView('pipeline')"><span class="ico2" style="--ic:#7c5cff">⚲</span>Pipeline</button>
-    <button data-v="clients" onclick="showView('clients')"><span class="ico2" style="--ic:#7c5cff">◉</span>Clients</button>
-    <button data-v="react" onclick="showView('react')"><span class="ico2" style="--ic:#7c5cff">↻</span>Reactivation <span class="badge" id="reactBadge"></span></button>
+    <button data-v="pipeline" onclick="showView('pipeline')"><span class="ico2" style="--ic:#7c5cff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg></span>Pipeline</button>
+    <button data-v="clients" onclick="showView('clients')"><span class="ico2" style="--ic:#7c5cff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>Clients</button>
+    <button data-v="react" onclick="showView('react')"><span class="ico2" style="--ic:#7c5cff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0020.49 15"/></svg></span>Reactivation <span class="badge" id="reactBadge"></span></button>
   </div>
   <!-- Deal Production + Credit Monitoring inject themselves here (production.js, mfsn.js) -->
   <div class="sec" data-g="pr">Production</div>
   <div class="nav navgroup" data-g="pr" id="navProduction" style="--rc:#2f8fd6">
-    <button id="fuNavBtn" data-v="tasks" onclick="showView('tasks')"><span class="ico2" style="--ic:#2f8fd6">☰</span>Follow-Ups</button>
+    <button id="fuNavBtn" data-v="tasks" onclick="showView('tasks')"><span class="ico2" style="--ic:#2f8fd6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>Follow-Ups</button>
   </div>
   <!-- Revenue + Personal Finances inject themselves here (revenue.js, personal-finances.js) -- money, so green -->
   <div class="sec" data-g="fi">Finance</div>
   <div class="nav navgroup" data-g="fi" id="navFinance" style="--rc:#0e9e56"></div>
   <div class="sec" data-g="ma">Marketing</div>
   <div class="nav navgroup" data-g="ma" style="--rc:#e08a3c">
-    <button data-v="social" onclick="showView('social')"><span class="ico2" style="--ic:#e08a3c">✦</span>Social</button>
+    <button data-v="social" onclick="showView('social')"><span class="ico2" style="--ic:#e08a3c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg></span>Social</button>
   </div>
   <div class="sec" data-g="ac">Account</div>
   <div class="nav navgroup" data-g="ac" style="--rc:#8b93a3">
-    <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2" style="--ic:#8b93a3">←</span>Back to Proven Agency</button>
-    <button onclick="openNotifications()"><span class="ico2" style="--ic:#8b93a3">🔔</span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
-    <button onclick="openSettings()"><span class="ico2" style="--ic:#8b93a3">✧</span>Settings</button>
-    <button onclick="openChangePw()"><span class="ico2" style="--ic:#8b93a3">🔑</span>Change password</button>
-    <button onclick="showView('tickets')"><span class="ico2" style="--ic:#8b93a3">🎫</span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
-    <button onclick="openSupportTicket()"><span class="ico2" style="--ic:#8b93a3">✉</span>Submit a Support Ticket</button>
-    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())"><span class="ico2" style="--ic:#8b93a3">→</span>Sign out</button>
+    <button id="backToProvenBtn" style="display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span>Back to Proven Agency</button>
+    <button onclick="openNotifications()"><span class="ico2" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
+    <button onclick="openSettings()"><span class="ico2" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005.6 15a1.65 1.65 0 00-1.51-1H4a2 2 0 010-4h.09A1.65 1.65 0 005.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>Settings</button>
+    <button onclick="openChangePw()"><span class="ico2" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5L18 10M12 11l3 3"/></svg></span>Change password</button>
+    <button onclick="showView('tickets')"><span class="ico2" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 002 2v2a2 2 0 01-2 2v2a2 2 0 002 2h16a2 2 0 002-2v-2a2 2 0 010-4V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"/><path d="M9 5v14"/></svg></span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
+    <button onclick="openSupportTicket()"><span class="ico2" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span>Submit a Support Ticket</button>
+    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())"><span class="ico2" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>Sign out</button>
   </div>
   <div class="spacer"></div>
   <div class="sec">Data sources</div>
@@ -669,7 +673,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="clientbase" gs-w="7" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">◉ Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#7c5cff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
           <div class="cardsub">Where every client sits right now</div>
           <div class="cb-wrap" style="position:relative;margin-top:10px">
             <div class="segbar" id="segbar"></div>
@@ -681,7 +685,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="attention" gs-w="5" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">⚠ Needs attention</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span> Needs attention</h3>
           <div class="cardsub">Fix these before trusting the numbers</div>
           <div id="attention" style="margin-top:6px"></div>
         </div>
@@ -689,7 +693,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="conversations" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">🗨 Conversations <button class="linklike" onclick="showView('messages')">Open inbox →</button></h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#3563a8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></span> Conversations <button class="linklike" onclick="showView('messages')">Open inbox →</button></h3>
           <div class="cardsub">SMS volume · inbound above the line, outbound below</div>
           <div class="convtotals">
             <div><b id="convIn">0</b><span class="rep" id="convRatio"></span><span>Inbound texts</span></div>
@@ -701,7 +705,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="revenue-package" gs-w="6" gs-h="8"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">◈ Revenue by package</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21L8.5 9M12 21L15.5 9M6 3l2.5 6M18 3l-2.5 6"/></svg></span> Revenue by package</h3>
           <div class="cardsub">All-time · Commas + Fanbasis sales</div>
           <div class="cwrap2" style="height:170px"><canvas id="chDeals"></canvas></div>
           <div id="dealsLegend" class="pkg-legend"></div>
@@ -710,7 +714,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="mentorship" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">🎓 Mentorship program</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></span> Mentorship program</h3>
           <div class="cardsub">All-time mentorship sales</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:14px" id="mentorStats"></div>
         </div>
@@ -718,7 +722,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="rounds" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">⚲ Active by dispute round</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#8b5cf6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg></span> Active by dispute round</h3>
           <div class="cardsub">Credit repair delivery stages</div>
           <div class="cwrap2"><canvas id="chRounds"></canvas></div>
         </div>
@@ -726,7 +730,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="social-growth" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">✦ Social growth</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg></span> Social growth</h3>
           <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
           <div class="cwrap2"><canvas id="chSocial"></canvas></div>
         </div>
@@ -734,7 +738,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="churn" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">↻ Churn recency</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#b3372f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0020.49 15"/></svg></span> Churn recency</h3>
           <div class="cardsub">How long ago inactive clients lapsed</div>
           <div class="cwrap2"><canvas id="chChurn"></canvas></div>
         </div>
@@ -742,7 +746,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="social-snapshot" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">✦ Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg></span> Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
           <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
           <div class="dstat" style="margin-top:12px">
             <div class="tone-pink"><div class="l">IG followers</div><div class="v">3,656</div></div>
@@ -754,7 +758,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="top-content" gs-w="6" gs-h="4"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">🏆 Top performing content</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M7 5H4a2 2 0 002 4M17 5h3a2 2 0 01-2 4"/></svg></span> Top performing content</h3>
           <div class="cardsub">Public engagement · read Jul 14, 2026</div>
           <div id="topPostsMini" style="margin-top:6px"></div>
         </div>
@@ -762,7 +766,7 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="activity" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle">⚡ Activity</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#ff2e9a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span> Activity</h3>
           <div class="cardsub">Latest sales, disputes & new clients</div>
           <div id="feed" style="margin-top:6px"></div>
         </div>
@@ -856,7 +860,7 @@ section.view{display:none} section.view.on{display:block}
     <!-- Static social stats — real numbers read from her public profiles on 07/14/2026 (nothing connected) -->
     <div class="grid" style="grid-template-columns:1fr 1fr">
       <div class="card">
-        <h3 class="cardtitle">📸 Instagram <span class="badge-soft badge-ok" title="Verified account">✔ VERIFIED</span>
+        <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span> Instagram <span class="badge-soft badge-ok" title="Verified account">✔ VERIFIED</span>
           <a class="linklike" href="https://www.instagram.com/msfinancialsolutions_/" target="_blank">@msfinancialsolutions_ ↗</a></h3>
         <div class="cardsub">Static numbers · as seen on profile Jul 14, 2026</div>
         <div class="dstat" style="margin-top:14px">
@@ -866,7 +870,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div>
       <div class="card">
-        <h3 class="cardtitle">👥 Facebook group
+        <h3 class="cardtitle"><span class="cico" style="--ic:#3563a8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span> Facebook group
           <a class="linklike" href="https://www.facebook.com/groups/302248546068656/" target="_blank">open group ↗</a></h3>
         <div class="cardsub">Her community group — join link for clients</div>
         <div class="dstat" style="margin-top:14px;grid-template-columns:1fr">
@@ -875,7 +879,7 @@ section.view{display:none} section.view.on{display:block}
       </div>
     </div>
     <div class="card" style="margin-top:14px">
-      <h3 class="cardtitle">🏆 Top performing content</h3>
+      <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M7 5H4a2 2 0 002 4M17 5h3a2 2 0 01-2 4"/></svg></span> Top performing content</h3>
       <div class="cardsub">Real public engagement, read Jul 14 2026 — connect Meta in Settings for automatic ranking</div>
       <div id="topPostsFull" style="margin-top:6px"></div>
     </div>
@@ -903,7 +907,7 @@ section.view{display:none} section.view.on{display:block}
   <!-- ================= TICKET REQUESTS ================= -->
   <section class="view" id="view-tickets">
     <div class="card">
-      <h3 class="cardtitle">🎫 Support Ticket Requests</h3>
+      <h3 class="cardtitle"><span class="cico" style="--ic:#8b93a3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 002 2v2a2 2 0 01-2 2v2a2 2 0 002 2h16a2 2 0 002-2v-2a2 2 0 010-4V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"/><path d="M9 5v14"/></svg></span> Support Ticket Requests</h3>
       <div class="cardsub">Everything submitted to The Proven Agency from this dashboard, and their replies.</div>
       <div id="ticketList" style="margin-top:10px"></div>
     </div>
@@ -1407,11 +1411,11 @@ async function loadDashboard(){
 }
 function renderAttention(d){
   const h=d.health||{};const k=d.kpis;const rows=[];
-  if(!h.paymentFeedOk)rows.push(['◈','Payment sync quiet','No Fanbasis sale in 48h — verify the Zap','Verify',()=>openSettings()]);
-  if(!h.disputeFeedOk)rows.push(['▤','Dispute feed silent','No DisputeFox event in 7 days','Verify',()=>openSettings()]);
-  if(!h.socialOk)rows.push(['✦','Social snapshots stale','No follower check in 24h','Refresh',()=>{showView('social');refreshSocial();}]);
-  if(k.unclassified>0)rows.push(['◉',`${fmtN(k.unclassified)} unclassified clients`,`${Math.round(k.unclassified/(k.totalClients||1)*100)}% of base has no lifecycle stage`,'Review',()=>goClients('unknown')]);
-  if(!rows.length)rows.push(['✓','All systems reporting','Feeds healthy across all sources','',null]);
+  if(!h.paymentFeedOk)rows.push(['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21L8.5 9M12 21L15.5 9M6 3l2.5 6M18 3l-2.5 6"/></svg>','Payment sync quiet','No Fanbasis sale in 48h — verify the Zap','Verify',()=>openSettings()]);
+  if(!h.disputeFeedOk)rows.push(['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>','Dispute feed silent','No DisputeFox event in 7 days','Verify',()=>openSettings()]);
+  if(!h.socialOk)rows.push(['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>','Social snapshots stale','No follower check in 24h','Refresh',()=>{showView('social');refreshSocial();}]);
+  if(k.unclassified>0)rows.push(['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',`${fmtN(k.unclassified)} unclassified clients`,`${Math.round(k.unclassified/(k.totalClients||1)*100)}% of base has no lifecycle stage`,'Review',()=>goClients('unknown')]);
+  if(!rows.length)rows.push(['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>','All systems reporting','Feeds healthy across all sources','',null]);
   $('attention').innerHTML=rows.map(([i,t,s,a],idx)=>`<div class="att"><div class="ico">${i}</div>
     <div><b>${t}</b><span>${s}</span></div>${a?`<button class="act ${idx===0?'dark':''}" onclick="__att[${idx}]()">${a}</button>`:''}</div>`).join('');
   window.__att=rows.map(r=>r[4]||(()=>{}));
