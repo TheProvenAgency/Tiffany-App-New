@@ -1662,6 +1662,28 @@ app.get('/api/messages/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Reply to a conversation thread, on whatever channel it's using (SMS,
+// Email, Facebook, Instagram, WhatsApp, ...). Admin-only for now, same
+// caution as the existing client-profile "send SMS" button (not in
+// EMPLOYEE_API) -- this reaches a real client. Same write-gating as the
+// rest of this section: READ_ONLY refuses in live mode rather than
+// pretending to succeed; demo mode is a harmless no-op.
+app.post('/api/messages/:id/reply', async (req, res) => {
+  try {
+    const message = (req.body.message || '').trim();
+    const contactId = req.body.contactId;
+    const type = (req.body.type || 'SMS').toUpperCase();
+    if (!message) return res.status(400).json({ error: 'empty message' });
+    if (!contactId) return res.status(400).json({ error: 'contactId required' });
+    if (READ_ONLY && liveMode()) return refuseWrite(res, 'replyMessage', `${req.params.id} (${type}, ${message.length} chars)`);
+    if (!liveMode()) return res.json({ ok: true, demo: true, note: 'Demo mode — no message actually sent. Connect GHL to enable.' });
+    const r = await ghl.sendMessage(store.getConfig(), { contactId, conversationId: req.params.id, type, message });
+    store.addEvent({ type: 'message_out', channel: type, at: new Date().toISOString(), contactId, conversationId: req.params.id });
+    store.clearCache();
+    res.json({ ok: true, id: r.messageId || r.id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Build a fresh Deal Production record for a GHL client that has never been
 // tracked here before. ghlId is stored so a later reconcile run recognizes
 // this record on sight (exact match) instead of falling back to the coarser
