@@ -39,7 +39,7 @@
      grows with the card instead of overflowing into a scrollbar. */
   body.single-card{padding:0;height:100vh;overflow:hidden}
   body.single-card [data-card]{display:none}
-  body.single-card [data-card].adm-active{display:flex;height:100%}
+  body.single-card [data-card].adm-active{display:flex;height:100%;width:100%}
   /* The .col-sm-6.col-lg-3 Bootstrap grid classes on each [data-card]
      wrapper give it a width based on breakpoint percentages of the
      iframe's own viewport (25% at >=992px, 50% at >=576px, discrete
@@ -63,7 +63,7 @@
      card twice as wide genuinely gets a font size around twice as big,
      clamped only at sane floor/ceiling extremes so it never disappears
      or blows past the card. */
-  body.single-card .bg-base{height:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;
+  body.single-card .bg-base{height:100%;width:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;
     padding:clamp(8px,calc(16px * var(--kpi-scale,1)),48px)}
   body.single-card .kpi-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;
     padding-bottom:clamp(4px,calc(14px * var(--kpi-scale,1)),40px);margin-bottom:clamp(4px,calc(14px * var(--kpi-scale,1)),40px)}
