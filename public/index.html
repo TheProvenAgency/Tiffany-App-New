@@ -203,6 +203,16 @@ header h1{font-size:19px;margin:0;font-weight:700}
 /* while actively arranging, let the drag/resize outline breathe past the
    card edge instead of getting clipped by the line above */
 .grid-stack.gs-editing .grid-stack-item-content{overflow:visible}
+/* Cards embedded as iframes (the 4 Admina KPI tiles) own their entire
+   surface as a separate document -- a mousedown inside one never reaches
+   this page's mouse handlers, so GridStack's drag/resize (which listens
+   on this document) never sees it start. Tiffany couldn't grab these
+   cards at all in "Customize layout" mode because of this. Disabling
+   iframe pointer-events only while actively editing lets the drag/resize
+   pass through to the parent grid-stack-item underneath instead --
+   normal iframe interaction (the real dropdown/etc.) comes back the
+   moment editing is turned off. */
+.grid-stack.gs-editing .grid-stack-item-content iframe{pointer-events:none}
 .grid-stack-item-content>.card,.grid-stack-item-content>.kpi,
 .grid-stack-item-content>.rv-card,.grid-stack-item-content>.rv-kpis,
 .grid-stack-item-content>.rv-kpi{height:100%;box-sizing:border-box}
