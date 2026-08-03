@@ -118,8 +118,8 @@ header h1{font-size:19px;margin:0;font-weight:700}
 /* cards -- rounder + a softer lifted shadow so cards read as distinct
    surfaces at a glance, closer to the reference dashboards. */
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 0 24px rgba(24,27,44,.06)}
-.card.hero{border-top:4px solid var(--green)}
-.card.moneycard{border-top:4px solid var(--green)}
+.card.hero{border-top:1px solid var(--line)}
+.card.moneycard{border-top:1px solid var(--line)}
 /* gradient KPI stat cards -- the "at a glance" headline numbers, in
    Tiffany's brand colors (pink/rose) plus a couple of complementary
    accents so four in a row don't read as one flat block. */
@@ -307,6 +307,7 @@ h3.cardtitle{margin:0;font-size:14.5px;display:flex;align-items:center;gap:8px}
 .cardtitle .cico{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:color-mix(in srgb, var(--ic,#6b7280) 16%, white);color:var(--ic,#6b7280)}
 .cardtitle .cico svg{width:15px;height:15px}
 .cardtitle .cico i{font-size:15px;line-height:1}
+.rv-kpi-donut{border-top-color:var(--line)!important}
 h3.cardtitle .sub{display:block}
 .cardsub{color:var(--muted);font-size:12px;margin-top:2px}
 .linklike{margin-left:auto;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none}
@@ -412,11 +413,11 @@ section.view{display:none} section.view.on{display:block}
 .dstat div[onclick]:hover{transform:translateY(-2px)}
 .dstat .l{font-size:clamp(8px,2.4cqw,10px);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dstat .v{font-size:clamp(12.5px,4.2cqw,17px);font-weight:800;margin-top:3px}
-.dstat div.tone-green{background:var(--green-soft)}
-.dstat div.tone-red{background:var(--red-soft)}
-.dstat div.tone-gold{background:var(--gold-soft)}
-.dstat div.tone-blue{background:var(--blue-soft)}
-.dstat div.tone-pink{background:var(--pink-soft)}
+.dstat div.tone-green{background:#f8f9fc}
+.dstat div.tone-red{background:#f8f9fc}
+.dstat div.tone-gold{background:#f8f9fc}
+.dstat div.tone-blue{background:#f8f9fc}
+.dstat div.tone-pink{background:#f8f9fc}
 .evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eef0f5;font-size:12.5px}
 .evrow .mut{color:var(--muted)}
 .noterow{background:#f8f9fc;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}

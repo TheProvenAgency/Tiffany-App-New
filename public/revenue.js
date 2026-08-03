@@ -189,7 +189,7 @@ var css=''+
 '.rv-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '.rv-kpi .v{font-size:23px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
 '.rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
-'.rv-kpi.hero{background:var(--green);border-top-color:var(--green)}.rv-kpi.hero .l{color:rgba(0,0,0,.6)}.rv-kpi.hero .v{color:var(--ink);font-size:25px}.rv-kpi.hero .s{color:rgba(0,0,0,.55)}'+
+'.rv-kpi.hero{background:var(--card);border-top-color:var(--green)}.rv-kpi.hero .l{color:var(--green)}.rv-kpi.hero .v{color:var(--ink);font-size:25px}.rv-kpi.hero .s{color:var(--muted)}'+
 '#view-rev .rv-grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}'+
 '#view-rev .rv-grid11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}'+
 '.rv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
