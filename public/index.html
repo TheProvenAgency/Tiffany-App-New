@@ -2227,25 +2227,17 @@ async function loadDashLayout(){
     // until the person drags it, instead of disappearing.
     if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length) dashGridStack.load(d.layout.nodes,false);
   }catch(e){ /* keep the shipped default layout from the HTML */ }
-  // Self-heal the Total income card's size. Its content changed shape a lot
-  // (5 small tiles merged into one card with a legend + stacked bar chart),
-  // so anyone with an existing saved layout -- personal or the shared
-  // default -- is still sized for the old cramped 3-wide/3-tall tile and
-  // the new content clips/overflows. Bump just this one card up to a
-  // sane minimum on load without touching anything else they've arranged.
-  const totalEl=document.querySelector('[gs-id="rev-kpi-total"]');
-  if(totalEl&&totalEl.gridstackNode){
-    const node=totalEl.gridstackNode;
-    if(node.w<6||node.h<6) dashGridStack.update(totalEl,{w:Math.max(node.w,6),h:Math.max(node.h,6)});
-  }
-  // Same self-heal for Revenue by package: it grew a two-column product
-  // list under the gauge, so a layout saved before that change is too
-  // short and clips the new list.
-  const pkgEl=document.querySelector('[gs-id="revenue-package"]');
-  if(pkgEl&&pkgEl.gridstackNode){
-    const node=pkgEl.gridstackNode;
-    if(node.h<8) dashGridStack.update(pkgEl,{h:Math.max(node.h,8)});
-  }
+  // NOTE: this used to "self-heal" rev-kpi-total and revenue-package back
+  // up to a hardcoded minimum size on every load, from back when their
+  // content changed shape and old saved layouts clipped. That code ran
+  // unconditionally on EVERY page load, for EVERY saved layout, forever --
+  // not just once for people with a stale pre-redesign layout -- so the
+  // instant someone deliberately resized either card smaller than that
+  // hardcoded minimum (their own choice, made right here in edit mode),
+  // this would silently snap it back up and then re-save that override
+  // over their own arrangement a moment later. That's the exact "I keep
+  // arranging it and it keeps reverting" bug -- removed outright. A saved
+  // layout, personal or shared-default, is now trusted as-is, full stop.
   resizeDashCharts();
 }
 function saveDashLayout(){
