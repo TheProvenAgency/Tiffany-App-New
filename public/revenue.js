@@ -263,6 +263,15 @@ var css=''+
 '.adm-legend li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}'+
 '.adm-legend .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;display:inline-block}'+
 '.adm-avatar{width:28px;height:28px;border-radius:50%;background:color-mix(in srgb, var(--ic,#6b7280) 18%, white);color:var(--ic,#6b7280);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:0 0 auto}'+
+// Admina reference (Returning Clients card): icon-circle header (reuses
+// .adm-chead.noline), a big retention % with a colored delta line right
+// under it, then a small gradient area sparkline filling the rest of the
+// card -- see drawReturning() in index.html for the real month-by-month
+// repeat-payer rate this renders (breakdowns.returning from /api/dashboard).
+'.rc-num{font-size:32px;font-weight:800;color:var(--ink);line-height:1;margin-top:2px}'+
+'.rc-delta{font-size:12.5px;font-weight:600;margin-top:7px;display:flex;align-items:center;gap:4px;color:var(--green)}'+
+'.rc-delta.down{color:var(--red)}.rc-delta i{font-style:normal;font-size:13px;line-height:1}'+
+'.rc-note{margin-top:6px}'+
 '.adm-table{width:100%;border-collapse:collapse;font-size:12.5px}'+
 '.adm-table th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:0 10px 8px;border-bottom:1px solid var(--line)}'+
 '.adm-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink)}'+
@@ -638,7 +647,9 @@ function initRV(){
   // present from page load, drawn once here rather than waiting for the
   // Revenue view's render().
   drawMethods('dashMethods');
-  drawCust('dashCust');
+  // dashCust/Customer Growth was replaced by the Dashboard's own Returning
+  // Clients card (real repeat-payer rate, see drawReturning() in
+  // index.html) -- no longer drawn from here.
   // Decorative Daily/Weekly/Monthly tabs on the Payment methods card --
   // see the comment on #dashMethodsGran in index.html for why this only
   // toggles the active tab instead of actually redrawing the chart.

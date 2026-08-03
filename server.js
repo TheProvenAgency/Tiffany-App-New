@@ -867,7 +867,38 @@ app.get('/api/dashboard', async (req, res) => {
           return st;
         })(),
         activeByDeal: by(active, c => c.deal),
-        churnRecency: Object.entries(churnBuckets).map(([key, count]) => ({ key, count }))
+        churnRecency: Object.entries(churnBuckets).map(([key, count]) => ({ key, count })),
+        // Real month-by-month repeat-payer rate, replacing the Dashboard's
+        // "Customer Growth" card with an honest "Returning Clients" one --
+        // for each calendar month, what fraction of that month's payers
+        // (by email) had ALSO paid in an earlier month. Uses the full
+        // payment history (not the date-range-filtered paysIn) since you
+        // need earlier months on record to know who's "returning" --  the
+        // very first month on record is correctly 0% (nobody has an
+        // earlier payment to return from yet), same as any real retention
+        // curve's first cohort.
+        returning: (() => {
+          const byMonth = {};
+          payments.forEach(p => {
+            if (!p.email || !p.at) return;
+            const m = localDay(p.at).slice(0, 7);
+            (byMonth[m] = byMonth[m] || []).push(p.email);
+          });
+          const months = Object.keys(byMonth).sort();
+          const seenBefore = new Set();
+          const series = months.map(m => {
+            const payersThisMonth = new Set(byMonth[m]);
+            let returningCount = 0;
+            payersThisMonth.forEach(email => { if (seenBefore.has(email)) returningCount++; });
+            const rate = payersThisMonth.size ? Math.round(returningCount / payersThisMonth.size * 1000) / 10 : 0;
+            payersThisMonth.forEach(email => seenBefore.add(email));
+            return { label: m, rate, returningCount, totalPayers: payersThisMonth.size };
+          });
+          const recent = series.slice(-7);
+          const last = series[series.length - 1] || { rate: 0 };
+          const prev = series[series.length - 2] || { rate: last.rate };
+          return { series: recent, rate: last.rate, deltaVsPrevMonth: Math.round((last.rate - prev.rate) * 10) / 10 };
+        })()
       }
     });
   } catch (e) {
