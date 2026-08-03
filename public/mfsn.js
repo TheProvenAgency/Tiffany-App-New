@@ -226,13 +226,26 @@ function mfTrendBadge(vals){
   var up=pct2>=0;
   return {text:(up?'▲ ':'▼ ')+Math.abs(pct2).toFixed(0)+'%', up:up};
 }
+// Renders a share (real numerator/denominator, not a fabricated
+// week-over-week change) in the same icon+colored-text language as
+// Admina's own KPI trend rows -- a small glyph followed by plain colored
+// text, no pill/badge background. Color is honest, threshold-based: green
+// once most of the book has cleared the bar, gold while it's still
+// mid-way, red if the share is genuinely low.
+function mfShareRow(num, den, label){
+  var pct = den > 0 ? Math.round((num/den)*100) : 0;
+  var cls = pct>=66 ? 'up' : (pct>=33 ? 'caution' : 'down');
+  var glyph = pct>=66 ? '▲' : (pct>=33 ? '●' : '▼');
+  return '<span class="rvktrend '+cls+'"><i>'+glyph+'</i>'+pct+'% '+label+'</span>';
+}
 function initMFDashKpis(){
   if(!document.getElementById('mfkEnrolled'))return;
   document.getElementById('mfkEnrolled').textContent=M.enrolled.toLocaleString();
-  document.getElementById('mfkEnrolledSub').textContent=M.active+' active';
+  document.getElementById('mfkEnrolledSub').innerHTML=mfShareRow(M.active, M.enrolled, 'active monitoring');
   document.getElementById('mfkUpgraded').textContent=M.upgraded.toLocaleString();
+  document.getElementById('mfkUpgradedSub').innerHTML=mfShareRow(M.upgraded, M.upgraded+M.toUpgrade, 'on new platform');
   document.getElementById('mfkNewActives').textContent=M.newActives.toLocaleString();
-  document.getElementById('mfkNewActivesSub').textContent='of '+M.targetActives+' target';
+  document.getElementById('mfkNewActivesSub').innerHTML=mfShareRow(M.newActives, M.targetActives, 'of bonus target');
   if(!window.Chart)return;
   // Enrolled/Upgraded/New-actives don't have a monthly history to spark --
   // they're a portal snapshot, not a series -- but each one IS really two

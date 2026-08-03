@@ -202,20 +202,31 @@ header h1{font-size:19px;margin:0;font-weight:700}
    daily figures the tile's own number comes from (see revenue.js
    drawKpiSparklines), not placeholder data. */
 .rv-kpi{position:relative;overflow:hidden}
-/* Admina reference: KPI card label picks up the card's own accent color
-(via --kc, set inline alongside border-top-color) instead of flat gray,
-with a thin divider underneath separating the header from the figure --
-and a decorative "more" affordance in the corner, like the reference's
-three-dot menu, purely visual (no menu behind it yet). */
-.rv-kpi-donut .l{color:var(--kc,var(--muted));padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}
-.rv-kpi-donut::after{content:'\22EE';position:absolute;top:12px;right:14px;color:var(--muted);font-size:15px;line-height:1;opacity:.55}
+/* Admina reference (measured directly off admina.wowtheme7.com's real KPI
+   tiles via getComputedStyle): the label is flat neutral gray -- text-
+   neutral-700, rgb(55,65,81) -- on EVERY tile, never tinted to the card's
+   own accent color like an earlier pass here assumed. A thin divider
+   separates the label row from the big figure, and a plain "more" affordance
+   (unicode vertical-dots, no menu behind it yet) sits top-right on every
+   tile -- hero included, not just the donut ones. */
+.rv-kpi .l{color:#374151;font-weight:500;padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+.rv-kpi::after{content:'\22EE';position:absolute;top:12px;right:14px;color:var(--muted);font-size:15px;line-height:1;opacity:.55}
 
 .rv-kpi .rvkspark{position:absolute;right:12px;bottom:12px;width:40%;max-width:120px;height:40%;max-height:58px;opacity:.95;cursor:crosshair}
-.rv-kpi .rvktrend{position:absolute;top:14px;right:14px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,0,0,.06);color:#6b7280}
-.rv-kpi .rvktrend.up{color:#0e9e56;background:rgba(14,158,86,.14)}
-.rv-kpi .rvktrend.down{color:#c0392b;background:rgba(192,57,43,.14)}
-.rv-kpi.hero .rvktrend{background:rgba(0,0,0,.14);color:rgba(0,0,0,.7)}
-.rv-kpi.hero .rvktrend.up{color:#0a5c33;background:rgba(0,0,0,.16)}
+/* Trend row (icon + colored text), same structure as Admina's own KPI
+   tiles: a small up/down arrow glyph followed by plain colored text, sitting
+   in normal flow right under the big number -- NOT a pill/badge with a
+   background fill, and NOT absolutely pinned to a corner (that was
+   conflating this with the "more" affordance above, which is a separate,
+   always-top-right element). Color is semantic per Admina's own palette:
+   green for a genuinely positive/on-track figure, red for a shortfall,
+   gold for a caution/needs-attention figure. */
+.rv-kpi .rvktrend{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:500;margin-top:2px}
+.rv-kpi .rvktrend i{font-style:normal;font-size:13px;line-height:1}
+.rv-kpi .rvktrend.up{color:#16a34a}
+.rv-kpi .rvktrend.down{color:#dc2626}
+.rv-kpi .rvktrend.caution{color:#d97706}
+.rv-kpi .rvktrend.neutral{color:#4f46e5}
 /* Chart.js (responsive:true, maintainAspectRatio:false) sizes a canvas to
    fill its DIRECT parent's box -- when the canvas sat straight inside the
    whole tile, Chart.js resized it to nearly the tile's full width/height
@@ -631,7 +642,7 @@ section.view{display:none} section.view.on{display:block}
            kept live by updateTotalIncomeCard() in revenue.js, which is
            wired into loadDashboard() so it recomputes on every date-range
            change, same as every other card on this page. */-->
-      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rev-kpi-total" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="rv-kpi hero" style="padding-bottom:12px">
           <div class="l" id="rvkTotalL">Total income</div>
           <div class="v" id="rvkTotalV">$0</div>
@@ -658,17 +669,17 @@ section.view{display:none} section.view.on{display:block}
            DOM order, so if these sat after rev-trend/mfsn in the markup
            they'd get shoved down below those taller cards instead of
            sitting flush against rev-kpi-total. -->
-      <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6;--kc:#3b82f6" title="MyFreeScoreNow affiliate book: total members enrolled under Tiffany's affiliate link. Ring shows how many are actively using credit monitoring vs. not yet active.">
           <div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div>
         </div>
       </div></div>
-      <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4;--kc:#06b6d4" title="MyFreeScoreNow affiliate book: members migrated from MFSN's old member platform to the new one. Ring shows upgraded vs. still on the old platform.">
-          <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div>
+          <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s" id="mfkUpgradedSub">to new platform</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div>
         </div>
       </div></div>
-      <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6;--kc:#8b5cf6" title="MyFreeScoreNow affiliate book: members newly active on MFSN's new portal, counting toward MFSN's bonus-tier incentive target for affiliates.">
           <div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div>
         </div>
