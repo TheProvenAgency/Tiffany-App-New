@@ -138,8 +138,9 @@ fetch('/api/dashboard').then(function(r){ return r.json(); }).then(function(d){
 new ApexCharts(document.querySelector("#barChart"), {
   series: [{ data: [543648,87000,72000,62000,48000,33129,29100].map(function(v){return Math.round(v/1000);}) }],
   chart: { type: "bar", height: 80, width: 130, sparkline: { enabled: true } },
-  plotOptions: { bar: { columnWidth: "65%", borderRadius: 3, distributed: true } },
-  colors: [trackColor,trackColor,trackColor,trackColor,trackColor,trackColor,primaryColor],
+  plotOptions: { bar: { columnWidth: "65%", borderRadius: 3 } },
+  colors: [primaryColor],
+  fill: { opacity: [0.35,0.35,0.35,0.35,0.35,0.35,1] },
   dataLabels: { enabled: false }, tooltip: { enabled: false }
 }).render();
 
