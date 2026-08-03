@@ -877,19 +877,23 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <!-- Admina reference: "Returning Clients" -- icon-circle header, a
-           big retention % with a colored delta line, then a small green
-           gradient area sparkline at the bottom. Real month-by-month
-           repeat-payer rate (breakdowns.returning from /api/dashboard,
-           see server.js), not the New-customers-by-month chart this card
-           used to show -- that's still on the Revenue page as "New
-           customers by month" (rvCust), untouched. See drawReturning()
-           in this file's own script block for how it's filled in. -->
+      <!-- Admina reference: "Returning Clients" layout -- icon-circle
+           header, a big retention % with a colored delta line, then a
+           small green gradient area sparkline at the bottom. Real
+           month-by-month repeat-payer rate (breakdowns.returning from
+           /api/dashboard, see server.js), not the New-customers-by-month
+           chart this card used to show -- that's still on the Revenue
+           page as "New customers by month" (rvCust), untouched. Titled
+           "Customer Growth" (not "Returning Clients") per Tiffany's
+           explicit request -- keep the H3 text as-is even though the
+           underlying metric is retention-rate, not new-customer count.
+           See drawReturning() in this file's own script block for how
+           it's filled in. -->
       <div class="grid-stack-item" gs-id="dash-newcust" gs-x="0" gs-y="46" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead noline">
             <div class="adm-cicon" style="--ic:#e0455c"><i class="ri-group-line"></i></div>
-            <div class="adm-ctext"><h3>Returning Clients</h3><div class="cap">Customer retention rate</div></div>
+            <div class="adm-ctext"><h3>Customer Growth</h3><div class="cap">Customer retention rate</div></div>
           </div>
           <div class="rc-num" id="rcNum">--</div>
           <div class="rc-delta" id="rcDelta"></div>
