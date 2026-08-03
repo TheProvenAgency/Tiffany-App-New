@@ -340,10 +340,22 @@ function methodRows(){
 
 /* ---------- charts ---------- */
 function killChart(k){if(charts[k]){charts[k].destroy();charts[k]=null;}}
-function trendData(){
+function trendData(withMf){
   if(gran==='daily')return {labels:CO_DAILY.labels,vals:CO_DAILY.rev,color:C.teal,fill:'rgba(47,143,138,.12)'};
   if(gran==='weekly')return {labels:CO_WEEKLY.labels,vals:CO_WEEKLY.rev,color:C.purple,fill:'rgba(107,91,208,.12)'};
-  return {labels:CO_MONTHLY.labels,vals:CO_MONTHLY.rev,color:C.blue,fill:'rgba(53,99,168,.12)'};
+  // Monthly is the one grain where MFSN commissions are actually tracked
+  // (they're only ever reported per calendar month, never daily/weekly).
+  // withMf is only passed true for the Dashboard's copy of this chart --
+  // the Revenue page's own copy sits under a "Commas -- sales" section
+  // header, so it stays Commas-only there; adding an MFSN line under that
+  // heading would misrepresent the section it's in. Reads from the same
+  // INCOME_BY_MONTH/INCOME_YMS the Total income KPI card's range math
+  // already uses, so the two cards can never disagree.
+  if(!withMf)return {labels:CO_MONTHLY.labels,vals:CO_MONTHLY.rev,color:C.blue,fill:'rgba(53,99,168,.12)'};
+  var labels=INCOME_YMS.map(function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]; });
+  var coVals=INCOME_YMS.map(function(ym){ return INCOME_BY_MONTH[ym].co||0; });
+  var mfVals=INCOME_YMS.map(function(ym){ return INCOME_BY_MONTH[ym].mf||0; });
+  return {labels:labels,vals:coVals,color:C.blue,fill:'rgba(53,99,168,.12)',mfVals:mfVals,mfColor:C.gold,mfFill:'rgba(245,158,11,.10)'};
 }
 // targetId lets the same Sales-trend chart draw into either the Revenue
 // page's own canvas (#rvTrend) or the copy that now also lives on the
@@ -352,14 +364,20 @@ function trendData(){
 function drawTrend(targetId){
   targetId=targetId||'rvTrend';
   if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
-  var d=trendData();
-  // Admina reference: each point on its own Sales-trend line is colored by
-  // whether that period was up or down vs the one before it (green/gold),
-  // not a single flat color for the whole line -- real month-over-month
-  // direction from the same data, not a decorative fabrication.
+  var d=trendData(targetId==='dashTrend');
+  var hasMf=Array.isArray(d.mfVals);
+  // Admina reference: each point on the Commas line is colored by whether
+  // that period was up or down vs the one before it (green/gold) rather
+  // than one flat color for the whole line -- real month-over-month
+  // direction from the data, not a decorative fabrication.
   var dotColors=d.vals.map(function(v,i){ if(i===0)return d.color; return v>=d.vals[i-1]?C.green:C.gold; });
-  charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:[{data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?4:0,pointBackgroundColor:dotColors,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:12}}}}});
+  var datasets=[{label:'Commas',data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?4:0,pointBackgroundColor:dotColors,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5,order:1}];
+  if(hasMf) datasets.push({label:'MFSN',data:d.mfVals,borderColor:d.mfColor,backgroundColor:d.mfFill,fill:true,tension:.32,pointRadius:4,pointBackgroundColor:d.mfColor,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5,borderDash:[5,3],order:2});
+  // Keep the header legend's MFSN dot in sync -- only shown when this
+  // grain actually has an MFSN series to go with it.
+  var mfLegend=document.getElementById('dashTrendLegendMf'); if(mfLegend) mfLegend.style.display=hasMf?'':'none';
+  charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:datasets},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:12}}}}});
 }
 // redraws whichever of the two Sales-trend canvases currently exist in the
 // document -- the Revenue page's isn't in the DOM unless that view has

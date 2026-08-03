@@ -701,6 +701,16 @@ section.view{display:none} section.view.on{display:block}
               <button data-g="monthly" class="on">Monthly</button>
             </div>
           </div>
+          <!-- Which line is which -- Monthly plots both real series (Commas
+               vs MFSN); Daily/Weekly only has Commas data (MFSN commissions
+               are only ever reported monthly), so this legend swaps to a
+               single Commas dot for those two grains instead of showing an
+               MFSN key next to a line that isn't there. dashTrendLegend()
+               in revenue.js keeps this in sync with whatever's drawn. -->
+          <div class="rvk-split-legend" id="dashTrendLegend" style="margin-top:0">
+            <span><i style="background:#3b82f6"></i>Commas</span>
+            <span id="dashTrendLegendMf"><i style="background:#f59e0b"></i>MFSN</span>
+          </div>
           <!-- Admina reference (Sales Overview): a small stack of colored
                stat tiles to the left of the chart instead of the number
                living only in a KPI card elsewhere -- real figures, not
