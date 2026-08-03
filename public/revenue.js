@@ -643,6 +643,12 @@ function initRV(){
   // ...and Member upgrade progress (gs-id="dash-upgrade"), now an Admina
   // Order Summary-style donut -- see drawUpgradeChart() above.
   drawUpgradeChart();
+  // Dashboard's Customer lifecycle ring (index.html) makes its first
+  // draw attempt before this deferred script has run, so MF isn't
+  // defined yet and it bails out silently (see drawLifecycle() guard).
+  // Now that MF exists, give it a real redraw with the correct Upgraded
+  // count.
+  if(window.__redrawLifecycle) window.__redrawLifecycle();
   // Total income card needs to redraw every time the Today/7D/30D/90D/YTD/
   // All picker (or a custom Apply) changes the selected range -- every one
   // of those routes through loadDashboard() (see index.html setPreset/

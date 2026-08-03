@@ -1583,8 +1583,15 @@ async function loadDashboard(){
   // "Upgraded" tracks a different axis (portal migration, not dispute
   // progress) so it's called out in the legend footnote rather than
   // silently folded into the dispute pipeline total.
-  (function drawLifecycle(){
+  window.__lastDashBreakdowns=b;
+  window.__redrawLifecycle=function(){ drawLifecycle(window.__lastDashBreakdowns); };
+  drawLifecycle(b);
+  function drawLifecycle(b){
     var el=$('chLifecycle'); if(!el) return;
+    if(typeof MF==='undefined'){ return; } // revenue.js (deferred) hasn't run yet on
+      // first paint -- it calls window.__redrawLifecycle() itself once MF exists,
+      // so this just skips the too-early first attempt instead of throwing and
+      // aborting the rest of loadDashboard().
     var roundMap={}; b.byRound.forEach(function(x){roundMap[x.key]=x.count;});
     var stages=[
       {label:'Onboarding', value:(b.byStage&&b.byStage.Onboarding)||0},
@@ -1626,7 +1633,7 @@ async function loadDashboard(){
       lg.innerHTML=stages.map(function(s,i){return '<li><i style="background:'+colors[i]+'"></i>'+s.label+'<b>'+s.value.toLocaleString()+'</b></li>';}).join('')+
         '<li class="lc-note">Upgraded tracks portal migration, a separate status from dispute-round progress.</li>';
     }
-  })();
+  }
   mkChart('chChurn',{type:'bar',data:{labels:b.churnRecency.map(x=>x.key),datasets:[{data:b.churnRecency.map(x=>x.count),
     backgroundColor:[BLUE+'aa',PURPLE+'aa',GOLD+'aa',RED+'88',RED+'dd'],borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
