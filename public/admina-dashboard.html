@@ -40,6 +40,17 @@
   body.single-card{padding:0;height:100vh;overflow:hidden}
   body.single-card [data-card]{display:none}
   body.single-card [data-card].adm-active{display:flex;height:100%}
+  /* The .col-sm-6.col-lg-3 Bootstrap grid classes on each [data-card]
+     wrapper give it a width based on breakpoint percentages of the
+     iframe's own viewport (25% at >=992px, 50% at >=576px, discrete
+     jumps otherwise) -- completely decoupled from the actual card
+     size GridStack just set. That's why .bg-base's measured width
+     could stay pinned around 335px even after the card was dragged
+     much wider: Bootstrap's breakpoint math, not the real card size,
+     was deciding it. Force the wrapper to always be the iframe's
+     full width in single-card mode so .bg-base (and therefore the
+     --kpi-scale measurement above) tracks the actual card size. */
+  body.single-card [data-card].adm-active{width:100%;max-width:100%;flex:0 0 100%}
   body.single-card .dashboard-main-body,body.single-card .row,body.single-card .col-xxl-12{height:100%}
   /* --kpi-scale is set by JS (see the ResizeObserver near the bottom of
      this file) from the card's OWN measured growth relative to however
