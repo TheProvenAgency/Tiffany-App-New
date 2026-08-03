@@ -198,6 +198,14 @@ header h1{font-size:19px;margin:0;font-weight:700}
    daily figures the tile's own number comes from (see revenue.js
    drawKpiSparklines), not placeholder data. */
 .rv-kpi{position:relative;overflow:hidden}
+/* Admina reference: KPI card label picks up the card's own accent color
+(via --kc, set inline alongside border-top-color) instead of flat gray,
+with a thin divider underneath separating the header from the figure --
+and a decorative "more" affordance in the corner, like the reference's
+three-dot menu, purely visual (no menu behind it yet). */
+.rv-kpi-donut .l{color:var(--kc,var(--muted));padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+.rv-kpi-donut::after{content:'\22EE';position:absolute;top:12px;right:14px;color:var(--muted);font-size:15px;line-height:1;opacity:.55}
+
 .rv-kpi .rvkspark{position:absolute;right:12px;bottom:12px;width:40%;max-width:120px;height:40%;max-height:58px;opacity:.95;cursor:crosshair}
 .rv-kpi .rvktrend{position:absolute;top:14px;right:14px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,0,0,.06);color:#6b7280}
 .rv-kpi .rvktrend.up{color:#0e9e56;background:rgba(14,158,86,.14)}
@@ -659,15 +667,15 @@ section.view{display:none} section.view.on{display:block}
            the two sparklines from its own real M/COMM_TREND data -- nothing
            here is hardcoded twice, the markup below is just the shell. -->
       <div class="grid-stack-item" gs-id="mf-kpi-enrolled" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6" title="MyFreeScoreNow affiliate book: total members enrolled under Tiffany's affiliate link. Ring shows how many are actively using credit monitoring vs. not yet active.">
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#3b82f6;--kc:#3b82f6" title="MyFreeScoreNow affiliate book: total members enrolled under Tiffany's affiliate link. Ring shows how many are actively using credit monitoring vs. not yet active.">
           <div class="l">Enrolled members</div><div class="v" id="mfkEnrolled">—</div><div class="s" id="mfkEnrolledSub">active monitoring</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutEnrolled"></canvas></div></div>
       </div></div>
       <div class="grid-stack-item" gs-id="mf-kpi-upgraded" gs-w="2" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4" title="MyFreeScoreNow affiliate book: members migrated from MFSN's old member platform to the new one. Ring shows upgraded vs. still on the old platform.">
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#06b6d4;--kc:#06b6d4" title="MyFreeScoreNow affiliate book: members migrated from MFSN's old member platform to the new one. Ring shows upgraded vs. still on the old platform.">
           <div class="l">Upgraded</div><div class="v" id="mfkUpgraded">—</div><div class="s">to new platform</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutUpgraded"></canvas></div></div>
       </div></div>
       <div class="grid-stack-item" gs-id="mf-kpi-newactives" gs-w="3" gs-h="3"><div class="grid-stack-item-content">
-        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6" title="MyFreeScoreNow affiliate book: members newly active on MFSN's new portal, counting toward MFSN's bonus-tier incentive target for affiliates.">
+        <div class="rv-kpi rv-kpi-donut" style="border-top-color:#8b5cf6;--kc:#8b5cf6" title="MyFreeScoreNow affiliate book: members newly active on MFSN's new portal, counting toward MFSN's bonus-tier incentive target for affiliates.">
           <div class="l">New portal actives</div><div class="v" id="mfkNewActives">—</div><div class="s" id="mfkNewActivesSub">bonus tier progress</div><div class="rvkdonut-wrap"><canvas class="rvkdonut" id="mfkDonutNewActives"></canvas></div></div>
       </div></div>
 
