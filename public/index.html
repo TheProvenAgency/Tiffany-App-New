@@ -1576,9 +1576,20 @@ document.addEventListener('click', e => {
   setNavCollapsed(true);
 });
 (function initNavRail(){
+  // The Dashboard view is always what's actually on screen on a fresh
+  // load (baked in as section#view-dash.on / button[data-v=dash].on --
+  // there's no client-side routing in this app), regardless of whatever
+  // group the user last had open in a previous session. A stale
+  // localStorage group ('fi' from a prior visit, say) would otherwise
+  // show Finance's panel while the Dashboard content sits underneath it
+  // -- group and content out of sync. So the currently-active view's
+  // group always wins over the saved one; localStorage is only a
+  // fallback for the rare case that lookup fails.
   let g='ov',collapsed=false;
   try{
-    g=localStorage.getItem('navGroup')||'ov';
+    const activeBtn=document.querySelector('.navgroup button.on');
+    const activeView=activeBtn&&activeBtn.dataset.v;
+    g=(activeView&&VIEW_GROUP[activeView])||localStorage.getItem('navGroup')||'ov';
     const saved=localStorage.getItem('navCollapsed');
     // No explicit preference saved yet -- default collapsed on phone-size
     // screens (fixed 238px sidebar would otherwise eat most of the
