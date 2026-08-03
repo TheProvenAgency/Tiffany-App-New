@@ -1588,7 +1588,7 @@ async function loadDashboard(){
   drawLifecycle(b);
   function drawLifecycle(b){
     var el=$('chLifecycle'); if(!el) return;
-    if(typeof MF==='undefined'){ return; } // revenue.js (deferred) hasn't run yet on
+    if(typeof window.MF==='undefined'){ return; } // revenue.js (deferred) hasn't run yet on
       // first paint -- it calls window.__redrawLifecycle() itself once MF exists,
       // so this just skips the too-early first attempt instead of throwing and
       // aborting the rest of loadDashboard().
@@ -1603,7 +1603,7 @@ async function loadDashboard(){
       {label:'Round 6', value:roundMap['Round 6']||0},
       {label:'Round 7', value:roundMap['Round 7']||0},
       {label:'Round 8', value:roundMap['Round 8']||0},
-      {label:'Upgraded', value:MF.upgraded||0},
+      {label:'Upgraded', value:window.MF.upgraded||0},
       {label:'Completed', value:(b.byStage&&b.byStage.Completed)||0}
     ];
     // Cool blue (Onboarding) sweeping to warm green (Completed) so color

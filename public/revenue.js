@@ -21,6 +21,10 @@ var METHODS=[
 
 /* ---------- MyFreeScoreNow (affiliate) — from the affiliate portal ---------- */
 var MF={ ytd:107780, latestMonth:17192, active:203, enrolled:1493, upgraded:420, toUpgrade:1073, newActives:736 };
+window.MF=MF; // this whole file is wrapped in its own IIFE (see top), so MF
+// is otherwise invisible to index.html's separate inline script -- the
+// Customer lifecycle ring on the Dashboard reads MF.upgraded and needs a
+// real cross-file reference, not just hoped-for load order.
 // Total monthly affiliate earnings (commission + referral + bonuses), most recent 10 months.
 var MF_MONTHLY={ labels:['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
   vals:[16038,16982,17236,16572,16573,16915,19100,19002,18999,17192] };
