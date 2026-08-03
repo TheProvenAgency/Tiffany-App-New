@@ -375,7 +375,7 @@ function initLM(){
   var nav=document.getElementById('navFinance')||document.getElementById('nav');
   if(nav&&!document.getElementById('lmNavBtn')){
     var b=document.createElement('button');b.id='lmNavBtn';b.setAttribute('onclick',"showView('personal')");
-    b.innerHTML='<span class="ico2">◎</span>Personal Finances';nav.appendChild(b);
+    b.innerHTML='<span class="ico2"><i class="ri-wallet-3-line"></i></span>Personal Finances';nav.appendChild(b);
   }
   if(typeof window.showView==='function'&&!window.__lmWrap){
     window.__lmWrap=true;var _sv=window.showView;

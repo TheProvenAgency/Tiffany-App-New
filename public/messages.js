@@ -228,7 +228,7 @@ if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc); else document.body.
 var nav=document.getElementById('navProduction')||document.getElementById('nav');
 if(nav&&!document.getElementById('msgNavBtn')){
 var b=document.createElement('button');b.id='msgNavBtn';b.setAttribute('onclick',"showView('messages')");
-b.innerHTML='<span class="ico2">✉</span>All Messages';nav.appendChild(b);
+b.innerHTML='<span class="ico2"><i class="ri-message-3-line"></i></span>All Messages';nav.appendChild(b);
 }
 
 document.getElementById('msgBack').onclick=function(){document.getElementById('view-messages').classList.remove('msg-thread-open');};

@@ -491,7 +491,7 @@ function initRV(){
   var nav=document.getElementById('navFinance')||document.getElementById('nav');
   if(nav&&!document.getElementById('rvNavBtn')){
     var b=document.createElement('button');b.id='rvNavBtn';b.setAttribute('onclick',"showView('rev')");
-    b.innerHTML='<span class="ico2">$</span>Revenue';nav.appendChild(b);
+    b.innerHTML='<span class="ico2"><i class="ri-money-dollar-circle-line"></i></span>Revenue';nav.appendChild(b);
   }
   if(typeof window.showView==='function'&&!window.__rvWrap){
     window.__rvWrap=true;var _sv=window.showView;

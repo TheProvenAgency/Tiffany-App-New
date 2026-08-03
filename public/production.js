@@ -503,7 +503,7 @@ function initProd(){
   var nav=document.getElementById('navProduction')||document.getElementById('nav');
   if(nav&&!document.getElementById('pvNavBtn')){
     var b=document.createElement('button');b.id='pvNavBtn';b.setAttribute('onclick',"showView('production')");
-    b.innerHTML='<span class="ico2">▤</span>Deal Production';nav.appendChild(b);
+    b.innerHTML='<span class="ico2"><i class="ri-briefcase-4-line"></i></span>Deal Production';nav.appendChild(b);
   }
   if(typeof window.showView==='function'&&!window.__pvWrap){
     window.__pvWrap=true;var _sv=window.showView;

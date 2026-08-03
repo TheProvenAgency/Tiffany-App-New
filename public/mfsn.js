@@ -277,7 +277,7 @@ function initMF(){
   var nav=document.getElementById('navProduction')||document.getElementById('nav');
   if(nav&&!document.getElementById('mfNavBtn')){
     var b=document.createElement('button');b.id='mfNavBtn';b.setAttribute('onclick',"showView('mfsn')");
-    b.innerHTML='<span class="ico2">◈</span>Credit Monitoring';nav.appendChild(b);
+    b.innerHTML='<span class="ico2"><i class="ri-shield-check-line"></i></span>Credit Monitoring';nav.appendChild(b);
   }
   if(typeof window.showView==='function'&&!window.__mfWrap){
     window.__mfWrap=true;var _sv=window.showView;
