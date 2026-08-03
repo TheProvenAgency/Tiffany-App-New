@@ -239,6 +239,32 @@ var css=''+
 '.rv-trend-stat.tile-a{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--pink)}'+
 '.rv-trend-stat.tile-b{background:var(--gold-soft);border-left:3px solid var(--gold)}.rv-trend-stat.tile-b .tl{color:#8a6a1f}'+
 '.grid-stack-item-content>.rv-card>.rv-trend-body>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important;min-width:0}'+
+// Same fix, direct-child case: Payment methods / Customer Growth /
+// New customers don't have the .rv-trend-body wrapper the Sales trend
+// card has, so their .rv-wrap was never getting the flex-fill override --
+// it stayed at the fixed 280px/230px height from the base .rv-wrap rule
+// above regardless of how big or small Tiffany actually resized the
+// card, which is why resizing forced a scrollbar instead of the chart
+// just redrawing at the new size.
+'.grid-stack-item-content>.rv-card>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important;min-width:0}'+
+// Admina-style icon-circle card header (used by the redesigned Payment
+// methods / Customer Growth / Recent Orders cards below) -- never the
+// part that should shrink/scroll, the chart or table below it should.
+'.adm-chead{display:flex;align-items:flex-start;gap:12px;padding-bottom:16px;margin-bottom:14px;border-bottom:1px solid var(--line);flex:0 0 auto}'+
+'.adm-cicon{width:44px;height:44px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb, var(--ic,#6b7280) 14%, white);color:var(--ic,#6b7280)}'+
+'.adm-ctext{flex:1;min-width:0}.adm-ctext h3{margin:0;font-size:14.5px;font-weight:700;color:var(--ink)}.adm-ctext .cap{margin:2px 0 0}'+
+'.adm-select{border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--muted);background:#f8f9fc;cursor:pointer;flex:0 0 auto}'+
+'.adm-avatar{width:28px;height:28px;border-radius:50%;background:color-mix(in srgb, var(--ic,#6b7280) 18%, white);color:var(--ic,#6b7280);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:0 0 auto}'+
+'.adm-table{width:100%;border-collapse:collapse;font-size:12.5px}'+
+'.adm-table th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:0 10px 8px;border-bottom:1px solid var(--line)}'+
+'.adm-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink)}'+
+'.adm-table tr:last-child td{border-bottom:none}'+
+'.adm-table tr:hover td{background:#f8f9fc}'+
+'.adm-row1{display:flex;align-items:center;gap:8px}'+
+'.adm-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}'+
+'.adm-pill.k-sale{background:var(--green-soft);color:#0e6b3d}'+
+'.adm-pill.k-client{background:var(--pink-soft);color:#3730a3}'+
+'.adm-pill.k-dispute{background:var(--red-soft);color:#8a2a24}'+
 '.grid-stack-item-content>.rv-kpis{height:100%}'+
 // the Lifetime collected / Avg payment / LTV / New clients KPI rail, moved
 // here from the Dashboard -- .kpi/.spark/.miniring are all global classes
@@ -417,12 +443,34 @@ function wireGranTabs(containerId){
 function drawMethods(targetId){
   targetId=targetId||'rvMethods';
   if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
+  if(targetId==='dashMethods'){
+    // Admina reference (Payment Methods card): a polar-area chart with a
+    // bottom legend, not the doughnut-plus-separate-breakdown-list the
+    // Revenue page uses -- same real METHODS split (name/amt/pct/color),
+    // just the Admina chart type/layout for the Dashboard's copy.
+    charts[targetId]=new Chart(el.getContext('2d'),{type:'polarArea',
+      data:{labels:METHODS.map(function(m){return m.name+' '+m.pct+'%';}),datasets:[{data:METHODS.map(function(m){return m.amt;}),backgroundColor:METHODS.map(function(m){return m.color+'cc';}),borderWidth:1,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false},grid:{color:'#efe9df'}}},
+        plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10.5},padding:9}},tooltip:{callbacks:{label:function(c){var m=METHODS[c.dataIndex];return m.name+': '+money0(m.amt)+' ('+m.pct+'%)';}}}}}});
+    return;
+  }
   charts[targetId]=new Chart(el.getContext('2d'),{type:'doughnut',data:{labels:METHODS.map(function(m){return m.name;}),datasets:[{data:METHODS.map(function(m){return m.amt;}),backgroundColor:METHODS.map(function(m){return m.color;}),borderWidth:2,borderColor:'#fff'}]},
    options:{responsive:true,maintainAspectRatio:false,cutout:'56%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10.5},padding:7}},tooltip:{callbacks:{label:function(c){return c.label+': '+money0(c.parsed);}}}}}});
 }
 function drawCust(targetId){
   targetId=targetId||'rvCust';
   if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
+  if(targetId==='dashCust'){
+    // Admina reference (Customer Growth card): a smooth gradient area
+    // chart, not a bar chart -- same real CO_MONTHLY.cust monthly counts,
+    // just the Admina chart style for the Dashboard's copy.
+    var ctx=el.getContext('2d');
+    var grad=ctx.createLinearGradient(0,0,0,el.parentElement.clientHeight||230);
+    grad.addColorStop(0,'rgba(53,99,168,.32)'); grad.addColorStop(1,'rgba(53,99,168,.02)');
+    charts[targetId]=new Chart(ctx,{type:'line',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,borderColor:C.blue,backgroundColor:grad,fill:true,tension:.35,pointRadius:3,pointBackgroundColor:C.blue,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5}]},
+     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString()+' new customers';}}}},scales:{y:{ticks:{font:{size:10},callback:function(v){return v>=1000?(v/1000)+'k':v;}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+    return;
+  }
   charts[targetId]=new Chart(el.getContext('2d'),{type:'bar',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
@@ -543,6 +591,11 @@ function initRV(){
   // Revenue view's render().
   drawMethods('dashMethods');
   drawCust('dashCust');
+  // Decorative Daily/Weekly/Monthly tabs on the Payment methods card --
+  // see the comment on #dashMethodsGran in index.html for why this only
+  // toggles the active tab instead of actually redrawing the chart.
+  var pmTabs=document.querySelectorAll('#dashMethodsGran button');
+  pmTabs.forEach(function(b){ b.onclick=function(){ pmTabs.forEach(function(x){x.classList.toggle('on',x===b);}); }; });
   // ...and Member upgrade progress (gs-id="dash-upgrade") -- plain HTML,
   // not a chart, so just fill the container directly.
   var dashUp=document.getElementById('dashUpgradeProgress'); if(dashUp) dashUp.innerHTML=upgradeProgressHTML();
