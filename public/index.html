@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<script>(function(){try{if(localStorage.getItem('mfsTheme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 <title>Ms. Financial Solutions — Command Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -39,9 +40,27 @@
      own hot-pink CTA lives in login.html, a separate file, untouched. */
   --pink:#16a34a; --pink-soft:#e3f6ea; --rose:#22b35c; --blush:#a8e6bd; --brand-ink:#0c3d20;
 }
+/* Dark mode -- toggled via the header sun/moon button (see themeToggleBtn),
+   persisted in localStorage so it survives a reload without needing any
+   server round-trip (deliberately client-side only, see the layout-wiping
+   saga earlier -- no reason to make dark-mode preference depend on the
+   same ephemeral disk that keeps wiping everything else). Card/sidebar/
+   text/border colors all read these same vars everywhere already, so
+   flipping them here covers the page chrome for free. Chart canvases
+   (Chart.js) set their own grid/tick colors directly in JS, not CSS, so
+   they stay on their light-mode colors for now -- a real scope boundary,
+   not silently glossed over: they still render fine on dark cards (muted
+   gray text/gridlines read on either background) but aren't "themed". */
+html[data-theme="dark"]{
+  --bg:#141a17; --card:#1d2621; --ink:#e9efe9; --muted:#8fa398; --line:#2b3630;
+  --sidebar:#1a221d; --sidebar-ink:#c3cfc7; --sidebar-dim:#78897f; --sidebar-line:#2b3630;
+  --green-soft:#123322; --red-soft:#3a2422; --blue-soft:#1c2733; --gold-soft:#332a16;
+  --pink-soft:#12331f;
+}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);background-image:linear-gradient(180deg,#e6f5ea 0%,#eef7f1 22%,#f4f8f5 55%,#f6f8f7 100%);background-attachment:fixed;color:var(--ink);font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex}
+body{background:var(--bg);background-image:linear-gradient(180deg,#e6f5ea 0%,#eef7f1 22%,#f4f8f5 55%,#f6f8f7 100%);background-attachment:fixed;color:var(--ink);font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;transition:background-color .2s ease,color .2s ease}
+html[data-theme="dark"] body{background-image:linear-gradient(180deg,#182620 0%,#151d19 30%,#131916 100%)}
 button{font-family:inherit}
 /* ============ sidebar ============ */
 /* Single always-visible panel -- every group's pages sit right on the page,
@@ -127,6 +146,39 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 main{flex:1;min-width:0;padding:0 26px 40px;margin-left:302px;transition:margin-left .16s ease}
 body:has(#sidebar.collapsed) main{margin-left:64px}
 header{display:flex;align-items:center;gap:14px;padding:16px 0 10px;position:sticky;top:0;background:var(--bg);z-index:40}
+/* Header icon row (theme toggle + Messages/Notifications dropdowns) --
+   modeled on Admina's circular header buttons: plain neutral icon in a
+   soft rounded square, filled/tinted on hover, small red dot instead of
+   a full count badge (keeps it visually light like the reference). */
+.hdr-icons{display:flex;align-items:center;gap:8px}
+.hdr-ibtn{position:relative;width:38px;height:38px;border-radius:11px;border:1px solid var(--line);
+  background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center;
+  font-size:17px;cursor:pointer;transition:background .12s ease,color .12s ease}
+.hdr-ibtn:hover{background:var(--pink-soft);color:var(--pink)}
+.hdr-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#c0392b;border:2px solid var(--card)}
+/* Theme toggle shows sun in light mode, moon in dark mode -- CSS-only swap,
+   no JS re-render needed beyond flipping the [data-theme] attribute. */
+.hdr-moon{display:none}
+html[data-theme="dark"] .hdr-sun{display:none}
+html[data-theme="dark"] .hdr-moon{display:block}
+.hdr-dd{position:relative}
+.hdr-ddpanel{display:none;position:absolute;right:0;top:46px;width:320px;background:var(--card);
+  border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 28px rgba(20,30,25,.14);
+  overflow:hidden;z-index:60}
+.hdr-dd.open .hdr-ddpanel{display:block}
+.hdr-ddhead{padding:12px 16px;font-weight:700;font-size:13.5px;color:var(--ink);
+  background:var(--pink-soft);border-bottom:1px solid var(--line)}
+.hdr-ddlist{max-height:320px;overflow-y:auto}
+.hdr-ddrow{display:flex;flex-direction:column;gap:2px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.hdr-ddrow:last-child{border-bottom:none}
+.hdr-ddrow:hover{background:var(--pink-soft)}
+.hdr-ddrow .hdr-ddname{font-size:13px;font-weight:600;color:var(--ink)}
+.hdr-ddrow .hdr-ddsnip{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-ddrow .hdr-ddtime{font-size:10.5px;color:var(--sidebar-dim)}
+.hdr-ddempty{padding:20px 16px;font-size:12.5px;color:var(--muted);text-align:center}
+.hdr-ddfoot{padding:10px 16px;text-align:center;font-size:12.5px;font-weight:600;color:var(--pink);
+  cursor:pointer;border-top:1px solid var(--line)}
+.hdr-ddfoot:hover{background:var(--pink-soft)}
 header h1{font-size:19px;margin:0;font-weight:700}
 .livepill{background:var(--green-soft);color:var(--green);font-size:10.5px;font-weight:700;letter-spacing:.05em;
   padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px}
@@ -661,6 +713,31 @@ section.view{display:none} section.view.on{display:block}
     <span class="livepill" id="modePill">LIVE</span>
     <div class="hspace"></div>
     <input class="search" id="globalSearch" placeholder="Search clients, payments…">
+    <div class="hdr-icons">
+      <button class="hdr-ibtn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode">
+        <i class="ri-sun-line hdr-sun"></i><i class="ri-moon-line hdr-moon"></i>
+      </button>
+      <div class="hdr-dd" id="hdrMsgDd">
+        <button class="hdr-ibtn" onclick="toggleHdrDd('hdrMsgDd')" title="Messages">
+          <i class="ri-mail-line"></i><span class="hdr-dot" id="hdrMsgDot" style="display:none"></span>
+        </button>
+        <div class="hdr-ddpanel">
+          <div class="hdr-ddhead">Messages</div>
+          <div class="hdr-ddlist" id="hdrMsgList"><div class="hdr-ddempty">Loading…</div></div>
+          <div class="hdr-ddfoot" onclick="showView('messages');closeHdrDd()">See all messages →</div>
+        </div>
+      </div>
+      <div class="hdr-dd" id="hdrNotifDd">
+        <button class="hdr-ibtn" onclick="toggleHdrDd('hdrNotifDd')" title="Notifications">
+          <i class="ri-notification-3-line"></i><span class="hdr-dot" id="hdrNotifDot" style="display:none"></span>
+        </button>
+        <div class="hdr-ddpanel">
+          <div class="hdr-ddhead">Notifications</div>
+          <div class="hdr-ddlist" id="hdrNotifList"><div class="hdr-ddempty">Loading…</div></div>
+          <div class="hdr-ddfoot" onclick="openNotifications();closeHdrDd()">See all notifications →</div>
+        </div>
+      </div>
+    </div>
     <div class="avatar">MS</div>
   </header>
 
@@ -2445,6 +2522,67 @@ async function openNotifications(){
   await loadNotifications();
   renderNotifList();
   $('notifOverlay').classList.add('show');
+}
+
+/* ================= header icon row: theme toggle + Messages/Notifications previews ================= */
+function toggleTheme(){
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('mfsTheme','light');}catch(e){}}
+  else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('mfsTheme','dark');}catch(e){}}
+}
+function toggleHdrDd(id){
+  const dd=$(id); if(!dd)return;
+  const willOpen=!dd.classList.contains('open');
+  document.querySelectorAll('.hdr-dd.open').forEach(x=>x.classList.remove('open'));
+  if(willOpen){
+    dd.classList.add('open');
+    if(id==='hdrMsgDd')loadHdrMessages();
+    if(id==='hdrNotifDd')loadHdrNotifs();
+  }
+}
+function closeHdrDd(){document.querySelectorAll('.hdr-dd.open').forEach(x=>x.classList.remove('open'));}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.hdr-dd'))closeHdrDd();
+});
+function timeAgo(ts){
+  if(!ts)return'';
+  const s=Math.max(1,Math.floor((Date.now()-new Date(ts).getTime())/1000));
+  if(s<60)return s+'s ago';
+  const m=Math.floor(s/60); if(m<60)return m+'m ago';
+  const h=Math.floor(m/60); if(h<24)return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+/* Messages preview: reuses the same real /api/messages conversations feed
+   the full inbox (messages.js) reads from -- just the 5 most recent here,
+   with an unread dot on the button instead of a duplicate badge system. */
+async function loadHdrMessages(){
+  const list=$('hdrMsgList'); if(!list)return;
+  try{
+    const r=await fetch('/api/messages?limit=5');
+    const d=await r.json();
+    const convos=(d.conversations||[]).slice(0,5);
+    const anyUnread=(d.conversations||[]).some(c=>c.unread);
+    const dot=$('hdrMsgDot'); if(dot)dot.style.display=anyUnread?'block':'none';
+    list.innerHTML=convos.length ? convos.map(c=>`<div class="hdr-ddrow" onclick="showView('messages');closeHdrDd()">
+      <div class="hdr-ddname">${escUser(c.name||c.email||c.phone||'Unknown')}</div>
+      <div class="hdr-ddsnip">${escUser(c.lastBody||'')}</div>
+      <div class="hdr-ddtime">${timeAgo(c.lastAt)}</div>
+    </div>`).join('') : '<div class="hdr-ddempty">No conversations yet.</div>';
+  }catch(e){ list.innerHTML='<div class="hdr-ddempty">Couldn\'t load messages.</div>'; }
+}
+/* Notifications preview: reuses the already-loaded notifsCache from the
+   existing real @mention/task-assignment system (loadNotifications(),
+   polled every 20s) -- just renders the 5 most recent here rather than
+   re-fetching, and "see all" opens the same #notifOverlay modal that
+   already exists. */
+function loadHdrNotifs(){
+  const list=$('hdrNotifList'); if(!list)return;
+  const dot=$('hdrNotifDot'); if(dot)dot.style.display=notifsCache.some(n=>!n.read)?'block':'none';
+  const recent=notifsCache.slice(0,5);
+  list.innerHTML=recent.length ? recent.map(n=>`<div class="hdr-ddrow" ${n.clientId?`onclick="openNotifTarget('${n.id}','${n.clientId}');closeHdrDd()"`:''}>
+    <div class="hdr-ddname">${n.read?'':'<b>New</b> '}${escUser(notifText(n))}</div>
+    <div class="hdr-ddtime">${timeAgo(n.createdAt)}</div>
+  </div>`).join('') : '<div class="hdr-ddempty">Nothing yet.</div>';
 }
 function openNotifTarget(notifId,clientId){
   fetch('/api/notifications/'+notifId+'/read',{method:'POST'}).then(loadNotifications);
