@@ -240,7 +240,7 @@ var css=''+
 '.rv-trend-stat{border-radius:12px;padding:14px 16px;flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;min-height:0}'+
 '.rv-trend-stat .tv{font-size:clamp(15px,2.2cqw,20px);font-weight:800;color:var(--ink);line-height:1.15}'+
 '.rv-trend-stat .tl{font-size:11.5px;color:var(--muted);margin-top:3px}'+
-'.rv-trend-stat.tile-a{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--pink)}'+
+'.rv-trend-stat.tile-a{background:var(--pink-soft);border:1px solid var(--pink-soft);border-left:3px solid var(--pink)}'+
 '.rv-trend-stat.tile-b{background:var(--gold-soft);border-left:3px solid var(--gold)}.rv-trend-stat.tile-b .tl{color:#8a6a1f}'+
 '.grid-stack-item-content>.rv-card>.rv-trend-body>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important;min-width:0}'+
 // Same fix, direct-child case: Payment methods / Customer Growth /
@@ -464,13 +464,17 @@ function drawTrend(targetId){
   // than one flat color for the whole line -- real month-over-month
   // direction from the data, not a decorative fabrication.
   var dotColors=d.vals.map(function(v,i){ if(i===0)return d.color; return v>=d.vals[i-1]?C.green:C.gold; });
-  var datasets=[{label:'Commas',data:d.vals,borderColor:d.color,backgroundColor:d.fill,fill:true,tension:.32,pointRadius:gran==='monthly'?4:0,pointBackgroundColor:dotColors,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5,order:1}];
-  if(hasMf) datasets.push({label:'MFSN',data:d.mfVals,borderColor:d.mfColor,backgroundColor:d.mfFill,fill:true,tension:.32,pointRadius:4,pointBackgroundColor:d.mfColor,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5,borderDash:[5,3],order:2});
+  // Admina reference (Sales Overview): two clean solid lines, no area
+  // fill underneath, small round markers on every point instead of a
+  // filled/dashed look -- fill:false and a real (not dashed) MFSN line
+  // is the whole difference from the old style below.
+  var datasets=[{label:'Commas',data:d.vals,borderColor:d.color,fill:false,tension:.32,pointRadius:3,pointBackgroundColor:dotColors,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5,order:1}];
+  if(hasMf) datasets.push({label:'MFSN',data:d.mfVals,borderColor:d.mfColor,fill:false,tension:.32,pointRadius:3,pointBackgroundColor:d.mfColor,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5,order:2});
   // Keep the header legend's MFSN dot in sync -- only shown when this
   // grain actually has an MFSN series to go with it.
   var mfLegend=document.getElementById('dashTrendLegendMf'); if(mfLegend) mfLegend.style.display=hasMf?'':'none';
   charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:datasets},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:12}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10.5},color:'#9ca3af'},grid:{color:'#eef0f5'}},x:{grid:{display:false},ticks:{font:{size:10.5},color:'#9ca3af',maxTicksLimit:12}}}}});
 }
 // redraws whichever of the two Sales-trend canvases currently exist in the
 // document -- the Revenue page's isn't in the DOM unless that view has
