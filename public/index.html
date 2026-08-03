@@ -845,7 +845,7 @@ section.view{display:none} section.view.on{display:block}
            chart (id="dashMethods"/"dashCust") so both pages can have a
            live instance at once -- see drawMethods()/drawCust() in
            revenue.js, same pattern as the Sales trend card above. -->
-      <div class="grid-stack-item" gs-id="dash-methods" gs-x="0" gs-y="46" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="dash-methods" gs-x="6" gs-y="40" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead">
             <div class="adm-cicon" style="--ic:#b98a2f"><i class="ri-bank-card-2-line"></i></div>
@@ -866,7 +866,7 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="dash-newcust" gs-x="6" gs-y="46" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="dash-newcust" gs-x="0" gs-y="46" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead">
             <div class="adm-cicon" style="--ic:#3563a8"><i class="ri-user-add-line"></i></div>
@@ -879,11 +879,25 @@ section.view{display:none} section.view.on{display:block}
       <!-- Member upgrade progress -- same real MF numbers as the Revenue
            page's copy, filled in by the same upgradeProgressHTML() helper
            in revenue.js (plain HTML, not a chart, so no canvas here). -->
-      <div class="grid-stack-item" gs-id="dash-upgrade" gs-x="0" gs-y="55" gs-w="6" gs-h="7"><div class="grid-stack-item-content">
+      <!-- Admina reference: "Order Summary" (icon-circle header, no
+           bottom rule, full-circle donut with a center total label and
+           per-slice % labels, small dot legend underneath). Real MF
+           numbers: Upgraded + Need upgrade genuinely sum to MF.enrolled,
+           so this is an honest 2-segment donut rather than inventing a
+           3rd category just to match Admina's 3-slice example. See
+           drawUpgradeChart() in revenue.js. -->
+      <div class="grid-stack-item" gs-id="dash-upgrade" gs-x="6" gs-y="49" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><i class="ri-arrow-up-circle-line"></i></span>Member upgrade progress</h3>
-          <div class="cap">Migrating the book to the new platform.</div>
-          <div id="dashUpgradeProgress"></div>
+          <div class="adm-chead noline">
+            <div class="adm-cicon" style="--ic:#0e9e56"><i class="ri-arrow-up-circle-line"></i></div>
+            <div class="adm-ctext"><h3>Member upgrade progress</h3><div class="cap">Migrating the book to the new platform.</div></div>
+          </div>
+          <div class="rv-wrap sm"><canvas id="dashUpgradeChart"></canvas></div>
+          <ul class="adm-legend">
+            <li><span class="dot" style="background:var(--green)"></span>Upgraded</li>
+            <li><span class="dot" style="background:var(--gold)"></span>Need upgrade</li>
+          </ul>
+          <div class="cap" style="text-align:center;margin-top:6px" id="dashUpgradeActiveCap"></div>
         </div>
       </div></div>
 

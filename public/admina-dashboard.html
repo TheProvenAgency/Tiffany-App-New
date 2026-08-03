@@ -11,8 +11,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2"></script>
 <script src="/admina-assets/js/lib/iconify-icon.min.js"></script>
 <style>
-  html,body{background:#f4f6fa;margin:0}
-  body{padding:20px}
+  html,body{background:#f4f6fa;margin:0;height:100%;overflow:hidden}
+  body{padding:20px;box-sizing:border-box}
   /* Each KPI tile needs to read as its own floating card, not one big
      bordered container -- Bootstrap's row gutter alone doesn't do that
      when both the card and the gutter are the same white as the page,
@@ -20,17 +20,44 @@
      border on the card, against a light gray canvas (matching the main
      app's --bg), makes each tile pop independently. */
   .bg-base.radius-20{box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 6px rgba(16,24,40,.06);border:1px solid rgba(16,24,40,.05)}
+
   /* Single-card mode (?card=total-income|enrolled|actives|upgraded): each
      KPI now lives in its own grid-stack-item on the dashboard so Tiffany
      can drag/resize them independently like every other card, instead of
      all 4 being trapped together inside one iframe/grid cell. This iframe
      is reused per-card via the query param rather than shipping 4 near-
-     identical HTML files -- same real Admina markup/charts either way. */
-  body.single-card{padding:10px;height:100vh}
+     identical HTML files -- same real Admina markup/charts either way.
+
+     Everything below this point is the fix for "the card doesn't adjust,
+     details inside stay the same size" -- in single-card mode the iframe's
+     own viewport IS exactly the grid card's rendered size (the iframe
+     element is width:100%;height:100% of its grid-stack-item, see
+     index.html), so vw/vh units here are a direct, live readout of
+     however big or small Tiffany just made the card. Padding/font-size/
+     spacing all use clamp(min, vw/vh-based, max) instead of Bootstrap's
+     fixed p-24/text-2xl/etc, so the whole tile actually shrinks and
+     grows with the card instead of overflowing into a scrollbar. */
+  body.single-card{padding:0;height:100vh;overflow:hidden}
   body.single-card [data-card]{display:none}
-  body.single-card [data-card].adm-active{display:block;flex:0 0 100%;max-width:100%;width:100%;height:100%}
+  body.single-card [data-card].adm-active{display:flex;height:100%}
   body.single-card .dashboard-main-body,body.single-card .row,body.single-card .col-xxl-12{height:100%}
-  body.single-card .bg-base{height:100%}
+  body.single-card .bg-base{height:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;
+    padding:clamp(10px,5vw,24px)}
+  body.single-card .kpi-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding-bottom:clamp(6px,3vh,20px);margin-bottom:clamp(6px,3vh,20px)}
+  body.single-card .kpi-head span.text-neutral-700{font-size:clamp(10.5px,4.2vw,14px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.single-card .kpi-body{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  body.single-card .kpi-text{min-width:0;flex:1 1 auto}
+  body.single-card .kpi-text h2{font-size:clamp(15px,9vw,28px)!important;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.single-card .kpi-text .mt-16{margin-top:clamp(3px,2vh,16px)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.single-card .kpi-text .mt-16 span,body.single-card .kpi-text .mt-16 i{font-size:clamp(9px,3.2vw,13px)}
+  body.single-card .kpi-chart{flex:0 1 auto;max-width:42%;min-width:0}
+  body.single-card .kpi-chart>div{width:100%!important}
+  /* Below a certain card size the dropdown "..." menu button just eats
+     space nothing else needs -- hide it rather than let it force an
+     overflow; it has no real menu items wired anyway (decorative, same
+     as the real Admina template ships it). */
+  body.single-card .kpi-head .dropdown{flex:0 0 auto}
 </style>
 </head>
 <body>
@@ -55,7 +82,7 @@
 
         <div class="col-sm-6 col-lg-3" data-card="total-income">
           <div class="bg-base p-24 radius-20 h-100">
-            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+            <div class="kpi-head d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
               <span class="text-neutral-700 fw-medium">Total income</span>
               <div class="dropdown">
                 <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -63,22 +90,22 @@
                 </button>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between gap-8">
-              <div>
+            <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
+              <div class="kpi-text">
                 <h2 class="text-2xl mb-0" id="admTotalIncome">$0</h2>
                 <div class="mt-16" id="admTotalIncomeTrend">
                   <span class="text-primary-600 text-lg line-height-1"><i class="ph ph-arrow-up"></i></span>
                   <span class="text-primary-600 fw-medium">Commas + MFSN</span>
                 </div>
               </div>
-              <div><div id="barChart"></div></div>
+              <div class="kpi-chart"><div id="barChart"></div></div>
             </div>
           </div>
         </div>
 
         <div class="col-sm-6 col-lg-3" data-card="enrolled">
           <div class="bg-base p-24 radius-20 h-100">
-            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+            <div class="kpi-head d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
               <span class="text-neutral-700 fw-medium">Enrolled members</span>
               <div class="dropdown">
                 <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -86,15 +113,15 @@
                 </button>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between gap-8">
-              <div>
+            <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
+              <div class="kpi-text">
                 <h2 class="text-2xl mb-0">1,493</h2>
                 <div class="mt-16">
                   <span class="text-warning-600 text-lg line-height-1"><i class="ph ph-arrows-down-up"></i></span>
                   <span class="text-warning-600 fw-medium">14% active monitoring</span>
                 </div>
               </div>
-              <div style="width:140px">
+              <div class="kpi-chart" style="width:140px">
                 <div class="remove-tooltip-title rounded-tooltip-value"><div id="lineChart"></div></div>
               </div>
             </div>
@@ -103,7 +130,7 @@
 
         <div class="col-sm-6 col-lg-3" data-card="actives">
           <div class="bg-base p-24 radius-20 h-100">
-            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+            <div class="kpi-head d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
               <span class="text-neutral-700 fw-medium">New portal actives</span>
               <div class="dropdown">
                 <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -111,22 +138,22 @@
                 </button>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between gap-8">
-              <div>
+            <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
+              <div class="kpi-text">
                 <h2 class="text-2xl mb-0">736</h2>
                 <div class="mt-16">
                   <span class="text-warning-600 text-lg line-height-1"><i class="ph ph-arrow-up-right"></i></span>
                   <span class="text-warning-600 fw-medium">60% of target</span>
                 </div>
               </div>
-              <div><div id="radialChart" class="m--8-px" style="min-width:90px; min-height:90px;"></div></div>
+              <div class="kpi-chart"><div id="radialChart" class="m--8-px" style="min-width:60px; min-height:60px;"></div></div>
             </div>
           </div>
         </div>
 
         <div class="col-sm-6 col-lg-3" data-card="upgraded">
           <div class="bg-base p-24 radius-20 h-100">
-            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+            <div class="kpi-head d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
               <span class="text-neutral-700 fw-medium">Upgraded</span>
               <div class="dropdown">
                 <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -134,15 +161,15 @@
                 </button>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between gap-8">
-              <div>
+            <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
+              <div class="kpi-text">
                 <h2 class="text-2xl mb-0">420</h2>
                 <div class="mt-16">
                   <span class="text-danger-600 text-lg line-height-1"><i class="ph ph-arrow-down"></i></span>
                   <span class="text-danger-600 fw-medium">28% on new platform</span>
                 </div>
               </div>
-              <div style="width:140px"><div id="columnChart"></div></div>
+              <div class="kpi-chart" style="width:140px"><div id="columnChart"></div></div>
             </div>
           </div>
         </div>
@@ -166,40 +193,72 @@ fetch('/api/dashboard').then(function(r){ return r.json(); }).then(function(d){
   if(el && d && d.kpis) el.textContent = '$' + Math.round(d.kpis.revenueTotal).toLocaleString();
 }).catch(function(){});
 
-new ApexCharts(document.querySelector("#barChart"), {
+var barChart = new ApexCharts(document.querySelector("#barChart"), {
   series: [{ data: [543648,87000,72000,62000,48000,33129,29100].map(function(v){return Math.round(v/1000);}) }],
   chart: { type: "bar", height: 80, width: 130, sparkline: { enabled: true } },
   plotOptions: { bar: { columnWidth: "65%", borderRadius: 3 } },
   colors: [primaryColor],
   fill: { opacity: [0.35,0.35,0.35,0.35,0.35,0.35,1] },
   dataLabels: { enabled: false }, tooltip: { enabled: false }
-}).render();
+});
+barChart.render();
 
-new ApexCharts(document.querySelector("#lineChart"), {
+var lineChart = new ApexCharts(document.querySelector("#lineChart"), {
   series: [{ data: [1210,1265,1301,1340,1375,1402,1430,1448,1461,1472,1483,1489,1493] }],
   chart: { type: "area", height: 80, sparkline: { enabled: true } },
   stroke: { curve: "smooth", width: 2 },
   fill: { type: "gradient", gradient: { opacityFrom: 0.4, opacityTo: 0 } },
   colors: [primaryColor], tooltip: { enabled: true }
-}).render();
+});
+lineChart.render();
 
-new ApexCharts(document.querySelector("#radialChart"), {
+var radialChart = new ApexCharts(document.querySelector("#radialChart"), {
   series: [Math.round(736/1226*100)],
   chart: { type: "radialBar", height: 90, width: 90, sparkline: { enabled: true } },
   plotOptions: { radialBar: { startAngle:0, endAngle:360, hollow:{size:"70%"},
     track:{background:trackColor,strokeWidth:"100%",margin:0},
     dataLabels:{ name:{show:false}, value:{ fontSize:"12px", fontWeight:500, color:warningColor, offsetY:0, show:true, formatter:function(v){return v+"%";} } } } },
   fill: { colors: [warningColor] }, stroke: { lineCap: "round" }, labels: ["New portal actives"]
-}).render();
+});
+radialChart.render();
 
-new ApexCharts(document.querySelector("#columnChart"), {
+var columnChart = new ApexCharts(document.querySelector("#columnChart"), {
   series: [{ data: [30,55,80,120,180,260,340,420].map(function(v){return v;}) }],
   chart: { type: "bar", height: 80, sparkline: { enabled: true } },
   plotOptions: { bar: { columnWidth: "40%", borderRadius: 3 } },
   colors: [dangerColor],
   fill: { opacity: [1,0.3,1,0.3,1,0.3,1,1] },
   dataLabels: { enabled: false }, tooltip: { enabled: false }
-}).render();
+});
+columnChart.render();
+
+// The vw/vh clamp() rules above handle the text/padding side of "the card
+// doesn't adjust when resized" -- this handles the chart side. ApexCharts
+// only re-measures its own canvas on the iframe's window 'resize' event,
+// which normally fires when the *browser* window changes size -- but here
+// the iframe's rendered size changes because the GridStack card around it
+// was dragged/resized, which doesn't reliably fire that event in every
+// browser. A ResizeObserver on the actual visible card watches its real
+// pixel size directly and nudges each chart to redraw at the new size,
+// so shrinking or growing the card via "Customize layout" actually
+// resizes the chart instead of leaving it at whatever size it first
+// rendered at.
+if(window.ResizeObserver){
+  var chartsByCard = {
+    'total-income': [barChart],
+    'enrolled': [lineChart],
+    'actives': [radialChart],
+    'upgraded': [columnChart]
+  };
+  Object.keys(chartsByCard).forEach(function(card){
+    var el = document.querySelector('[data-card="'+card+'"] .bg-base');
+    if(!el) return;
+    var ro = new ResizeObserver(function(){
+      chartsByCard[card].forEach(function(ch){ if(ch && ch.windowResizeHandler) ch.windowResizeHandler(); });
+    });
+    ro.observe(el);
+  });
+}
 </script>
 </body>
 </html>

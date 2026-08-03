@@ -254,6 +254,10 @@ var css=''+
 '.adm-cicon{width:44px;height:44px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb, var(--ic,#6b7280) 14%, white);color:var(--ic,#6b7280)}'+
 '.adm-ctext{flex:1;min-width:0}.adm-ctext h3{margin:0;font-size:14.5px;font-weight:700;color:var(--ink)}.adm-ctext .cap{margin:2px 0 0}'+
 '.adm-select{border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--muted);background:#f8f9fc;cursor:pointer;flex:0 0 auto}'+
+'.adm-chead.noline{border-bottom:none;padding-bottom:4px;margin-bottom:4px}'+
+'.adm-legend{list-style:none;display:flex;justify-content:center;gap:16px;padding:0;margin:12px 0 0;flex-wrap:wrap;flex:0 0 auto}'+
+'.adm-legend li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}'+
+'.adm-legend .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;display:inline-block}'+
 '.adm-avatar{width:28px;height:28px;border-radius:50%;background:color-mix(in srgb, var(--ic,#6b7280) 18%, white);color:var(--ic,#6b7280);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:0 0 auto}'+
 '.adm-table{width:100%;border-collapse:collapse;font-size:12.5px}'+
 '.adm-table th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:0 10px 8px;border-bottom:1px solid var(--line)}'+
@@ -365,6 +369,46 @@ function upgradeProgressHTML(){
     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.gold+'"></span>Need upgrade</div><div class="rv-prog"><i style="width:'+Math.round(MF.toUpgrade/MF.enrolled*100)+'%;background:'+C.gold+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.toUpgrade.toLocaleString()+'</div></div>'+
     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.blue+'"></span>Active members</div><div class="rv-prog"><i style="width:'+Math.round(MF.active/MF.enrolled*100)+'%;background:'+C.blue+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.active+'</div></div>'+
     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+Math.round(MF.upgraded/MF.enrolled*100)+'% of '+MF.enrolled.toLocaleString()+' members migrated.</div>';
+}
+// Admina reference (Order Summary card): a full-circle donut with a
+// center "Total X" label and per-slice percentage labels, not the
+// progress-bar-row layout upgradeProgressHTML() above builds for the
+// Revenue page. Same real MF numbers -- Upgraded + Need upgrade are
+// genuinely complementary (they sum to MF.enrolled, unlike a 3rd made-up
+// slice), so this is an honest 2-segment donut rather than forcing a
+// fake 3rd category just to match Admina's 3-slice example exactly.
+function drawUpgradeChart(){
+  if(!window.Chart)return;var el=document.getElementById('dashUpgradeChart');if(!el)return;killChart('dashUpgradeChart');
+  var data=[MF.upgraded,MF.toUpgrade];
+  var total=MF.enrolled;
+  charts['dashUpgradeChart']=new Chart(el.getContext('2d'),{type:'doughnut',
+    data:{labels:['Upgraded','Need upgrade'],datasets:[{data:data,backgroundColor:[C.green,C.gold],borderWidth:0,hoverOffset:6}]},
+    options:{cutout:'65%',maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed.toLocaleString()+' ('+Math.round(c.parsed/total*100)+'%)';}}}}},
+    plugins:[{id:'centerTotal',afterDraw:function(chart){
+      var meta=chart.getDatasetMeta(0); if(!meta.data.length)return;
+      var cx=meta.data[0].x, cy=meta.data[0].y;
+      var ctx=chart.ctx;
+      ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='#9ca3af';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
+      ctx.fillText('Total members',cx,cy-11);
+      ctx.fillStyle='#211d18';ctx.font='700 22px -apple-system,Segoe UI,Inter,sans-serif';
+      ctx.fillText(total.toLocaleString(),cx,cy+12);
+      ctx.restore();
+    }},
+    {id:'sliceLabels',afterDraw:function(chart){
+      var meta=chart.getDatasetMeta(0); if(!meta.data.length)return;
+      var ctx=chart.ctx;
+      ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 12px -apple-system,Segoe UI,Inter,sans-serif';ctx.fillStyle='#fff';
+      meta.data.forEach(function(arc,i){
+        var pct=Math.round(data[i]/total*100);
+        var mid=(arc.startAngle+arc.endAngle)/2, r=(arc.innerRadius+arc.outerRadius)/2;
+        var x=arc.x+Math.cos(mid)*r, y=arc.y+Math.sin(mid)*r;
+        ctx.fillText(pct+'%',x,y);
+      });
+      ctx.restore();
+    }}]});
+  var cap=document.getElementById('dashUpgradeActiveCap'); if(cap) cap.textContent=MF.active.toLocaleString()+' active members currently engaging with the portal.';
 }
 function methodRows(){
   return METHODS.map(function(m){
@@ -596,9 +640,9 @@ function initRV(){
   // toggles the active tab instead of actually redrawing the chart.
   var pmTabs=document.querySelectorAll('#dashMethodsGran button');
   pmTabs.forEach(function(b){ b.onclick=function(){ pmTabs.forEach(function(x){x.classList.toggle('on',x===b);}); }; });
-  // ...and Member upgrade progress (gs-id="dash-upgrade") -- plain HTML,
-  // not a chart, so just fill the container directly.
-  var dashUp=document.getElementById('dashUpgradeProgress'); if(dashUp) dashUp.innerHTML=upgradeProgressHTML();
+  // ...and Member upgrade progress (gs-id="dash-upgrade"), now an Admina
+  // Order Summary-style donut -- see drawUpgradeChart() above.
+  drawUpgradeChart();
   // Total income card needs to redraw every time the Today/7D/30D/90D/YTD/
   // All picker (or a custom Apply) changes the selected range -- every one
   // of those routes through loadDashboard() (see index.html setPreset/
