@@ -49,12 +49,28 @@ button{font-family:inherit}
 aside{display:flex;height:100vh;position:fixed;top:0;left:0;z-index:50}
 /* Floating tab that opens/closes the whole sidebar -- lives outside the
    aside so it's still reachable even when the panel is fully collapsed. */
-.navCollapseToggle{position:fixed;top:14px;left:200px;z-index:70;width:40px;height:40px;border:1px solid rgba(0,0,0,.06);border-radius:12px;
+.navCollapseToggle{position:fixed;top:14px;left:264px;z-index:70;width:40px;height:40px;border:1px solid rgba(0,0,0,.06);border-radius:12px;
   background:#fff;color:#3a3730;display:flex;align-items:center;justify-content:center;
   cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.16);transition:left .16s ease,box-shadow .12s ease,transform .12s ease}
 .navCollapseToggle svg{width:19px;height:19px}
 .navCollapseToggle:hover{box-shadow:0 6px 18px rgba(0,0,0,.22);transform:translateY(-1px)}
-body:has(#sidebar.collapsed) .navCollapseToggle{left:14px}
+/* Collapsing only tucks the panel away -- the icon rail (Admina's actual
+   pattern) stays put as a minimal always-there nav, so the toggle only
+   needs to clear the rail's own width, not the full 238+64px. */
+body:has(#sidebar.collapsed) .navCollapseToggle{left:78px}
+/* Icon-only rail, always visible regardless of panel collapse state --
+   this is the real Admina "twin sidebar" interaction: click a section
+   icon here and the panel to its right swaps to show just that group,
+   instead of one long scrolling list of every section at once. */
+.navrail{width:64px;min-width:64px;background:var(--sidebar);height:100%;display:flex;flex-direction:column;
+  align-items:center;gap:6px;padding:14px 0;border-right:1px solid var(--sidebar-line);flex:0 0 auto}
+.navrail .railbrand{width:40px;height:40px;border-radius:12px;border:none;background:none;padding:4px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.navrail .railbrand img{width:100%;height:100%;object-fit:contain}
+.navrail .railbtn{width:42px;height:42px;border-radius:12px;border:none;background:none;color:var(--sidebar-dim);
+  font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s ease,color .12s ease}
+.navrail .railbtn:hover{background:#f4f6fa;color:var(--sidebar-ink)}
+.navrail .railbtn.on{background:var(--pink);color:#fff}
 .navpanel{width:238px;min-width:238px;background:var(--sidebar);color:var(--sidebar-ink);height:100%;
   display:flex;flex-direction:column;padding:14px 0;overflow-y:auto;transition:margin-left .16s ease,opacity .16s ease;
   border-right:1px solid var(--sidebar-line);box-shadow:0 0 24px rgba(24,27,44,.06)}
@@ -98,8 +114,8 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 /* margin-left reserves the space the now-fixed aside occupies (238px, its
    .navpanel width) so content doesn't render underneath it; collapses back
    to 0 in lockstep with the sidebar via the body:has() rule below. */
-main{flex:1;min-width:0;padding:0 26px 40px;margin-left:238px;transition:margin-left .16s ease}
-body:has(#sidebar.collapsed) main{margin-left:0}
+main{flex:1;min-width:0;padding:0 26px 40px;margin-left:302px;transition:margin-left .16s ease}
+body:has(#sidebar.collapsed) main{margin-left:64px}
 header{display:flex;align-items:center;gap:14px;padding:16px 0 10px;position:sticky;top:0;background:var(--bg);z-index:40}
 header h1{font-size:19px;margin:0;font-weight:700}
 .livepill{background:var(--green-soft);color:var(--green);font-size:10.5px;font-weight:700;letter-spacing:.05em;
@@ -506,7 +522,7 @@ section.view{display:none} section.view.on{display:block}
      the client drawer/overlay elsewhere in this file -- makes it obvious
      the panel is temporary/floating on top, and gives a big, easy target
      to dismiss it besides hunting for the small toggle circle. */
-  body:has(#sidebar:not(.collapsed))::before{content:'';position:fixed;inset:0;left:238px;
+  body:has(#sidebar:not(.collapsed))::before{content:'';position:fixed;inset:0;left:302px;
     background:rgba(20,16,10,.45);z-index:140}
   /* Dashboard grid at phone/tablet width: bypass GridStack's absolute
      x/y/w/h positioning (a 12-column desktop layout's row heights don't
@@ -554,6 +570,15 @@ section.view{display:none} section.view.on{display:block}
 
 <button class="navCollapseToggle" id="railCollapseBtn" title="Collapse sidebar" onclick="toggleNavPanel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><line x1="9.5" y1="4" x2="9.5" y2="20"/></svg></button>
 <aside id="sidebar">
+  <nav class="navrail" id="navrail" aria-label="Sections">
+    <button class="railbrand" onclick="showView('dash')" title="Ms. Financial Solutions"><img src="/logo.png" alt=""></button>
+    <button class="railbtn" data-g="ov" onclick="setNavGroup('ov',true)" title="Overview"><i class="ri-home-5-line"></i></button>
+    <button class="railbtn" data-g="cl" onclick="setNavGroup('cl',true)" title="Clients"><i class="ri-team-line"></i></button>
+    <button class="railbtn" data-g="pr" onclick="setNavGroup('pr',true)" title="Production"><i class="ri-stack-line"></i></button>
+    <button class="railbtn" data-g="fi" onclick="setNavGroup('fi',true)" title="Finance"><i class="ri-money-dollar-circle-line"></i></button>
+    <button class="railbtn" data-g="ma" onclick="setNavGroup('ma',true)" title="Marketing"><i class="ri-sparkling-2-line"></i></button>
+    <button class="railbtn" data-g="ac" onclick="setNavGroup('ac',true)" title="Account"><i class="ri-settings-3-line"></i></button>
+  </nav>
   <div class="navpanel" id="navpanel">
   <div class="brand">
     <img src="/logo.png" alt="Ms. Financial Solutions">
@@ -661,8 +686,28 @@ section.view{display:none} section.view.on{display:block}
            numbers (Total income from /api/dashboard live, MFSN figures
            from the same M object mfsn.js uses everywhere else) into the
            exact real card markup/ApexCharts configs from the template. -->
-      <div class="grid-stack-item" gs-id="admina-kpis" gs-x="0" gs-y="0" gs-w="4" gs-h="9"><div class="grid-stack-item-content">
-        <iframe src="/admina-dashboard.html" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="KPI overview"></iframe>
+      <!-- Real Admina template markup, one grid-stack-item per KPI tile (was
+           previously one combined iframe holding all 4 -- Tiffany asked for
+           each card to be independently draggable/resizable like every other
+           card on this dashboard, which a shared iframe can't do since
+           GridStack only sees the outer item, not what's inside it). Same
+           admina-dashboard.html document, reused 4x via ?card=; each load
+           only shows/activates its one tile. -->
+
+      <div class="grid-stack-item" gs-id="kpi-total-income" gs-x="0" gs-y="0" gs-w="2" gs-h="5"><div class="grid-stack-item-content">
+        <iframe src="/admina-dashboard.html?card=total-income" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="Total income"></iframe>
+      </div></div>
+
+      <div class="grid-stack-item" gs-id="kpi-enrolled" gs-x="2" gs-y="0" gs-w="2" gs-h="5"><div class="grid-stack-item-content">
+        <iframe src="/admina-dashboard.html?card=enrolled" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="Enrolled members"></iframe>
+      </div></div>
+
+      <div class="grid-stack-item" gs-id="kpi-actives" gs-x="0" gs-y="5" gs-w="2" gs-h="4"><div class="grid-stack-item-content">
+        <iframe src="/admina-dashboard.html?card=actives" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="New portal actives"></iframe>
+      </div></div>
+
+      <div class="grid-stack-item" gs-id="kpi-upgraded" gs-x="2" gs-y="5" gs-w="2" gs-h="4"><div class="grid-stack-item-content">
+        <iframe src="/admina-dashboard.html?card=upgraded" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="Upgraded"></iframe>
       </div></div>
 
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="4" gs-y="0" gs-w="8" gs-h="9"><div class="grid-stack-item-content">
@@ -1493,19 +1538,23 @@ function openProspectsModal(){
 // personal-finances.js add their own views ('production','mfsn','rev',
 // 'personal') and call setNavGroup themselves since they load after this.
 const VIEW_GROUP={dash:'ov',pipeline:'cl',clients:'cl',react:'cl',tasks:'pr',social:'ma',tickets:'ac'};
-// Switches which group's panel is visible (and lights the matching rail
-// icon). expand=true also un-collapses the panel if it was closed -- used
-// when the user deliberately clicks a rail icon; navigation-driven calls
-// pass false so jumping to a view doesn't yank an intentionally-collapsed
-// sidebar back open.
-// Kept as a no-op-ish shell (rather than deleted) because production.js,
-// mfsn.js, personal-finances.js, revenue.js and role.js all still call
-// window.setNavGroup(...) when they inject their own nav buttons -- now
-// that every group is visible all the time there's nothing left to show or
-// hide, so this just remembers the "last active" group for the record.
+// Switches which group's section is visible in the panel and lights the
+// matching rail icon -- the actual Admina "twin sidebar" behavior: click
+// a rail icon, the panel swaps to show just that group instead of one
+// long scrolling list of every section. expand=true additionally
+// un-collapses the whole sidebar if it was closed -- used when the user
+// deliberately clicks a rail icon; navigation-driven calls (showView,
+// and production.js/mfsn.js/personal-finances.js/revenue.js/role.js
+// registering their own injected buttons) pass false so jumping to a
+// view or the page just loading doesn't yank an intentionally-collapsed
+// sidebar back open -- but the group itself always switches either way,
+// so whichever view is now active is always the one visible in the panel.
 function setNavGroup(g,expand){
   if(expand===undefined)expand=true;
   try{localStorage.setItem('navGroup',g);}catch(e){}
+  document.querySelectorAll('.sec[data-g]').forEach(function(el){el.style.display=(el.dataset.g===g?'':'none');});
+  document.querySelectorAll('.navgroup[data-g]').forEach(function(el){el.style.display=(el.dataset.g===g?'':'none');});
+  document.querySelectorAll('.navrail .railbtn[data-g]').forEach(function(b){b.classList.toggle('on',b.dataset.g===g);});
   if(expand)setNavCollapsed(false);
 }
 function setNavCollapsed(collapsed){
