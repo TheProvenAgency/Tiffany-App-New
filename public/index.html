@@ -202,6 +202,13 @@ header h1{font-size:19px;margin:0;font-weight:700}
    daily figures the tile's own number comes from (see revenue.js
    drawKpiSparklines), not placeholder data. */
 .rv-kpi{position:relative;overflow:hidden;display:flex;flex-direction:column}
+/* .rv-kpi.hero needs its OWN higher-specificity rule here -- there's an
+   unrelated generic .hero{display:grid} rule elsewhere on the page (for a
+   different hero-banner element) that ties with the plain .rv-kpi selector
+   above on specificity and was winning on source order, silently reverting
+   the Total Income tile back to a grid layout and breaking the flex-based
+   reflow this rule exists to provide. */
+.rv-kpi.hero{display:flex;flex-direction:column}
 /* Admina reference (measured directly off admina.wowtheme7.com's real KPI
    tiles via getComputedStyle): the label is flat neutral gray -- text-
    neutral-700, rgb(55,65,81) -- on EVERY tile, never tinted to the card's
