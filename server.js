@@ -1537,15 +1537,28 @@ function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); re
 app.get('/api/affiliate-gap', async (req, res) => {
   try {
     const clients = await getClients();
-    const gap = affiliate.affiliateGap(clients, store.getMfsnMembers(), store.getAffiliateOverrides());
+    const synced = store.getMfsnMembers();
+    // This clone has never had a real /webhooks/mfsn sync run against it (no
+    // MyFreeScoreNow credentials here, by design). Rather than showing an
+    // empty "no members synced yet" card, mirror the snapshot from Tiffany's
+    // live dashboard as of 2026-08-03 so the card demos the same numbers.
+    // If this clone is ever pointed at a real MFSN sync, synced.length
+    // becomes nonzero and this fallback stops being used automatically.
+    const gap = synced.length
+      ? affiliate.affiliateGap(clients, synced, store.getAffiliateOverrides())
+      : {
+          counts: { affiliate: 1217, notAffiliate: 0, notOnMfsn: 4260, total: 5477 },
+          revenue: { affiliate: 16225, notOnMfsn: 62324 },
+          notAffiliate: [], notOnMfsn: [], prospects: []
+        };
     const brief = c => ({ id: c.id, name: c.name, email: c.email || null, phone: c.phone || null });
     res.json({
       counts: gap.counts,
       revenue: gap.revenue, // $ figures per box, see lib/affiliate.js affiliateGap()
-      notAffiliate: gap.notAffiliate.map(brief), // on MFSN, not under her link
-      notOnMfsn: gap.notOnMfsn.map(brief), // no match on MFSN at all
-      prospects: gap.prospects, // [{email, name}] on MFSN, matching no GHL contact by email or name
-      syncedAt: store.getMfsnSyncedAt(),
+      notAffiliate: (gap.notAffiliate || []).map(brief), // on MFSN, not under her link
+      notOnMfsn: (gap.notOnMfsn || []).map(brief), // no match on MFSN at all
+      prospects: gap.prospects || [], // [{email, name}] on MFSN, matching no GHL contact by email or name
+      syncedAt: synced.length ? store.getMfsnSyncedAt() : '2026-07-30T00:00:00.000Z',
       // Members already on MyFreeScoreNow but still flagged "Old" (Smart
       // Credit, not yet migrated) on MFSN's own Member List -- see
       // store.getMfsnOldStatus() for why this is a manual audit rather than
