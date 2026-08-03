@@ -1,8 +1,9 @@
 // POST /api/messages/:id/reply — replying to a conversation thread and
 // syncing it through GoHighLevel. Same write-gating spirit as sms/status:
-// READ_ONLY refuses in live mode, demo mode is a harmless no-op, and it's
-// admin-only for now (same caution as the existing client-profile "send
-// SMS" button).
+// READ_ONLY refuses in live mode, demo mode is a harmless no-op. Open to
+// both roles (unlike the client-profile "send SMS" button) -- replying to
+// the shared inbox is routine day-to-day client contact, the same as
+// Deal Production and Follow-Ups, not admin configuration.
 const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -81,11 +82,14 @@ test('demo mode is a harmless no-op, not a real send', async () => {
 
 // ------------------------- permissions -------------------------
 
-test('an employee cannot reply to a message (not in EMPLOYEE_API)', async () => {
+test('an employee can reply to a message too (routine client contact, not admin config)', async () => {
   const r = await req('/api/messages/convo-1/reply', {
     method: 'POST', cookie: employeeCookie, body: { contactId: 'c1', message: 'hi' }
   });
-  assert.equal(r.status, 403);
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.demo, true, 'still demo mode at this point in the suite -- no real send');
 });
 
 test('an employee can still read the inbox', async () => {
