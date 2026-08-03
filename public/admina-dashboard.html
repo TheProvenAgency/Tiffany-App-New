@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — Admina</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/admina-assets/css/lib/bootstrap.min.css">
+<link rel="stylesheet" href="/admina-assets/css/lib/apexcharts.css">
+<link rel="stylesheet" href="/admina-assets/css/remixicon.css">
+<link rel="stylesheet" href="/admina-assets/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2"></script>
+<script src="/admina-assets/js/lib/iconify-icon.min.js"></script>
+<style>
+  html,body{background:#fff;margin:0}
+  body{padding:20px}
+</style>
+</head>
+<body>
+
+<div class="dashboard-main-body" style="padding:0">
+  <div class="row gy-20-px">
+    <div class="col-xxl-12">
+      <div class="row gy-20-px">
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="bg-base p-24 radius-20 h-100">
+            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+              <span class="text-neutral-700 fw-medium">Total income</span>
+              <div class="dropdown">
+                <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <iconify-icon icon="entypo:dots-three-vertical" class="icon text-secondary-light"></iconify-icon>
+                </button>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between gap-8">
+              <div>
+                <h2 class="text-2xl mb-0" id="admTotalIncome">$0</h2>
+                <div class="mt-16" id="admTotalIncomeTrend">
+                  <span class="text-primary-600 text-lg line-height-1"><i class="ph ph-arrow-up"></i></span>
+                  <span class="text-primary-600 fw-medium">Commas + MFSN</span>
+                </div>
+              </div>
+              <div><div id="barChart"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="bg-base p-24 radius-20 h-100">
+            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+              <span class="text-neutral-700 fw-medium">Enrolled members</span>
+              <div class="dropdown">
+                <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <iconify-icon icon="entypo:dots-three-vertical" class="icon text-secondary-light"></iconify-icon>
+                </button>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between gap-8">
+              <div>
+                <h2 class="text-2xl mb-0">1,493</h2>
+                <div class="mt-16">
+                  <span class="text-warning-600 text-lg line-height-1"><i class="ph ph-arrows-down-up"></i></span>
+                  <span class="text-warning-600 fw-medium">14% active monitoring</span>
+                </div>
+              </div>
+              <div style="width:140px">
+                <div class="remove-tooltip-title rounded-tooltip-value"><div id="lineChart"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="bg-base p-24 radius-20 h-100">
+            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+              <span class="text-neutral-700 fw-medium">New portal actives</span>
+              <div class="dropdown">
+                <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <iconify-icon icon="entypo:dots-three-vertical" class="icon text-secondary-light"></iconify-icon>
+                </button>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between gap-8">
+              <div>
+                <h2 class="text-2xl mb-0">736</h2>
+                <div class="mt-16">
+                  <span class="text-warning-600 text-lg line-height-1"><i class="ph ph-arrow-up-right"></i></span>
+                  <span class="text-warning-600 fw-medium">60% of target</span>
+                </div>
+              </div>
+              <div><div id="radialChart" class="m--8-px" style="min-width:90px; min-height:90px;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="bg-base p-24 radius-20 h-100">
+            <div class="d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
+              <span class="text-neutral-700 fw-medium">Upgraded</span>
+              <div class="dropdown">
+                <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <iconify-icon icon="entypo:dots-three-vertical" class="icon text-secondary-light"></iconify-icon>
+                </button>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between gap-8">
+              <div>
+                <h2 class="text-2xl mb-0">420</h2>
+                <div class="mt-16">
+                  <span class="text-danger-600 text-lg line-height-1"><i class="ph ph-arrow-down"></i></span>
+                  <span class="text-danger-600 fw-medium">28% on new platform</span>
+                </div>
+              </div>
+              <div style="width:140px"><div id="columnChart"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/admina-assets/js/lib/bootstrap.bundle.min.js"></script>
+<script src="/admina-assets/js/lib/apexcharts.min.js"></script>
+<script>
+function getCssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+var primaryColor = getCssVar('--primary-600') || '#4F46E5';
+var trackColor   = getCssVar('--primary-100') || '#BFDCFF';
+var warningColor = getCssVar('--warning-600') || '#F59E0B';
+var dangerColor  = getCssVar('--danger-600')  || '#DC2626';
+
+fetch('/api/dashboard').then(function(r){ return r.json(); }).then(function(d){
+  var el = document.getElementById('admTotalIncome');
+  if(el && d && d.kpis) el.textContent = '$' + Math.round(d.kpis.revenueTotal).toLocaleString();
+}).catch(function(){});
+
+new ApexCharts(document.querySelector("#barChart"), {
+  series: [{ data: [543648,87000,72000,62000,48000,33129,29100].map(function(v){return Math.round(v/1000);}) }],
+  chart: { type: "bar", height: 80, width: 130, sparkline: { enabled: true } },
+  plotOptions: { bar: { columnWidth: "65%", borderRadius: 3, distributed: true } },
+  colors: [trackColor,trackColor,trackColor,trackColor,trackColor,trackColor,primaryColor],
+  dataLabels: { enabled: false }, tooltip: { enabled: false }
+}).render();
+
+new ApexCharts(document.querySelector("#lineChart"), {
+  series: [{ data: [1210,1265,1301,1340,1375,1402,1430,1448,1461,1472,1483,1489,1493] }],
+  chart: { type: "area", height: 80, sparkline: { enabled: true } },
+  stroke: { curve: "smooth", width: 2 },
+  fill: { type: "gradient", gradient: { opacityFrom: 0.4, opacityTo: 0 } },
+  colors: [primaryColor], tooltip: { enabled: true }
+}).render();
+
+new ApexCharts(document.querySelector("#radialChart"), {
+  series: [Math.round(736/1226*100)],
+  chart: { type: "radialBar", height: 90, width: 90, sparkline: { enabled: true } },
+  plotOptions: { radialBar: { startAngle:0, endAngle:360, hollow:{size:"70%"},
+    track:{background:trackColor,strokeWidth:"100%",margin:0},
+    dataLabels:{ name:{show:false}, value:{ fontSize:"12px", fontWeight:500, color:warningColor, offsetY:0, show:true, formatter:function(v){return v+"%";} } } } },
+  fill: { colors: [warningColor] }, stroke: { lineCap: "round" }, labels: ["New portal actives"]
+}).render();
+
+new ApexCharts(document.querySelector("#columnChart"), {
+  series: [{ data: [30,55,80,120,180,260,340,420].map(function(v){return v;}) }],
+  chart: { type: "bar", height: 80, sparkline: { enabled: true } },
+  plotOptions: { bar: { columnWidth: "40%", borderRadius: 3 } },
+  colors: [dangerColor],
+  fill: { opacity: [1,0.3,1,0.3,1,0.3,1,1] },
+  dataLabels: { enabled: false }, tooltip: { enabled: false }
+}).render();
+</script>
+</body>
+</html>
