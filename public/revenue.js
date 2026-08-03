@@ -216,10 +216,15 @@ var css=''+
 '.rv-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}'+
 '.rv-tabs button{border:none;background:var(--card);padding:6px 15px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}'+
 '.rv-tabs button:last-child{border-right:none}.rv-tabs button.on{background:var(--ink);color:#fff}'+
-'#view-rev .rv-mrow{display:grid;grid-template-columns:1.1fr 1fr 74px;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-mrow:last-child{border-bottom:none}'+
-'#view-rev .rv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle}'+
-'#view-rev .rv-mn{font-weight:700;font-size:13px}#view-rev .rv-ma{font-variant-numeric:tabular-nums;font-weight:700}'+
-'#view-rev .rv-prog{height:8px;background:#efe9df;border-radius:6px;overflow:hidden}#view-rev .rv-prog>i{display:block;height:100%;border-radius:6px}'+
+/* .rv-mrow/.rv-dot/.rv-mn/.rv-ma/.rv-prog un-scoped from "#view-rev "
+   (used to be Revenue-page-only) now that Member upgrade progress also
+   renders as a Dashboard card (#dashUpgradeProgress, see index.html
+   gs-id="dash-upgrade") -- same reasoning as the .rv-kpi/.rv-card block
+   above. */
+'.rv-mrow{display:grid;grid-template-columns:1.1fr 1fr 74px;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid #f0ece3}.rv-mrow:last-child{border-bottom:none}'+
+'.rv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle}'+
+'.rv-mn{font-weight:700;font-size:13px}.rv-ma{font-variant-numeric:tabular-nums;font-weight:700}'+
+'.rv-prog{height:8px;background:#efe9df;border-radius:6px;overflow:hidden}.rv-prog>i{display:block;height:100%;border-radius:6px}'+
 '#view-rev .rv-disp{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-disp:last-child{border-bottom:none}'+
 '#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:#8a6516;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
 '#view-rev .rv-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}'+
