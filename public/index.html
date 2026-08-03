@@ -39,6 +39,7 @@
      of needing a search-and-replace across the file. The login screen's
      own hot-pink CTA lives in login.html, a separate file, untouched. */
   --pink:#16a34a; --pink-soft:#e3f6ea; --rose:#22b35c; --blush:#a8e6bd; --brand-ink:#0c3d20;
+  --tile-bg:#f2f4f8; --tile-bg-2:#f8f9fc; --filters-bg:#eef0f5; --filters-well:#e3e7ee;
 }
 /* Dark mode -- toggled via the header sun/moon button (see themeToggleBtn),
    persisted in localStorage so it survives a reload without needing any
@@ -56,6 +57,7 @@ html[data-theme="dark"]{
   --sidebar:#1a221d; --sidebar-ink:#c3cfc7; --sidebar-dim:#78897f; --sidebar-line:#2b3630;
   --green-soft:#123322; --red-soft:#3a2422; --blue-soft:#1c2733; --gold-soft:#332a16;
   --pink-soft:#12331f;
+  --tile-bg:#232e28; --tile-bg-2:#212b25; --filters-bg:#1c2620; --filters-well:#24312a;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -187,14 +189,15 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .search{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:250px;font-size:13px;color:var(--ink)}
 .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--rose));color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
 /* filter row */
-.filters{display:flex;align-items:center;gap:8px;background:#eef0f5;border-radius:12px;padding:7px 10px;margin-bottom:16px;flex-wrap:wrap}
-.chip{background:none;border:none;padding:6px 12px;border-radius:8px;font-size:12.5px;color:#6b7280;cursor:pointer;font-weight:600}
-.chip.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.rangebox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;color:#6b7280;display:flex;gap:6px;align-items:center}
-.rangebox input{border:none;font-size:12px;color:var(--ink);width:105px;background:none;color-scheme:light}
-.gran{margin-left:auto;display:flex;gap:2px;background:#e3e7ee;border-radius:9px;padding:3px}
-.gran button{border:none;background:none;padding:5px 13px;font-size:12.5px;border-radius:7px;color:#6b7280;cursor:pointer;font-weight:600}
-.gran button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.filters{display:flex;align-items:center;gap:8px;background:var(--filters-bg);border-radius:12px;padding:7px 10px;margin-bottom:16px;flex-wrap:wrap;transition:background .2s ease}
+.chip{background:none;border:none;padding:6px 12px;border-radius:8px;font-size:12.5px;color:var(--muted);cursor:pointer;font-weight:600}
+.chip.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rangebox{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.rangebox input{border:none;font-size:12px;color:var(--ink);width:105px;background:none}
+html[data-theme="dark"] .rangebox input{color-scheme:dark}
+.gran{margin-left:auto;display:flex;gap:2px;background:var(--filters-well);border-radius:9px;padding:3px}
+.gran button{border:none;background:none;padding:5px 13px;font-size:12.5px;border-radius:7px;color:var(--muted);cursor:pointer;font-weight:600}
+.gran button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 /* cards -- rounder + a softer lifted shadow so cards read as distinct
    surfaces at a glance, closer to the reference dashboards. */
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:none}
@@ -530,15 +533,15 @@ section.view{display:none} section.view.on{display:block}
    can tell "this is money" (green), "this needs attention" (red/gold),
    or "this is just a count" (neutral) without reading the label first. */
 .dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,2cqw,10px);margin-top:clamp(8px,2.6cqh,14px)}
-.dstat div{background:#f2f4f8;border-radius:14px;padding:clamp(7px,2.2cqh,12px) clamp(8px,2.6cqw,14px);transition:transform .15s ease;min-width:0}
+.dstat div{background:var(--tile-bg);border-radius:14px;padding:clamp(7px,2.2cqh,12px) clamp(8px,2.6cqw,14px);transition:transform .15s ease,background .2s ease;min-width:0}
 .dstat div[onclick]:hover{transform:translateY(-2px)}
 .dstat .l{font-size:clamp(8px,2.4cqw,10px);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dstat .v{font-size:clamp(12.5px,4.2cqw,17px);font-weight:800;margin-top:3px}
-.dstat div.tone-green{background:#f8f9fc}
-.dstat div.tone-red{background:#f8f9fc}
-.dstat div.tone-gold{background:#f8f9fc}
-.dstat div.tone-blue{background:#f8f9fc}
-.dstat div.tone-pink{background:#f8f9fc}
+.dstat div.tone-green{background:var(--tile-bg-2)}
+.dstat div.tone-red{background:var(--tile-bg-2)}
+.dstat div.tone-gold{background:var(--tile-bg-2)}
+.dstat div.tone-blue{background:var(--tile-bg-2)}
+.dstat div.tone-pink{background:var(--tile-bg-2)}
 .evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eef0f5;font-size:12.5px}
 .evrow .mut{color:var(--muted)}
 .noterow{background:#f8f9fc;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}

@@ -12,6 +12,7 @@
 <script src="/admina-assets/js/lib/iconify-icon.min.js"></script>
 <style>
   html,body{background:#eef7f1;margin:0;height:100%;overflow:hidden}
+  html[data-theme="dark"],html[data-theme="dark"] body{background:#0f1512}
   body{padding:20px;box-sizing:border-box}
   /* Each KPI tile needs to read as its own floating card, not one big
      bordered container -- Bootstrap's row gutter alone doesn't do that
@@ -81,6 +82,16 @@
      as the real Admina template ships it). */
   body.single-card .kpi-head .dropdown{flex:0 0 auto}
 </style>
+<script>(function(){
+  function applyMfsTheme(){
+    try{
+      if(localStorage.getItem('mfsTheme')==='dark') document.documentElement.setAttribute('data-theme','dark');
+      else document.documentElement.removeAttribute('data-theme');
+    }catch(e){}
+  }
+  applyMfsTheme();
+  window.addEventListener('storage', function(e){ if(e.key==='mfsTheme') applyMfsTheme(); });
+})();</script>
 </head>
 <body>
 <script>
