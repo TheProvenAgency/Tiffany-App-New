@@ -14,24 +14,34 @@
 <script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <style>
 :root{
-  /* clean cool white/gray canvas -- Tiffany asked to match the Admina
-     reference (clean white cards, soft gray canvas) instead of the old
-     warm beige/tan background. Sidebar stays her actual brand chrome
-     (near-black + hot pink), established earlier from her live site. */
-  --bg:#f4f6fa; --card:#ffffff; --ink:#20222b; --muted:#8b93a3; --line:#eaedf3;
+  /* Admina reference's real "Green" color-schema swatch (its theme
+     picker ships Blue/Red/Green/Yellow/Cyan skins -- #16a34a is the
+     literal hex behind the Green option), not a guess. --bg gets a very
+     light green tint instead of the old cool blue-gray so the canvas
+     itself reads green too, per Tiffany's ask, since Admina's own flat
+     #F5F6FA has no color of its own to copy -- the "gradient light
+     green" she's seeing is this card-on-canvas contrast plus the green
+     theme color everywhere, reproduced below as an actual subtle
+     gradient on body. */
+  --bg:#eef7f1; --card:#ffffff; --ink:#20222b; --muted:#8b93a3; --line:#eaedf3;
   --sidebar:#ffffff; --sidebar-ink:#4b5563; --sidebar-dim:#9198a5; --sidebar-line:#eef0f5;
   /* money green -- richer/more saturated than the old muted forest green so
      $ figures actually pop, per Tiffany's ask. Everything that already read
      var(--green) (badges, up-arrows, chart lines) gets the upgrade for free. */
   --green:#0e9e56; --green-soft:#dff7ea; --red:#b3372f; --red-soft:#f6e5e3;
   --blue:#3563a8; --blue-soft:#e6ecf6; --gray:#b9b3a8; --gold:#b98a2f; --gold-soft:#f5ecd8;
-  /* brand colors lifted from msfinancialsolutions.net / the login screen:
-     near-black background, hot-pink CTA, blush/rose accent text. */
-  --pink:#4f46e5; --pink-soft:#ecebff; --rose:#6d63e8; --blush:#c9c4ff; --brand-ink:#1f1147;
+  /* Primary brand accent (sidebar active nav, avatar gradient, default
+     ring color, edit-mode outline) switched from the old indigo/blue
+     (#4f46e5) to Admina's Green skin (#16a34a) per Tiffany's explicit
+     "not the blue one" ask -- variable names kept as --pink/--rose so
+     every existing var(--pink) reference below updates for free instead
+     of needing a search-and-replace across the file. The login screen's
+     own hot-pink CTA lives in login.html, a separate file, untouched. */
+  --pink:#16a34a; --pink-soft:#e3f6ea; --rose:#22b35c; --blush:#a8e6bd; --brand-ink:#0c3d20;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex}
+body{background:var(--bg);background-image:linear-gradient(180deg,#e6f5ea 0%,#eef7f1 22%,#f4f8f5 55%,#f6f8f7 100%);background-attachment:fixed;color:var(--ink);font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex}
 button{font-family:inherit}
 /* ============ sidebar ============ */
 /* Single always-visible panel -- every group's pages sit right on the page,
