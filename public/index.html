@@ -76,7 +76,7 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 .nav button{display:flex;align-items:center;gap:11px;width:calc(100% - 16px);margin:2px 8px;padding:11px 12px;border:none;
   background:none;color:var(--sidebar-ink);font-size:15px;border-radius:12px;cursor:pointer;text-align:left;position:relative;transition:background .12s ease,color .12s ease}
 .nav button:hover{background:#f4f6fa}
-.nav button.on{background:var(--rc,var(--pink));color:#fff;font-weight:600;box-shadow:0 4px 14px color-mix(in srgb, var(--rc,var(--pink)) 45%, transparent)}
+.nav button.on{background:color-mix(in srgb, var(--rc,var(--pink)) 12%, transparent);color:var(--rc,var(--pink));font-weight:600;box-shadow:none}
 .nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:11.5px;font-weight:700;padding:2px 8px}
 .nav svg{width:15px;height:15px;opacity:.75}
 /* Icon rides plain (no chip box) inside the pill, like Admina's outline
@@ -84,7 +84,7 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
    pill is active so it reads against the colored background. */
 .nav button .ico2{width:20px;height:20px;flex:0 0 auto;display:flex;align-items:center;
   justify-content:center;font-size:15px;color:var(--ic,var(--pink));background:none}
-.nav button.on .ico2{color:#fff}
+.nav button.on .ico2{color:var(--rc,var(--pink))}
 .ico2 svg{width:16px;height:16px;display:block}
 .spacer{flex:1}
 .sources{padding:0 18px 8px}
@@ -117,7 +117,7 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .gran button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 /* cards -- rounder + a softer lifted shadow so cards read as distinct
    surfaces at a glance, closer to the reference dashboards. */
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 0 24px rgba(24,27,44,.06)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:none}
 .card.hero{border-top:1px solid var(--line)}
 .card.moneycard{border-top:1px solid var(--line)}
 /* gradient KPI stat cards -- the "at a glance" headline numbers, in
