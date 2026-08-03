@@ -50,7 +50,6 @@ var css=''+
 '#view-messages .msg-composer textarea{flex:1;resize:none;max-height:120px;min-height:38px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;line-height:1.4;background:var(--bg);color:var(--ink)}'+
 '#view-messages .msg-composer button{background:var(--ink);color:#fff;border:none;border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}'+
 '#view-messages .msg-composer button:disabled{opacity:.5;cursor:default}'+
-'body[data-role="employee"] #view-messages .msg-composer{display:none!important}'+
 '@media(max-width:900px){#view-messages .msg-body{grid-template-columns:1fr}#view-messages .msg-thread{display:none}#view-messages.msg-thread-open .msg-thread{display:flex}#view-messages.msg-thread-open .msg-list-wrap{display:none}#view-messages .msg-back{display:inline-block!important}}'+
 '#view-messages .msg-back{display:none;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink);margin-right:4px}';
 
