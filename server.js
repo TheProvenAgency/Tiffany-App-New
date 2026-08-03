@@ -854,6 +854,18 @@ app.get('/api/dashboard', async (req, res) => {
         mentorshipBuyers: mentorshipBuyersAllTime,
         byDeal: by(clients, c => c.deal),
         byRound: by(active, c => c.round ? 'Round ' + c.round : null).sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true })),
+        // Real Deal Production stage counts (Onboarding/Ready/In rounds/
+        // Completed) -- same source of truth as the Production page's own
+        // "Clients by stage" chart (readProd(), see /api/production). Used
+        // to build the customer lifecycle ring on the Dashboard alongside
+        // byRound above, which further breaks "In rounds" out by round
+        // number.
+        byStage: (() => {
+          const prod = readProd() || [];
+          const st = { Onboarding: 0, Ready: 0, 'In rounds': 0, Completed: 0 };
+          prod.forEach(c => { if (st[c.stage] !== undefined) st[c.stage]++; });
+          return st;
+        })(),
         activeByDeal: by(active, c => c.deal),
         churnRecency: Object.entries(churnBuckets).map(([key, count]) => ({ key, count }))
       }

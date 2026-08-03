@@ -293,6 +293,14 @@ header h1{font-size:19px;margin:0;font-weight:700}
    Chart.js's own single-row legend so all six packages read as a clean
    list instead of a wrapping strip. */
 .pkg-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-top:12px;font-size:12px}
+.lc-wrap{display:flex;align-items:center;gap:18px;height:calc(100% - 44px)}
+.lc-ring{flex:1 1 55%;min-width:0;height:100%!important}
+.lc-legend{list-style:none;margin:0;padding:0;flex:1 1 45%;min-width:0;display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--muted);max-height:100%;overflow:auto}
+.lc-legend li{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.lc-legend li i{width:9px;height:9px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.lc-legend li b{margin-left:auto;color:var(--ink);font-weight:700}
+.lc-legend li.lc-note{white-space:normal;font-size:10.5px;line-height:1.35;margin-top:4px;padding-top:6px;border-top:1px solid var(--line)}
+
 .pkg-legend .pl-row{display:flex;align-items:center;gap:7px;min-width:0}
 .pkg-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;flex:0 0 auto}
 .pkg-legend .pl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(0,0,0,.7)}
@@ -817,9 +825,12 @@ section.view{display:none} section.view.on{display:block}
 
       <div class="grid-stack-item" gs-id="rounds" gs-x="6" gs-y="17" gs-w="6" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#8b5cf6"><i class="ri-filter-3-line"></i></span> Active by dispute round</h3>
-          <div class="cardsub">Credit repair delivery stages</div>
-          <div class="cwrap2"><canvas id="chRounds"></canvas></div>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#8b5cf6"><i class="ri-refresh-line"></i></span> Customer lifecycle</h3>
+          <div class="cardsub">Onboarding through completion, real pipeline counts</div>
+          <div class="lc-wrap">
+            <div class="cwrap2 lc-ring"><canvas id="chLifecycle"></canvas></div>
+            <ul class="lc-legend" id="lcLegend"></ul>
+          </div>
         </div>
       </div></div>
 
@@ -1563,9 +1574,59 @@ async function loadDashboard(){
       <i style="background:${pkgColors[i]}"></i><span class="pl-name">${x.key}</span>
       <b>${Math.round(x.revenue/dealsTotal*100)}%</b></div>`).join('');
   }
-  mkChart('chRounds',{type:'bar',data:{labels:b.byRound.map(x=>x.key),datasets:[{data:b.byRound.map(x=>x.count),
-    backgroundColor:c=>grad(c.chart.ctx,PURPLE,210),borderColor:PURPLE,borderWidth:1.5,borderRadius:5}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  // Customer lifecycle ring -- real Deal Production stage counts
+  // (b.byStage: Onboarding/Ready/Completed) combined with the existing
+  // per-round breakdown (b.byRound, "In rounds" subdivided by round
+  // number) and the portal-migration "Upgraded" count (MF.upgraded).
+  // Ordered clockwise from Onboarding (top) to Completed, honest values
+  // throughout -- no stage is invented or padded to make slices even.
+  // "Upgraded" tracks a different axis (portal migration, not dispute
+  // progress) so it's called out in the legend footnote rather than
+  // silently folded into the dispute pipeline total.
+  (function drawLifecycle(){
+    var el=$('chLifecycle'); if(!el) return;
+    var roundMap={}; b.byRound.forEach(function(x){roundMap[x.key]=x.count;});
+    var stages=[
+      {label:'Onboarding', value:(b.byStage&&b.byStage.Onboarding)||0},
+      {label:'Active / Ready', value:(b.byStage&&b.byStage.Ready)||0},
+      {label:'Round 2', value:roundMap['Round 2']||0},
+      {label:'Round 3', value:roundMap['Round 3']||0},
+      {label:'Round 4', value:roundMap['Round 4']||0},
+      {label:'Round 5', value:roundMap['Round 5']||0},
+      {label:'Round 6', value:roundMap['Round 6']||0},
+      {label:'Round 7', value:roundMap['Round 7']||0},
+      {label:'Round 8', value:roundMap['Round 8']||0},
+      {label:'Upgraded', value:MF.upgraded||0},
+      {label:'Completed', value:(b.byStage&&b.byStage.Completed)||0}
+    ];
+    // Cool blue (Onboarding) sweeping to warm green (Completed) so color
+    // reads as progress, same idea as the reference lifecycle-ring image.
+    function hue2rgb(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}
+    function hsl(h,s,l){h/=360;s/=100;l/=100;var r,g,bl;if(s===0){r=g=bl=l;}else{var q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);bl=hue2rgb(p,q,h-1/3);}return '#'+[r,g,bl].map(function(v){return Math.round(v*255).toString(16).padStart(2,'0');}).join('');}
+    var n=stages.length;
+    var colors=stages.map(function(s,i){return hsl(217-(217-152)*(i/(n-1)), 68, 52);});
+    var total=stages.reduce(function(s,x){return s+x.value;},0);
+    const existingLc=charts['chLifecycle']||Chart.getChart(el); if(existingLc) existingLc.destroy();
+    charts['chLifecycle']=new Chart(el.getContext('2d'),{type:'doughnut',
+      data:{labels:stages.map(function(s){return s.label;}),datasets:[{data:stages.map(function(s){return s.value;}),backgroundColor:colors,borderColor:'#fff',borderWidth:2,hoverOffset:6}]},
+      options:{cutout:'62%',maintainAspectRatio:false,rotation:-90,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed.toLocaleString()+(total?' ('+Math.round(c.parsed/total*100)+'%)':'');}}}}},
+      plugins:[{id:'lcCenter',afterDraw:function(chart){
+        var meta=chart.getDatasetMeta(0); if(!meta.data.length)return;
+        var cx=meta.data[0].x, cy=meta.data[0].y, ctx=chart.ctx;
+        ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillStyle='#9ca3af';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
+        ctx.fillText('Total in pipeline',cx,cy-11);
+        ctx.fillStyle=INK;ctx.font='700 22px -apple-system,Segoe UI,Inter,sans-serif';
+        ctx.fillText(total.toLocaleString(),cx,cy+12);
+        ctx.restore();
+      }}]});
+    var lg=$('lcLegend');
+    if(lg){
+      lg.innerHTML=stages.map(function(s,i){return '<li><i style="background:'+colors[i]+'"></i>'+s.label+'<b>'+s.value.toLocaleString()+'</b></li>';}).join('')+
+        '<li class="lc-note">Upgraded tracks portal migration, a separate status from dispute-round progress.</li>';
+    }
+  })();
   mkChart('chChurn',{type:'bar',data:{labels:b.churnRecency.map(x=>x.key),datasets:[{data:b.churnRecency.map(x=>x.count),
     backgroundColor:[BLUE+'aa',PURPLE+'aa',GOLD+'aa',RED+'88',RED+'dd'],borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
