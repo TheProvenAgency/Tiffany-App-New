@@ -861,6 +861,17 @@ section.view{display:none} section.view.on{display:block}
         </div>
       </div></div>
 
+      <!-- Member upgrade progress -- same real MF numbers as the Revenue
+           page's copy, filled in by the same upgradeProgressHTML() helper
+           in revenue.js (plain HTML, not a chart, so no canvas here). -->
+      <div class="grid-stack-item" gs-id="dash-upgrade" gs-x="0" gs-y="55" gs-w="6" gs-h="7"><div class="grid-stack-item-content">
+        <div class="rv-card">
+          <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><i class="ri-arrow-up-circle-line"></i></span>Member upgrade progress</h3>
+          <div class="cap">Migrating the book to the new platform.</div>
+          <div id="dashUpgradeProgress"></div>
+        </div>
+      </div></div>
+
       <div class="grid-stack-item" gs-id="social-snapshot" gs-x="9" gs-y="31" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><i class="ri-sparkling-2-line"></i></span> Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>

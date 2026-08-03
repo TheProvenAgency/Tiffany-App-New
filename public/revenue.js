@@ -311,11 +311,7 @@ function render(){
   '</div>'+
   '<div class="rv-grid2">'+
    '<div class="rv-card"><h3>Affiliate commissions by month</h3><div class="cap">Total monthly payout (commission + referral + bonuses).</div><div class="rv-wrap"><canvas id="rvMf"></canvas></div></div>'+
-   '<div class="rv-card"><h3>Member upgrade progress</h3><div class="cap">Migrating the book to the new platform.</div>'+
-     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.green+'"></span>Upgraded</div><div class="rv-prog"><i style="width:'+Math.round(MF.upgraded/MF.enrolled*100)+'%;background:'+C.green+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.upgraded+'</div></div>'+
-     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.gold+'"></span>Need upgrade</div><div class="rv-prog"><i style="width:'+Math.round(MF.toUpgrade/MF.enrolled*100)+'%;background:'+C.gold+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.toUpgrade.toLocaleString()+'</div></div>'+
-     '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.blue+'"></span>Active members</div><div class="rv-prog"><i style="width:'+Math.round(MF.active/MF.enrolled*100)+'%;background:'+C.blue+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.active+'</div></div>'+
-     '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+Math.round(MF.upgraded/MF.enrolled*100)+'% of '+MF.enrolled.toLocaleString()+' members migrated.</div>'+
+   '<div class="rv-card"><h3>Member upgrade progress</h3><div class="cap">Migrating the book to the new platform.</div>'+upgradeProgressHTML()+
    '</div>'+
   '</div>'+
   // ---- disputes ----
@@ -329,6 +325,15 @@ function render(){
   document.getElementById('rvBody').innerHTML=html;
   drawTrend(); drawMethods(); drawCust(); drawMf(); drawPeriods();
   wireGranTabs('rvGran');
+}
+// Shared with the Dashboard's own copy of this card (gs-id="dash-upgrade"
+// in index.html, filled in once at boot below) -- same real MF numbers,
+// pulled out of render()'s template so both places stay in sync.
+function upgradeProgressHTML(){
+  return '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.green+'"></span>Upgraded</div><div class="rv-prog"><i style="width:'+Math.round(MF.upgraded/MF.enrolled*100)+'%;background:'+C.green+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.upgraded+'</div></div>'+
+    '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.gold+'"></span>Need upgrade</div><div class="rv-prog"><i style="width:'+Math.round(MF.toUpgrade/MF.enrolled*100)+'%;background:'+C.gold+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.toUpgrade.toLocaleString()+'</div></div>'+
+    '<div class="rv-mrow"><div class="rv-mn"><span class="rv-dot" style="background:'+C.blue+'"></span>Active members</div><div class="rv-prog"><i style="width:'+Math.round(MF.active/MF.enrolled*100)+'%;background:'+C.blue+'"></i></div><div class="rv-ma" style="text-align:right">'+MF.active+'</div></div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">'+Math.round(MF.upgraded/MF.enrolled*100)+'% of '+MF.enrolled.toLocaleString()+' members migrated.</div>';
 }
 function methodRows(){
   return METHODS.map(function(m){
@@ -533,6 +538,9 @@ function initRV(){
   // Revenue view's render().
   drawMethods('dashMethods');
   drawCust('dashCust');
+  // ...and Member upgrade progress (gs-id="dash-upgrade") -- plain HTML,
+  // not a chart, so just fill the container directly.
+  var dashUp=document.getElementById('dashUpgradeProgress'); if(dashUp) dashUp.innerHTML=upgradeProgressHTML();
   // Total income card needs to redraw every time the Today/7D/30D/90D/YTD/
   // All picker (or a custom Apply) changes the selected range -- every one
   // of those routes through loadDashboard() (see index.html setPreset/
