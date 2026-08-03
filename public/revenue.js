@@ -84,21 +84,25 @@ function updateTotalIncomeCard(){
   var labels=r.months.map(function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]+' '+ym.slice(2,4); });
   var coVals=r.months.map(function(ym){return INCOME_BY_MONTH[ym].co||0;});
   var mfVals=r.months.map(function(ym){return INCOME_BY_MONTH[ym].mf||0;});
-  // Chart draws on its own white panel (see .rvk-split-wrap) so tick labels
-  // get normal dark/gray colors instead of fighting the green card
-  // background. Two plain side-by-side bars per month -- no stacking, no
-  // trend line -- Commas and MFSN each get their own bar so the two are
-  // directly comparable at a glance, not just a color-coded slice of one bar.
+  var totVals=r.months.map(function(ym){return (INCOME_BY_MONTH[ym].co||0)+(INCOME_BY_MONTH[ym].mf||0);});
+  // Bare corner sparkline, matching Admina's own KPI-card charts exactly:
+  // no axis, no gridlines, no tick labels, no background panel -- just the
+  // bars sitting directly on the card, with the most recent month picked
+  // out in the full accent color and every earlier month faded, the same
+  // "current period highlighted" treatment Admina's Total Revenue sparkline
+  // uses. The Commas/MFSN split still reads from the colored-dot legend
+  // above (with real dollar figures) instead of a second series here --
+  // two interleaved bars at ~70px wide just turned to visual noise.
+  var lastIdx=totVals.length-1;
   charts.rvkSparkTotal=new Chart(cv.getContext('2d'),{type:'bar',
     data:{labels:labels,datasets:[
-      {label:'Commas',data:coVals,backgroundColor:C.blue,borderRadius:4,borderSkipped:false},
-      {label:'MFSN',data:mfVals,backgroundColor:C.green,borderRadius:4,borderSkipped:false}
+      {data:totVals,backgroundColor:totVals.map(function(_,i){return i===lastIdx?C.blue:(C.blue+'55');}),borderRadius:3,borderSkipped:false,maxBarThickness:14}
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10.5,weight:'600'}}},
-        y:{ticks:{color:'#6b7280',callback:function(x){return moneyK(x);},font:{size:10}},grid:{color:'#eef0f4'}}
+        x:{display:false,grid:{display:false}},
+        y:{display:false,grid:{display:false}}
       }}});
 }
 

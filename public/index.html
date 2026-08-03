@@ -275,8 +275,8 @@ header h1{font-size:19px;margin:0;font-weight:700}
    background. White panel + normal dark tick color, like any chart
    elsewhere on the dashboard, fixes that outright rather than trying to
    tune individual colors to fight the backdrop. */
-.rvk-split-wrap{position:relative;height:clamp(90px,30cqh,150px);flex:1 1 auto;min-height:60px;margin-top:10px;
-  background:#fff;border-radius:10px;padding:8px 10px 2px}
+.rvk-split-wrap{position:absolute;right:14px;bottom:14px;
+  width:clamp(70px,32cqw,130px);height:clamp(34px,16cqh,56px);overflow:hidden}
 /* content adapts to whatever size the card gets dragged/resized to, rather
    than sitting at a fixed pixel height and spilling into the next card --
    the card becomes a flex column, its title/subtitle stay natural height,
@@ -653,7 +653,6 @@ section.view{display:none} section.view.on{display:block}
         <div class="rv-kpi hero" style="padding-bottom:12px">
           <div class="l" id="rvkTotalL">Total income</div>
           <div class="v" id="rvkTotalV">$0</div>
-          <div class="s" id="rvkTotalSub">Commas sales + MFSN commissions</div>
           <div class="rvk-split-legend" id="rvkSplitLegend">
             <span><i style="background:#3b82f6"></i>Commas <b id="rvkSplitCommas">$0</b></span>
             <span><i style="background:#0e9e56"></i>MFSN <b id="rvkSplitMfsn">$0</b></span>
