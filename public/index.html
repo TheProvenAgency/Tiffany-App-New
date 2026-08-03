@@ -127,24 +127,22 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 .nav button:hover{background:var(--sidebar-line)}
 /* Active nav pill -- matches Admina's real active-nav treatment (their
    .twin-menu li.active a rule: background: color-mix(primary-600 12%,
-   transparent), color: primary-600) instead of a solid fill. A light
-   tint of the row's OWN icon color (--ic, set inline per button/group --
-   see the sidebar markup) rather than a flat white-on-brand block --
-   this is what makes it read as "lighter" and tied to that row's own
-   accent instead of always being the single global brand pink. Falls
-   back to the section group's --rc, then the global --pink, for any
-   button that doesn't set its own --ic. color-mix with transparent (not
-   a hardcoded hex) also means this needs no separate dark-mode override
+   transparent), color: primary-600) instead of a solid fill. Always the
+   single site-wide brand green (--pink, which is the real hex #16a34a
+   in this green theme -- see the :root block) at a light 14% tint, NOT
+   each row's own --ic icon color -- every active pill is the same
+   light green regardless of section. color-mix with transparent (not a
+   hardcoded hex) also means this needs no separate dark-mode override
    -- it self-adjusts against whatever sidebar background is underneath. */
-.nav button.on{background:color-mix(in srgb, var(--ic,var(--rc,var(--pink))) 14%, transparent);color:var(--ic,var(--rc,var(--pink)));font-weight:600;box-shadow:none}
+.nav button.on{background:color-mix(in srgb, var(--pink) 14%, transparent);color:var(--pink);font-weight:600;box-shadow:none}
 .nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:11.5px;font-weight:700;padding:2px 8px}
 .nav svg{width:15px;height:15px;opacity:.75}
 /* Icon rides plain (no chip box) inside the pill, like Admina's outline
-   icons -- neutral gray by default regardless of section, flips to that
-   same soft accent color once its row's pill is active. */
+   icons -- neutral gray by default regardless of section, flips to the
+   same brand green once its row's pill is active. */
 .nav button .ico2{width:20px;height:20px;flex:0 0 auto;display:flex;align-items:center;
   justify-content:center;font-size:15px;color:var(--sidebar-dim);background:none}
-.nav button.on .ico2{color:var(--ic,var(--rc,var(--pink)))}
+.nav button.on .ico2{color:var(--pink)}
 .ico2 svg{width:16px;height:16px;display:block}
 .spacer{flex:1}
 .sources{padding:0 18px 8px}
