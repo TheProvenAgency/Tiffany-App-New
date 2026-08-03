@@ -41,16 +41,27 @@
   body.single-card [data-card]{display:none}
   body.single-card [data-card].adm-active{display:flex;height:100%}
   body.single-card .dashboard-main-body,body.single-card .row,body.single-card .col-xxl-12{height:100%}
+  /* --kpi-scale is set by JS (see the ResizeObserver near the bottom of
+     this file) from the card's OWN measured growth relative to however
+     big it was when this iframe first loaded -- not from vw/vh. The
+     earlier vw/vh clamp() version capped out almost immediately because
+     the max bound was tuned so close to the default card's own vw value
+     that there was no real room left to grow: drag the card twice as
+     big and the text stayed exactly the size it started at. calc() off
+     an actual measured scale factor has no such ceiling problem -- a
+     card twice as wide genuinely gets a font size around twice as big,
+     clamped only at sane floor/ceiling extremes so it never disappears
+     or blows past the card. */
   body.single-card .bg-base{height:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;
-    padding:clamp(10px,5vw,24px)}
+    padding:clamp(8px,calc(16px * var(--kpi-scale,1)),48px)}
   body.single-card .kpi-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding-bottom:clamp(6px,3vh,20px);margin-bottom:clamp(6px,3vh,20px)}
-  body.single-card .kpi-head span.text-neutral-700{font-size:clamp(10.5px,4.2vw,14px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    padding-bottom:clamp(4px,calc(14px * var(--kpi-scale,1)),40px);margin-bottom:clamp(4px,calc(14px * var(--kpi-scale,1)),40px)}
+  body.single-card .kpi-head span.text-neutral-700{font-size:clamp(10px,calc(13px * var(--kpi-scale,1)),26px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   body.single-card .kpi-body{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
   body.single-card .kpi-text{min-width:0;flex:1 1 auto}
-  body.single-card .kpi-text h2{font-size:clamp(15px,9vw,28px)!important;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  body.single-card .kpi-text .mt-16{margin-top:clamp(3px,2vh,16px)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  body.single-card .kpi-text .mt-16 span,body.single-card .kpi-text .mt-16 i{font-size:clamp(9px,3.2vw,13px)}
+  body.single-card .kpi-text h2{font-size:clamp(15px,calc(26px * var(--kpi-scale,1)),72px)!important;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.single-card .kpi-text .mt-16{margin-top:clamp(2px,calc(10px * var(--kpi-scale,1)),28px)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.single-card .kpi-text .mt-16 span,body.single-card .kpi-text .mt-16 i{font-size:clamp(8px,calc(12px * var(--kpi-scale,1)),22px)}
   body.single-card .kpi-chart{flex:0 1 auto;max-width:42%;min-width:0}
   body.single-card .kpi-chart>div{width:100%!important}
   /* Below a certain card size the dropdown "..." menu button just eats
@@ -250,10 +261,20 @@ if(window.ResizeObserver){
     'actives': [radialChart],
     'upgraded': [columnChart]
   };
+  var baseline = {}; // first-measured size per card, the "scale:1" reference
   Object.keys(chartsByCard).forEach(function(card){
     var el = document.querySelector('[data-card="'+card+'"] .bg-base');
     if(!el) return;
-    var ro = new ResizeObserver(function(){
+    var ro = new ResizeObserver(function(entries){
+      var box = entries[0].contentRect, w = box.width, h = box.height;
+      if(w<=0||h<=0) return;
+      if(!baseline[card]) baseline[card] = {w:w, h:h};
+      // Scale off whichever dimension grew/shrank less, so text never
+      // outgrows a card that only got taller (or only got wider) --
+      // same idea as object-fit:contain instead of stretching to fill.
+      var scale = Math.min(w/baseline[card].w, h/baseline[card].h);
+      scale = Math.max(0.55, Math.min(scale, 3));
+      el.style.setProperty('--kpi-scale', scale);
       chartsByCard[card].forEach(function(ch){ if(ch && ch.windowResizeHandler) ch.windowResizeHandler(); });
     });
     ro.observe(el);
