@@ -399,14 +399,21 @@ function wireGranTabs(containerId){
     };
   });
 }
-function drawMethods(){
-  if(!window.Chart)return;var el=document.getElementById('rvMethods');if(!el)return;killChart('m');
-  charts.m=new Chart(el.getContext('2d'),{type:'doughnut',data:{labels:METHODS.map(function(m){return m.name;}),datasets:[{data:METHODS.map(function(m){return m.amt;}),backgroundColor:METHODS.map(function(m){return m.color;}),borderWidth:2,borderColor:'#fff'}]},
+// targetId lets the same drawing code serve two canvases -- the Revenue
+// page's own copy (rvMethods/rvCust, default) and the Dashboard's
+// (dashMethods/dashCust, see index.html gs-id="dash-methods"/"dash-
+// newcust") -- same real METHODS/CO_MONTHLY data either way, same
+// pattern already used by drawTrend() above for rvTrend/dashTrend.
+function drawMethods(targetId){
+  targetId=targetId||'rvMethods';
+  if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
+  charts[targetId]=new Chart(el.getContext('2d'),{type:'doughnut',data:{labels:METHODS.map(function(m){return m.name;}),datasets:[{data:METHODS.map(function(m){return m.amt;}),backgroundColor:METHODS.map(function(m){return m.color;}),borderWidth:2,borderColor:'#fff'}]},
    options:{responsive:true,maintainAspectRatio:false,cutout:'56%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10.5},padding:7}},tooltip:{callbacks:{label:function(c){return c.label+': '+money0(c.parsed);}}}}}});
 }
-function drawCust(){
-  if(!window.Chart)return;var el=document.getElementById('rvCust');if(!el)return;killChart('c');
-  charts.c=new Chart(el.getContext('2d'),{type:'bar',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
+function drawCust(targetId){
+  targetId=targetId||'rvCust';
+  if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
+  charts[targetId]=new Chart(el.getContext('2d'),{type:'bar',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 function drawMf(){
@@ -520,6 +527,12 @@ function initRV(){
   drawTrend('dashTrend');
   drawKpiSparklines();
   wireGranTabs('rvGranDash');
+  // Same deal for the Dashboard's own Payment methods / New customers by
+  // month cards (gs-id="dash-methods"/"dash-newcust") -- static HTML
+  // present from page load, drawn once here rather than waiting for the
+  // Revenue view's render().
+  drawMethods('dashMethods');
+  drawCust('dashCust');
   // Total income card needs to redraw every time the Today/7D/30D/90D/YTD/
   // All picker (or a custom Apply) changes the selected range -- every one
   // of those routes through loadDashboard() (see index.html setPreset/
