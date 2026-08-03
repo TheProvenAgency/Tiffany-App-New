@@ -392,9 +392,14 @@ h3.cardtitle .sub{display:block}
 .moneychip{display:inline-block;background:var(--green-soft);color:var(--green);font-weight:800;
   padding:3px 10px;border-radius:8px;font-size:inherit}
 .dstat .v.money{color:var(--green);font-size:clamp(12.5px,4.4cqw,18px)}
-/* client base */
-.segbar{display:flex;height:14px;border-radius:8px;overflow:hidden;margin:14px 0 12px;background:#eee}
-.segbar div{height:100%}
+/* client base -- segmented bar redone to match the Admina "Delivery
+   Status" reference: each segment is its own rounded pill with a real
+   gap between them (not one flush bar), and its % share sits directly
+   above it rather than only living in the tooltip/statlist below. */
+.segbar{display:flex;gap:5px;margin:14px 0 12px}
+.segbar .cb-seg{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.segbar .cb-segpct{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+.segbar .cb-segbar{height:10px;width:100%;border-radius:6px}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .tile{border:1px solid var(--line);border-radius:13px;padding:clamp(7px,2.4cqh,11px) clamp(8px,2.6cqw,13px);cursor:pointer;transition:transform .15s ease,border-color .15s ease;min-width:0}
 .tile:hover{border-color:#c9cedb;transform:translateY(-2px)}
@@ -1494,7 +1499,7 @@ async function loadDashboard(){
     [k.inactiveClients,RED,'Inactive · reactivation','inactive'],[leadsPlus,GRAY,(k.leads>0?'Leads · no purchase':'Unclassified'),'unknown']];
   const total=k.totalClients||1;
   $('viewAllClients').textContent=`View all ${fmtN(k.totalClients)} →`;
-  $('segbar').innerHTML=segs.map(([n,c])=>`<div style="width:${Math.max(1,n/total*100)}%;background:${c}"></div>`).join('');
+  $('segbar').innerHTML=segs.map(([n,c])=>{const pct=Math.round(n/total*100);return `<div class="cb-seg" style="flex:${Math.max(1,n)}"><span class="cb-segpct">${pct}%</span><div class="cb-segbar" style="background:${c}"></div></div>`;}).join('');
   $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="statrow" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><span class="lbl">${l}</span><b>${fmtN(n)}</b></div>`).join('');
   const activePct=Math.round((k.activeClients||0)/total*100);
   $('activeRing').style.setProperty('--pct',activePct);
