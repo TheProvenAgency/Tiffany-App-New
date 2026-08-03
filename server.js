@@ -1212,6 +1212,20 @@ app.post('/api/dashboard-layout/default', (req, res) => {
   if (req.body && req.body.resetEveryone) clearedCount = store.clearAllPersonalDashboardLayouts();
   res.json({ ok: true, clearedCount });
 });
+// Admin-only: drop the site-wide default entirely (not replace it -- remove
+// it) so everyone without a personal override falls back to the HTML's own
+// shipped card layout. Pairs with the DELETE above, which only ever clears
+// one person's own override; this is the "undo a bad 'set as default'"
+// button, and also the only way to clear a __default__ entry that predates
+// the current HTML (e.g. one inherited from a template/seed) instead of
+// replacing it with yet another hardcoded snapshot.
+app.delete('/api/dashboard-layout/default', (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  const had = store.clearDefaultDashboardLayout();
+  let clearedCount = 0;
+  if (req.body && req.body.resetEveryone) clearedCount = store.clearAllPersonalDashboardLayouts();
+  res.json({ ok: true, had, clearedCount });
+});
 
 // reactivation queue: inactive clients, most recently lapsed first (hottest leads)
 app.get('/api/reactivation', async (req, res) => {
