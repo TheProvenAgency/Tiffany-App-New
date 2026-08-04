@@ -1305,7 +1305,16 @@ app.get('/api/activity', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// pipeline board: active clients grouped by round (mirrors GHL Credit Repair Delivery)
+// pipeline board: active clients grouped by round (mirrors GHL Credit Repair Delivery),
+// PLUS the Deal Production tracker's Onboarding and Completed buckets merged in
+// as the first and last columns -- the round-based data above only ever covers
+// "currently mid-dispute" clients, so without this the board silently started
+// at whatever round happened to have the earliest active client and never
+// showed anyone who just signed (no round yet) or finished (no longer active).
+// Deal Production records don't carry a dollar figure (that lives on the GHL
+// client record, which these leads may or may not still be tied to), so they
+// contribute clients/count but not revenue -- the column's revenue line is
+// left honestly at whatever the round-based side actually collected.
 app.get('/api/pipeline', async (req, res) => {
   try {
     const clients = await getClients();
@@ -1317,14 +1326,28 @@ app.get('/api/pipeline', async (req, res) => {
       cols[key].clients.push({ id: c.id, name: c.name, deal: c.deal, totalSpent: c.totalSpent, lastPaymentDate: c.lastPaymentDate });
       cols[key].revenue += c.totalSpent || 0;
     }
-    const order = k => k === 'New / Onboarding' ? 0 : parseInt(k.replace('Round ', '')) || 99;
+    const prod = readProd() || [];
+    const prodStageKey = { Onboarding: 'New / Onboarding', Completed: 'Done' };
+    let prodMerged = 0;
+    for (const p of prod) {
+      const key = prodStageKey[p.stage];
+      if (!key) continue; // 'Ready' isn't part of this board -- only onboarding/completed bookend it
+      cols[key] = cols[key] || { clients: [], revenue: 0 };
+      cols[key].clients.push({ id: p.id, name: p.name, deal: p.pkg, totalSpent: 0, lastPaymentDate: null });
+      prodMerged++;
+    }
+    const order = k => k === 'New / Onboarding' ? 0 : k === 'Done' ? 999 : parseInt(k.replace('Round ', '')) || 500;
     const columns = Object.entries(cols)
       .sort((a, b) => order(a[0]) - order(b[0]))
       .map(([name, v]) => ({
         name, count: v.clients.length, revenue: Math.round(v.revenue),
         clients: v.clients.sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0)).slice(0, 30)
       }));
-    res.json({ totalActive: active.length, totalRevenue: Math.round(active.reduce((s, c) => s + (c.totalSpent || 0), 0)), columns });
+    res.json({
+      totalActive: active.length + prodMerged,
+      totalRevenue: Math.round(active.reduce((s, c) => s + (c.totalSpent || 0), 0)),
+      columns
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
