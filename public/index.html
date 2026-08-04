@@ -586,6 +586,17 @@ section.view{display:none} section.view.on{display:block}
 .addtask input[type=text]{flex:1;min-width:220px}
 .addtask select{min-width:150px}
 .statchips{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
+.pipe-chev-row{display:flex;gap:4px;margin:14px 0 18px;overflow-x:auto;padding:4px 2px 10px}
+.pipe-chev{--c:#7c5cff;flex:1 1 0;min-width:108px;clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%,10% 50%);
+  background:var(--c);color:#fff;padding:11px 14px 11px 24px;cursor:pointer;transition:transform .15s ease,filter .15s ease,box-shadow .15s ease}
+.pipe-chev:first-child{clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%);padding-left:16px}
+.pipe-chev:hover{filter:brightness(1.07)}
+.pipe-chev.active{transform:translateY(-3px);box-shadow:0 8px 18px rgba(0,0,0,.22);filter:brightness(1.1)}
+.pipe-chev .pc-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.95}
+.pipe-chev .pc-count{font-size:16px;font-weight:800;margin-top:1px}
+.pipe-col{transition:box-shadow .2s ease,border-color .2s ease}
+.pipe-col.hl{border-color:#7c5cff !important;box-shadow:0 0 0 3px rgba(124,92,255,.22)}
+
 .statchips span{background:#f8f9fc;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
 .statchips b{color:var(--ink)}
 /* settings modal */
@@ -1087,6 +1098,7 @@ section.view{display:none} section.view.on{display:block}
     <div class="card">
       <h3 class="cardtitle">Credit Repair Delivery — active clients by round</h3>
       <div class="statchips" id="pipeStats" style="margin-top:10px"></div>
+      <div class="pipe-chev-row" id="pipeChevrons"></div>
       <div id="pipeBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px"></div>
     </div>
   </section>
@@ -1937,15 +1949,35 @@ $('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){showView('c
 async function loadPipeline(){
   const d=await(await fetch('/api/pipeline')).json();
   $('pipeStats').innerHTML=`<span><b>${fmtN(d.totalActive)}</b> active clients</span><span><b class="moneypop">${fmt$(d.totalRevenue)}</b> lifetime value in pipeline</span><span><b>${d.columns.length}</b> stages</span>`;
-  $('pipeBoard').innerHTML=d.columns.map(col=>`
-    <div style="min-width:230px;flex:0 0 230px;background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px">
+
+  // Red (just signed) -> green (done) heat gradient across however many
+  // stages actually came back -- no hardcoded palette, so a round appearing
+  // or disappearing from the data just reflows the whole strip instead of
+  // needing a code change.
+  const n=d.columns.length;
+  const hueAt=i=> n<=1?140:Math.round(140*(i/(n-1)));
+  $('pipeChevrons').innerHTML=d.columns.map((col,i)=>`
+    <div class="pipe-chev" id="pipeChev_${i}" style="--c:hsl(${hueAt(i)},64%,45%)" onclick="focusPipeCol(${i})" title="Jump to ${escUser(col.name)}">
+      <div class="pc-name">${col.name}</div>
+      <div class="pc-count">${col.count} lead${col.count===1?'':'s'}</div>
+    </div>`).join('');
+
+  $('pipeBoard').innerHTML=d.columns.map((col,i)=>`
+    <div class="pipe-col" id="pipeCol_${i}" style="min-width:230px;flex:0 0 230px;background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px;scroll-margin-inline-start:16px">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="font-size:13px">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span></div>
-      <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:10px">${fmt$(col.revenue)}</div>
+      <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:10px">${col.revenue?fmt$(col.revenue):'—'}</div>
       ${col.clients.map(c=>`<div onclick="openClient('${c.id}')" style="cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px">
         <div style="font-weight:600;font-size:12.5px">${c.name}</div>
-        <div style="color:var(--muted);font-size:11px;margin-top:2px">${c.deal||''} · ${fmt$(c.totalSpent)}</div></div>`).join('')}
+        <div style="color:var(--muted);font-size:11px;margin-top:2px">${c.deal||''}${c.totalSpent?' · '+fmt$(c.totalSpent):''}</div></div>`).join('')}
       ${col.count>30?`<div style="color:var(--muted);font-size:11.5px;text-align:center">+ ${col.count-30} more</div>`:''}
     </div>`).join('');
+}
+function focusPipeCol(i){
+  document.querySelectorAll('.pipe-chev.active').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.pipe-col.hl').forEach(el=>el.classList.remove('hl'));
+  const chev=$('pipeChev_'+i), col=$('pipeCol_'+i);
+  if(chev)chev.classList.add('active');
+  if(col){ col.classList.add('hl'); col.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
 }
 
 /* ================= clients ================= */
