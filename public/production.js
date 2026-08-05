@@ -6,12 +6,31 @@ var STAGES=['Onboarding','Ready','In rounds','Completed'];
 var C={blue:'#3b82f6',green:'#0e9e56',gold:'#f59e0b',red:'#e11d48',gray:'#c9c3e0',slate:'#6b6256'};
 var CLIENTS=[], loaded=false, saveT=null, charts={};
 var curView='overview', curFilter='all', curSearch='', curPage=1, PAGE=60, openId=null;
-var MYNAME=null, openStamp=null, pollTimer=null;
+var MYNAME=null, MYROLE=null, openStamp=null, pollTimer=null, lockedFilter=false;
 fetch('/api/me').then(function(r){return r.json();}).then(function(m){
   MYNAME=m&&m.name;
+  MYROLE=m&&m.role;
   if(m&&m.role==='admin'){
     var btn=document.getElementById('pvReconcileBtn'); if(btn)btn.style.display='';
     var sbtn=document.getElementById('pvSheetBtn'); if(sbtn)sbtn.style.display='';
+  }
+  // Employee (or an Admin previewing as one, since m.role is the EFFECTIVE
+  // role -- see GET /api/me in server.js): this module is their Pipeline
+  // and New Clients nav destination too, so relabel/repoint the button this
+  // file already injects, and add a second one for the locked New Clients
+  // queue. Admin's own "Deal Production" button/nav is untouched.
+  if(m&&m.role==='employee'){
+    var pvBtn=document.getElementById('pvNavBtn');
+    if(pvBtn){
+      pvBtn.lastChild.textContent='Pipeline';
+      pvBtn.setAttribute('onclick','pvGoBoard()');
+    }
+    var navCl=document.getElementById('navClients');
+    if(navCl&&!document.getElementById('pvNewClientsBtn')){
+      var nb=document.createElement('button');nb.id='pvNewClientsBtn';nb.setAttribute('onclick','pvGoNewClients()');
+      nb.innerHTML='<span class="ico2"><i class="ri-user-add-line"></i></span>New Clients';
+      navCl.appendChild(nb);
+    }
   }
 }).catch(function(){});
 
@@ -137,7 +156,12 @@ var FILTERS=[
  {id:'rounds',label:'In rounds',dot:C.green,f:function(c){return c.stage==='In rounds';}},
  {id:'onb',label:'Onboarding',dot:'#7a7461',f:function(c){return c.stage==='Onboarding';}},
  {id:'done',label:'Completed',dot:'#1f6a45',f:function(c){return c.stage==='Completed';}},
-{id:'needsAffiliate',label:'Needs affiliate',dot:C.gold,f:function(c){return c.mfsn==='needs';}}
+{id:'needsAffiliate',label:'Needs affiliate',dot:C.gold,f:function(c){return c.mfsn==='needs';}},
+// Backs the Employee "New Clients" nav item (pvGoNewClients below) -- just
+// signed up, nothing worked yet, or already cleared for their first round.
+// Not one of the regular chips (renderChips filters it out below) except
+// for an employee/preview session, where it's the one this view opens on.
+{id:'newclients',label:'New clients',dot:C.blue,f:function(c){return c.stage==='Onboarding'||(!anyLogin(c)&&(c.stage==='Ready'||!!anyReady(c)));}}
 ];
 /* c.mfsn is computed server-side (see /api/production in server.js) by
    matching name against the synced MyFreeScoreNow roster -- 'affiliate' (paying
@@ -331,7 +355,17 @@ function renderOverview(){
 /* ---------- queue (table + pager) ---------- */
 function renderChips(){
   var chips=document.getElementById('pvChips');
-  chips.innerHTML=FILTERS.map(function(fl){var n=CLIENTS.filter(fl.f).length;return '<div class="pv-chip'+(fl.id===curFilter?' active':'')+'" data-f="'+fl.id+'"><span class="dotc" style="background:'+fl.dot+'"></span>'+fl.label+' <span class="n">'+fmt(n)+'</span></div>';}).join('');
+  // Locked mode (the Employee "New Clients" nav item, see pvGoNewClients) --
+  // no chip picking, just a static label naming the fixed filter.
+  if(lockedFilter){
+    chips.innerHTML='<div class="pv-sub" style="margin:0 0 4px">New clients — just onboarded or ready to dispute. Use <b>Pipeline</b> in the sidebar for the full board.</div>';
+    return;
+  }
+  // 'newclients' backs that locked view and isn't a chip anyone picks by
+  // hand -- keep it out of Admin's Queue toolbar (unchanged from before)
+  // and out of an Employee's normal Pipeline browsing too.
+  var list=FILTERS.filter(function(fl){return fl.id!=='newclients';});
+  chips.innerHTML=list.map(function(fl){var n=CLIENTS.filter(fl.f).length;return '<div class="pv-chip'+(fl.id===curFilter?' active':'')+'" data-f="'+fl.id+'"><span class="dotc" style="background:'+fl.dot+'"></span>'+fl.label+' <span class="n">'+fmt(n)+'</span></div>';}).join('');
   chips.querySelectorAll('.pv-chip').forEach(function(el){el.onclick=function(){curFilter=el.getAttribute('data-f');curPage=1;drawWork();};});
 }
 function drawWork(){
@@ -365,6 +399,11 @@ function renderProduction(){
   if(!document.getElementById('pvChips')){return;}
   if(!loaded){ loadThen(function(){renderProduction();}); return; }
   document.getElementById('pvFoot').textContent='Team-shared client book ('+fmt(CLIENTS.length)+' clients from the credit-repair sheet) — every status, document, and note saves to the server for the whole team. Logins and credentials are never shown.';
+  // Locked mode (Employee "New Clients") is a single fixed queue -- no
+  // switching to Overview/Board from there. Full Pipeline access (pvGoBoard)
+  // always clears lockedFilter first, so this never affects Admin.
+  var tabs=document.querySelector('#view-production .pv-tabs');
+  if(tabs)tabs.style.display=lockedFilter?'none':'';
   renderChips();
   var s=document.getElementById('pvSearch'); if(s&&!s.__b){s.__b=1;s.oninput=function(){curSearch=s.value.toLowerCase();curPage=1;drawWork();};}
   if(curView==='overview'){ renderOverview(); } else { drawWork(); }
@@ -379,6 +418,34 @@ window.pvSetPV=function(v){
   document.getElementById('pvQueue').style.display=v==='queue'?'':'none';
   document.getElementById('pvBoardView').style.display=v==='board'?'':'none';
   renderProduction();
+};
+// Employee "Pipeline" nav entry point (also used to relabel pvNavBtn's
+// onclick above) -- the full module, landing on the Kanban board, nothing
+// locked or hidden ("strip nothing here" per the build spec, since none of
+// Deal Production carries a dollar figure).
+window.pvGoBoard=function(){
+  lockedFilter=false; curFilter='all'; curPage=1;
+  showView('production'); pvSetPV('board');
+  var pt=document.getElementById('pageTitle'); if(pt)pt.textContent='Pipeline';
+};
+// Employee "New Clients" nav entry point -- Queue, forced to the
+// 'newclients' filter, chips/tab-switcher hidden (see renderChips/
+// renderProduction above) so it reads as one fixed worklist.
+window.pvGoNewClients=function(){
+  lockedFilter=true; curFilter='newclients'; curPage=1;
+  showView('production'); pvSetPV('queue');
+  // showView('production') always highlights pvNavBtn ("Pipeline") as the
+  // active nav item -- point the highlight at New Clients instead since
+  // that's the button actually clicked.
+  var pvBtn=document.getElementById('pvNavBtn'); if(pvBtn)pvBtn.classList.remove('on');
+  var ncBtn=document.getElementById('pvNewClientsBtn'); if(ncBtn)ncBtn.classList.add('on');
+  var pt=document.getElementById('pageTitle'); if(pt)pt.textContent='New Clients';
+};
+// Safe external entry point into the drawer (e.g. from team.js's Team
+// Dashboard rows) regardless of whether this module has loaded its own
+// CLIENTS list yet.
+window.pvOpenClient=function(id){
+  if(!loaded){ loadThen(function(){ pvOpen(id); }); } else { pvOpen(id); }
 };
 
 /* ---------- drawer ---------- */

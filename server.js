@@ -273,17 +273,55 @@ app.use((req, res, next) => {
     return res.sendFile(path.join(__dirname, 'public', 'login.html'));
   }
   req.user = session;
+  // "View as Employee" (see POST /api/preview/start below) flips this to
+  // 'employee' for an admin session without touching session.role itself --
+  // every permission decision past this point (this gate, plus the few
+  // in-handler admin checks that read req.effectiveRole) uses this, so the
+  // preview is a real server-enforced downgrade, not a client-side mock.
+  req.effectiveRole = session.previewRole || session.role;
+
+  // The preview toggle routes are the one place that must always gate on
+  // the REAL role: an admin mid-preview still needs to be able to exit it.
+  const isPreviewToggle = req.path === '/api/preview/start' || req.path === '/api/preview/stop';
+  const roleForGate = isPreviewToggle ? session.role : req.effectiveRole;
 
   const permitted = req.path.startsWith('/api/')
-    ? auth.canAccess(session.role, req.method, req.path)
-    : auth.canAccessAsset(session.role, req.path);
+    ? auth.canAccess(roleForGate, req.method, req.path)
+    : auth.canAccessAsset(roleForGate, req.path);
   if (!permitted) return res.status(403).json({ error: 'forbidden' });
   next();
 });
 
 app.get('/api/me', (req, res) => {
   const u = getUsers().find(x => x.id === req.user.userId);
-  res.json({ id: req.user.userId, name: u ? u.name : 'User', username: u ? u.username : null, role: req.user.role, viaSso: !!req.user.viaSso });
+  // `role` is the EFFECTIVE role -- what governs rendering and every other
+  // permission check -- so existing client code that already gates on
+  // me.role (role.js, production.js's admin-only buttons, the
+  // personal-finances.js load check, etc.) automatically respects preview
+  // mode with no changes. `realRole`/`previewing` are only for the "View as
+  // Employee" toggle + banner themselves, which need to know the account's
+  // actual role to decide whether to show up at all.
+  res.json({
+    id: req.user.userId, name: u ? u.name : 'User', username: u ? u.username : null,
+    role: req.effectiveRole, realRole: req.user.role, previewing: !!req.user.previewRole,
+    viaSso: !!req.user.viaSso
+  });
+});
+
+// Admin-only session-scoped preview of the Employee experience -- does not
+// touch the account's real role in store.json, just flags this session (see
+// sessions.setPreview in lib/auth.js) so req.effectiveRole, and therefore
+// every guard downstream, treats it as an employee until /stop is called.
+app.post('/api/preview/start', (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  sessions.setPreview(cookieToken(req), 'employee');
+  persistSessions();
+  res.json({ ok: true });
+});
+app.post('/api/preview/stop', (req, res) => {
+  sessions.setPreview(cookieToken(req), null);
+  persistSessions();
+  res.json({ ok: true });
 });
 
 // user management (admin only — employees are blocked by canAccess)
@@ -949,7 +987,9 @@ app.get('/api/clients', async (req, res) => {
       return dir === 'asc' ? cmp : -cmp;
     });
     const p = Math.max(1, parseInt(page)), ps = Math.min(100, parseInt(pageSize));
-    res.json({ total: list.length, page: p, pageSize: ps, clients: list.slice((p - 1) * ps, p * ps) });
+    const moneyVisible = req.effectiveRole === 'admin';
+    const pageClients = list.slice((p - 1) * ps, p * ps).map(c => auth.redactClient(req.effectiveRole, c));
+    res.json({ total: list.length, page: p, pageSize: ps, clients: pageClients, moneyVisible });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -965,13 +1005,17 @@ app.get('/api/clients/:id', async (req, res) => {
       .sort((a, b) => (b.at || '').localeCompare(a.at || ''));
     const disputes = store.getEvents().filter(e => e.type === 'dispute' && (e.email || '').toLowerCase() === email)
       .sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+    const moneyVisible = req.effectiveRole === 'admin';
     res.json({
-      client: c,
-      payments: payments.slice(0, 50),
+      client: auth.redactClient(req.effectiveRole, c),
+      // The payment history is itself a list of dollar amounts -- drop the
+      // whole thing rather than trying to redact each entry.
+      payments: moneyVisible ? payments.slice(0, 50) : [],
       disputes: disputes.slice(0, 50),
       notes: store.getNotes(c.id).sort((a, b) => b.at.localeCompare(a.at)),
       tasks: store.getTasks().filter(t => t.clientId === c.id && !t.done),
-      worked: store.getWorked()[c.id] || null
+      worked: store.getWorked()[c.id] || null,
+      moneyVisible
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1242,7 +1286,7 @@ app.delete('/api/dashboard-layout', (req, res) => {
 // Anyone who already has their own saved layout is unaffected -- this
 // only changes the fallback.
 app.post('/api/dashboard-layout/default', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  if (req.effectiveRole !== 'admin') return res.status(403).json({ error: 'admin only' });
   const layout = req.body && req.body.layout;
   if (!layout || !Array.isArray(layout.nodes)) return res.status(400).json({ error: 'layout.nodes (array) is required' });
   store.setDefaultDashboardLayout(layout);
@@ -1263,7 +1307,7 @@ app.post('/api/dashboard-layout/default', (req, res) => {
 // the current HTML (e.g. one inherited from a template/seed) instead of
 // replacing it with yet another hardcoded snapshot.
 app.delete('/api/dashboard-layout/default', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  if (req.effectiveRole !== 'admin') return res.status(403).json({ error: 'admin only' });
   const had = store.clearDefaultDashboardLayout();
   let clearedCount = 0;
   if (req.body && req.body.resetEveryone) clearedCount = store.clearAllPersonalDashboardLayouts();
@@ -1654,7 +1698,7 @@ app.get('/api/affiliate-gap', async (req, res) => {
 // { active, activeTotal, paused, relinking }; auditedAt is always stamped
 // to now by store.setMfsnOldStatus().
 app.post('/api/mfsn-old-status', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
+  if (req.effectiveRole !== 'admin') return res.status(403).json({ error: 'admin only' });
   const b = req.body || {};
   const patch = {};
   for (const k of ['active', 'activeTotal', 'paused', 'relinking']) {
@@ -1900,7 +1944,7 @@ app.patch('/api/production/:id', (req, res) => {
 
   // Reject the whole patch rather than applying it partially — a partial save
   // looks identical to a successful one from the UI.
-  const { allowed, denied } = auth.filterEditable(req.user.role, patch);
+  const { allowed, denied } = auth.filterEditable(req.effectiveRole, patch);
   if (denied.length) {
     return res.status(403).json({ error: 'not allowed to change: ' + denied.join(', ') });
   }

@@ -60,10 +60,45 @@ after(() => {
 // ------------------------- the boundary -------------------------
 
 test('an employee is refused the money and admin APIs', async () => {
-  for (const p of ['/api/dashboard', '/api/config', '/api/clients', '/api/pipeline', '/api/social']) {
+  // /api/clients is deliberately not in this list -- the 2026-08-05 Company
+  // vs Team Dashboard spec opens a redacted Clients view to employees (see
+  // the "an employee reads Clients with money fields redacted" tests
+  // below). /api/pipeline stays 403: unlike Deal Production, it's a real
+  // revenue board (totalRevenue, per-client totalSpent).
+  for (const p of ['/api/dashboard', '/api/config', '/api/pipeline', '/api/social']) {
     const r = await req(p, { cookie: employeeCookie });
     assert.equal(r.status, 403, `${p} should be 403 for an employee, got ${r.status}`);
   }
+});
+
+test('an employee reads Clients with money fields redacted', async () => {
+  const r = await req('/api/clients', { cookie: employeeCookie });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.moneyVisible, false);
+  assert.ok(d.clients.length > 0, 'demo data should seed at least one client');
+  for (const c of d.clients) {
+    assert.ok(!('totalSpent' in c), 'totalSpent must not reach an employee');
+    assert.ok(!('numberOfPayments' in c), 'numberOfPayments must not reach an employee');
+    assert.ok(!('mfsnStatus' in c), 'mfsnStatus (affiliate/commission) must not reach an employee');
+    assert.ok(!('mfsnCommission' in c), 'mfsnCommission (a dollar figure) must not reach an employee');
+  }
+
+  const detail = await req('/api/clients/' + d.clients[0].id, { cookie: employeeCookie });
+  assert.equal(detail.status, 200);
+  const dd = await detail.json();
+  assert.equal(dd.moneyVisible, false);
+  assert.ok(!('totalSpent' in dd.client));
+  assert.ok(!('numberOfPayments' in dd.client));
+  assert.deepEqual(dd.payments, [], 'payment history is a list of dollar amounts -- dropped entirely');
+});
+
+test('an admin still sees full money fields on Clients', async () => {
+  const r = await req('/api/clients', { cookie: adminCookie });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.moneyVisible, true);
+  assert.ok(d.clients.length > 0 && 'totalSpent' in d.clients[0]);
 });
 
 test('an employee is refused the bulk production overwrite', async () => {
@@ -103,30 +138,26 @@ test('an employee can read the login directory, for the assignee dropdown', asyn
   assert.ok(!('password' in (list[0] || {})), 'no password field leaks to an employee');
 });
 
-test('an employee can create, note, and complete a Follow-Ups task', async () => {
+test('an employee is refused Follow-Ups entirely', async () => {
+  // Reversed 2026-08-05: the Company vs Team Dashboard spec dropped
+  // Follow-Ups from the Employee nav and asked for it to be "blocked at the
+  // route level," not just hidden -- an employee used to be able to
+  // create/note/complete a task here.
   const created = await req('/api/tasks', {
     method: 'POST', cookie: employeeCookie,
     body: { title: 'employee follow-up' }
   });
-  assert.equal(created.status, 200);
-  const task = await created.json();
+  assert.equal(created.status, 403);
+  assert.equal((await req('/api/tasks', { cookie: employeeCookie })).status, 403);
 
-  const noted = await req(`/api/tasks/${task.id}/notes`, {
-    method: 'POST', cookie: employeeCookie,
-    body: { text: 'left a note as an employee' }
+  // Made as admin so there's a real task id to probe the sub-routes with.
+  const adminCreated = await req('/api/tasks', {
+    method: 'POST', cookie: adminCookie, body: { title: 'admin follow-up' }
   });
-  assert.equal(noted.status, 200);
-
-  const listed = await req(`/api/tasks/${task.id}/notes`, { cookie: employeeCookie });
-  assert.equal(listed.status, 200);
-  const notes = await listed.json();
-  assert.equal(notes.length, 1);
-  assert.equal(notes[0].authorName, 'VA One');
-
-  const patched = await req(`/api/tasks/${task.id}`, {
-    method: 'PATCH', cookie: employeeCookie, body: { done: true }
-  });
-  assert.equal(patched.status, 200);
+  const task = await adminCreated.json();
+  assert.equal((await req(`/api/tasks/${task.id}`, { method: 'PATCH', cookie: employeeCookie, body: { done: true } })).status, 403);
+  assert.equal((await req(`/api/tasks/${task.id}/notes`, { cookie: employeeCookie })).status, 403);
+  assert.equal((await req(`/api/tasks/${task.id}/notes`, { method: 'POST', cookie: employeeCookie, body: { text: 'x' } })).status, 403);
 });
 
 // ------------------------- dashboard layout default -------------------------
@@ -186,6 +217,49 @@ test('DELETE /api/dashboard-layout clears a personal override, falling back to t
 test('an admin reaches the dashboard and config', async () => {
   assert.equal((await req('/api/dashboard', { cookie: adminCookie })).status, 200);
   assert.equal((await req('/api/config', { cookie: adminCookie })).status, 200);
+});
+
+// ------------------------- "View as Employee" preview -------------------------
+
+test('an employee can never start a preview', async () => {
+  const r = await req('/api/preview/start', { method: 'POST', cookie: employeeCookie });
+  assert.equal(r.status, 403);
+});
+
+test('View as Employee is a real server-enforced downgrade, round-trips cleanly', async () => {
+  // Baseline: real admin, not previewing.
+  const before = await (await req('/api/me', { cookie: adminCookie })).json();
+  assert.equal(before.role, 'admin');
+  assert.equal(before.realRole, 'admin');
+  assert.equal(before.previewing, false);
+
+  const started = await req('/api/preview/start', { method: 'POST', cookie: adminCookie });
+  assert.equal(started.status, 200);
+
+  const during = await (await req('/api/me', { cookie: adminCookie })).json();
+  assert.equal(during.role, 'employee', 'role is the EFFECTIVE role while previewing');
+  assert.equal(during.realRole, 'admin', 'the account is still really an admin');
+  assert.equal(during.previewing, true);
+
+  // Every guard downstream of req.effectiveRole must now treat this exact
+  // same session as an employee -- not a client-side mock.
+  assert.equal((await req('/api/dashboard', { cookie: adminCookie })).status, 403);
+  assert.equal((await req('/api/config', { cookie: adminCookie })).status, 403);
+  const clientsDuringPreview = await req('/api/clients', { cookie: adminCookie });
+  assert.equal(clientsDuringPreview.status, 200);
+  assert.equal((await clientsDuringPreview.json()).moneyVisible, false);
+  // Deal Production stays reachable, same as a real employee.
+  assert.equal((await req('/api/production', { cookie: adminCookie })).status, 200);
+
+  // Exiting must work from the very session that's mid-preview (real role,
+  // not effective role, gates this route -- see server.js).
+  const stopped = await req('/api/preview/stop', { method: 'POST', cookie: adminCookie });
+  assert.equal(stopped.status, 200);
+
+  const after = await (await req('/api/me', { cookie: adminCookie })).json();
+  assert.equal(after.role, 'admin');
+  assert.equal(after.previewing, false);
+  assert.equal((await req('/api/dashboard', { cookie: adminCookie })).status, 200, 'full admin access restored, same session, no re-login');
 });
 
 test('the legacy shared password still logs the admin in', async () => {

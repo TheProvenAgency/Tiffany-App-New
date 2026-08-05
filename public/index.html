@@ -697,9 +697,9 @@ section.view{display:none} section.view.on{display:block}
     <button data-v="dash" class="on" onclick="showView('dash')" style="--ic:#ff2e9a"><span class="ico2"><i class="ri-home-5-line"></i></span>Dashboard</button>
   </div>
   <div class="sec" data-g="cl">Clients</div>
-  <div class="nav navgroup" data-g="cl" style="--rc:#7c5cff">
+  <div class="nav navgroup" data-g="cl" id="navClients" style="--rc:#7c5cff">
     <button data-v="pipeline" onclick="showView('pipeline')" style="--ic:#7c5cff"><span class="ico2"><i class="ri-filter-3-line"></i></span>Pipeline</button>
-    <button data-v="clients" onclick="showView('clients')" style="--ic:#7c5cff"><span class="ico2"><i class="ri-team-line"></i></span>Clients</button>
+    <button id="clientsNavBtn" data-v="clients" onclick="showView('clients')" style="--ic:#7c5cff"><span class="ico2"><i class="ri-team-line"></i></span>Clients</button>
     <button data-v="react" onclick="showView('react')" style="--ic:#7c5cff"><span class="ico2"><i class="ri-refresh-line"></i></span>Reactivation <span class="badge" id="reactBadge"></span></button>
   </div>
   <!-- Deal Production + Credit Monitoring inject themselves here (production.js, mfsn.js) -->
@@ -719,10 +719,10 @@ section.view{display:none} section.view.on{display:block}
     <button id="backToProvenBtn" style="--ic:#8b93a3;display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2"><i class="ri-arrow-left-line"></i></span>Back to Proven Agency</button>
     <button onclick="openNotifications()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-notification-3-line"></i></span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
     <button onclick="openSettings()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-settings-3-line"></i></span>Settings</button>
-    <button onclick="openChangePw()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-key-2-line"></i></span>Change password</button>
+    <button id="changePwNavBtn" onclick="openChangePw()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-key-2-line"></i></span>Change password</button>
     <button onclick="showView('tickets')" style="--ic:#8b93a3"><span class="ico2"><i class="ri-coupon-3-line"></i></span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
     <button onclick="openSupportTicket()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-mail-line"></i></span>Submit a Support Ticket</button>
-    <button onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())" style="--ic:#8b93a3"><span class="ico2"><i class="ri-logout-box-r-line"></i></span>Sign out</button>
+    <button id="signOutNavBtn" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())" style="--ic:#8b93a3"><span class="ico2"><i class="ri-logout-box-r-line"></i></span>Sign out</button>
   </div>
   <div class="spacer"></div>
   <div class="sec">Data sources</div>
@@ -735,6 +735,14 @@ section.view{display:none} section.view.on{display:block}
     <h1 id="pageTitle">Dashboard</h1>
     <span class="livepill" id="modePill">LIVE</span>
     <div class="hspace"></div>
+    <!-- Admin-only "View as Employee" preview (see role.js) -- both start
+         hidden so a normal Admin load renders identically to before this
+         existed; role.js reveals exactly one of the two once it knows the
+         account's real role and whether a preview is already active. -->
+    <span class="livepill" id="previewBanner" style="display:none;background:var(--gold-soft,#f7e6c4);color:#8a6516;margin-right:8px;cursor:default">
+      Viewing as Employee <a href="#" id="exitPreviewBtn" style="margin-left:8px;color:#8a6516;font-weight:800;text-decoration:underline">Exit preview</a>
+    </span>
+    <button class="btn ghost" id="viewAsEmployeeBtn" style="display:none;margin-right:8px">View as Employee</button>
     <input class="search" id="globalSearch" placeholder="Search clients, payments…">
     <div class="hdr-icons">
       <button class="hdr-ibtn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode">
@@ -1112,16 +1120,16 @@ section.view{display:none} section.view.on{display:block}
         <select id="fStatus"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
         <select id="fDeal"><option value="">All packages</option></select>
         <select id="fRound"><option value="">All rounds</option></select>
-        <select id="fAffiliate"><option value="">All clients (no MyFreeScoreNow filter)</option><option value="affiliate">Affiliate</option><option value="not_affiliate">Not affiliate (on MFSN)</option><option value="not_on_mfsn">Not on MyFreeScoreNow</option></select>
+        <select id="fAffiliate" class="moneyCol"><option value="">All clients (no MyFreeScoreNow filter)</option><option value="affiliate">Affiliate</option><option value="not_affiliate">Not affiliate (on MFSN)</option><option value="not_on_mfsn">Not on MyFreeScoreNow</option></select>
         <button class="btn primary" id="addClientBtn" onclick="openAddClient()" style="margin-left:auto">+ Add Client</button>
       </div>
       <div style="overflow-x:auto"><table>
         <thead><tr>
           <th data-s="name">Name</th><th data-s="email">Email</th><th data-s="phone">Phone</th>
           <th data-s="status">Status</th><th data-s="deal">Package</th><th data-s="round">Round</th>
-          <th data-s="totalSpent">Total Spent</th><th data-s="numberOfPayments"># Pays</th>
+          <th class="moneyCol" data-s="totalSpent">Total Spent</th><th class="moneyCol" data-s="numberOfPayments"># Pays</th>
           <th data-s="lastPaymentDate">Last Payment</th><th data-s="createdAt">Joined</th>
-          <th>Affiliate</th>
+          <th class="moneyCol">Affiliate</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table></div>
@@ -1244,14 +1252,14 @@ section.view{display:none} section.view.on{display:block}
     <div class="dactions" id="dActions"></div>
   </div>
   <div class="dbody">
-    <div class="dsec"><h4>Send text (via GoHighLevel)</h4>
+    <div class="dsec employeeHide"><h4>Send text (via GoHighLevel)</h4>
       <textarea id="dSms" placeholder="Type a message…"></textarea>
       <div class="dactions"><button class="btn primary" onclick="sendSmsUI()">Send SMS</button><span class="testres" id="dSmsRes"></span></div>
     </div>
-    <div class="dsec"><h4>MyFreeScoreNow affiliate</h4>
+    <div class="dsec employeeHide"><h4>MyFreeScoreNow affiliate</h4>
       <div id="dAffiliate"></div>
     </div>
-    <div class="dsec"><h4>Add note</h4>
+    <div class="dsec employeeHide"><h4>Add note</h4>
       <div class="mentionwrap"><textarea id="dNote" placeholder="Log a call, promise-to-pay, dispute update… (type @ to mention someone)" oninput="mentionInput(this,'dNoteMbox')" onkeydown="return mentionKeydown(event,this,'dNoteMbox')"></textarea><div class="mentionbox" id="dNoteMbox" style="display:none"></div></div>
       <div class="dactions"><button class="btn ghost" onclick="addNoteUI()">Save note</button>
       <button class="btn ghost" onclick="toggleTaskForm()">+ Follow-up task</button></div>
@@ -1270,7 +1278,7 @@ section.view{display:none} section.view.on{display:block}
       </div>
     </div>
     <div class="dsec"><h4>Notes</h4><div id="dNotes"></div></div>
-    <div class="dsec"><h4>Payment history</h4><div id="dPays"></div></div>
+    <div class="dsec employeeHide"><h4>Payment history</h4><div id="dPays"></div></div>
     <div class="dsec"><h4>Dispute activity</h4><div id="dDisputes"></div></div>
     <div class="dsec"><h4>Open tasks</h4><div id="dTasks"></div></div>
   </div>
@@ -1987,14 +1995,20 @@ async function loadClients(){
   const maxP=Math.max(1,Math.ceil(d.total/d.pageSize));
   if(page>maxP){page=maxP;return loadClients();}
   $('pageInfo').textContent=`${d.total.toLocaleString()} clients · page ${d.page}/${maxP}`;
+  // moneyVisible comes from the server (see GET /api/clients in server.js) --
+  // false for a real Employee or an Admin previewing as one, in which case
+  // c.totalSpent/numberOfPayments/mfsnStatus are already stripped from d.clients,
+  // not just hidden here. This just keeps the now-pointless th/select out of the way.
+  const moneyVisible=d.moneyVisible!==false;
+  document.querySelectorAll('.moneyCol').forEach(el=>el.style.display=moneyVisible?'':'none');
   $('tbody').innerHTML=d.clients.map(c=>`<tr style="cursor:pointer" onclick="openClient('${c.id}')">
     <td><b>${c.name||''}</b></td><td>${c.email||''}</td><td>${c.phone||''}</td>
     <td><span class="pill ${c.status}">${c.status}</span></td>
     <td>${c.deal||'—'}</td><td>${c.round?'R'+c.round:'—'}</td>
-    <td><b>${fmt$(c.totalSpent)}</b></td><td>${c.numberOfPayments||0}</td>
+    ${moneyVisible?`<td><b>${fmt$(c.totalSpent)}</b></td><td>${c.numberOfPayments||0}</td>`:''}
     <td>${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</td>
     <td>${c.createdAt?c.createdAt.slice(0,10):'—'}</td>
-    <td>${mfsnPill(c.mfsnStatus)}</td></tr>`).join('');
+    ${moneyVisible?`<td>${mfsnPill(c.mfsnStatus)}</td>`:''}</tr>`).join('');
 }
 document.querySelectorAll('th[data-s]').forEach(th=>th.addEventListener('click',()=>{
   const s=th.dataset.s;if(sort===s)dir=dir==='asc'?'desc':'asc';else{sort=s;dir='desc';}page=1;loadClients();
@@ -2199,19 +2213,28 @@ function closeDrawer(){$('drawer').classList.remove('open');curClient=null;}
 async function openClient(id){
   const r=await fetch('/api/clients/'+id);if(!r.ok)return;
   const d=await r.json();const c=d.client;curClient=c;
+  const moneyVisible=d.moneyVisible!==false;
+  // Employee-facing sections (send text, mark active/inactive, MFSN
+  // affiliate, add-note+follow-up-task, payment history) call endpoints
+  // that stay admin-only server-side (see EMPLOYEE_API in lib/auth.js) --
+  // hide them rather than offer a control that would only 403. Employees
+  // still get read-only Notes/Open tasks, and write notes via Deal
+  // Production's own note field (reached from Pipeline) instead.
+  document.querySelectorAll('.drawer .employeeHide').forEach(el=>el.style.display=moneyVisible?'':'none');
   $('drawer').classList.add('open');
   $('dName').textContent=c.name;
   $('dMeta').innerHTML=`${c.email||''}${c.phone?' · '+c.phone:''}<br>
     <span class="pill ${c.status}">${c.status}</span>&nbsp; ${c.deal?'package: <b>'+c.deal+'</b>':''} ${c.round?' · round <b>'+c.round+'</b>':''}
     ${c.createdAt?' · joined '+c.createdAt.slice(0,10):''}`;
-  $('dStats').innerHTML=`
+  $('dStats').innerHTML=(moneyVisible?`
     <div class="tone-green"><div class="l">Total spent</div><div class="v money">${fmt$(c.totalSpent)}</div></div>
-    <div><div class="l"># payments</div><div class="v">${c.numberOfPayments||d.payments.length||0}</div></div>
-    <div><div class="l">Last payment</div><div class="v" style="font-size:13px">${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</div></div>`;
-  $('dActions').innerHTML=c.status==='active'
+    <div><div class="l"># payments</div><div class="v">${c.numberOfPayments||d.payments.length||0}</div></div>`:'')+
+    `<div><div class="l">Last payment</div><div class="v" style="font-size:13px">${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</div></div>`;
+  if(moneyVisible)$('dActions').innerHTML=c.status==='active'
     ?`<button class="btn ghost" onclick="setStatusUI('inactive')">Mark inactive</button>`
     :`<button class="btn primary" onclick="setStatusUI('active')">Mark active (reactivated)</button>`;
-  $('dAffiliate').innerHTML=`${mfsnPill(c.mfsnStatus)}
+  else $('dActions').innerHTML='';
+  if(moneyVisible)$('dAffiliate').innerHTML=`${mfsnPill(c.mfsnStatus)}
     <span class="cardsub" style="margin-left:8px">${c.mfsnOverride?'manually set':(c.mfsnMatched?'matched by email/name against her MyFreeScoreNow list':'no match found on her MyFreeScoreNow list')}</span>
     <div class="dactions" style="margin-top:10px">
       ${c.mfsnStatus!=='affiliate'?'<button class="btn ghost" onclick="setAffiliateUI(\'affiliate\')">Mark Affiliate</button>':''}
@@ -2220,9 +2243,9 @@ async function openClient(id){
       ${c.mfsnOverride?'<button class="btn ghost" onclick="setAffiliateUI(null)">Reset to auto-detect</button>':''}
     </div>`;
   $('dNotes').innerHTML=d.notes.length?d.notes.map(n=>`<div class="noterow">${escUser(n.text)}<div class="mut">${n.authorName?escUser(n.authorName)+' · ':''}${new Date(n.at).toLocaleString()}
-    <a href="#" onclick="fetch('/api/notes/${n.id}',{method:'DELETE'}).then(()=>openClient('${c.id}'));return false" style="color:var(--muted)"> · delete</a></div></div>`).join('')
+    ${moneyVisible?`<a href="#" onclick="fetch('/api/notes/${n.id}',{method:'DELETE'}).then(()=>openClient('${c.id}'));return false" style="color:var(--muted)"> · delete</a>`:''}</div></div>`).join('')
     :'<div class="cardsub">No notes yet.</div>';
-  $('dPays').innerHTML=d.payments.length?d.payments.map(p=>`<div class="evrow"><span>${(p.product||'payment')}</span><span><b>${fmt$(p.amount)}</b> <span class="mut">${(p.at||'').slice(0,10)}</span></span></div>`).join('')
+  if(moneyVisible)$('dPays').innerHTML=d.payments.length?d.payments.map(p=>`<div class="evrow"><span>${(p.product||'payment')}</span><span><b>${fmt$(p.amount)}</b> <span class="mut">${(p.at||'').slice(0,10)}</span></span></div>`).join('')
     :`<div class="cardsub">${c.lastPaymentDate?'Last payment '+c.lastPaymentDate.slice(0,10):'No payment history yet.'}</div>`;
   $('dDisputes').innerHTML=d.disputes.length?d.disputes.map(x=>`<div class="evrow"><span>${x.action||'dispute'} ${x.round?'· R'+x.round:''}</span><span class="mut">${(x.at||'').slice(0,10)}</span></div>`).join('')
     :`<div class="cardsub">${c.round?'Currently Round '+c.round+' (from GHL).':'No dispute activity recorded.'}</div>`;
@@ -2768,6 +2791,6 @@ setInterval(loadDashboard,5*60*1000);
 setInterval(loadTickets,20*1000);
 setInterval(loadNotifications,20*1000);
 </script>
-<script src="/production.js" defer></script><script src="/role.js" defer></script><script src="/mfsn.js" defer></script><script src="/revenue.js" defer></script><script src="/messages.js" defer></script>
+<script src="/production.js" defer></script><script src="/team.js" defer></script><script src="/role.js" defer></script><script src="/mfsn.js" defer></script><script src="/revenue.js" defer></script><script src="/messages.js" defer></script>
 </body>
 </html>
