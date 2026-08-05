@@ -40,17 +40,22 @@
   // (.railbtn, one per group) always visible on the far left, plus a panel
   // of grouped .navgroup containers (Overview/Clients/Production/Finance/
   // Marketing/Account). The Employee nav (per the 2026-08-05 Company vs Team
-  // Dashboard spec, revised the same day to add Pipeline + Follow-Ups back)
-  // spans several of those groups now instead of living in just one: Team
-  // Dashboard (Overview), Pipeline + New Clients + Clients (Clients group --
-  // Pipeline is the same top-level revenue-by-round board Admin sees,
-  // identical and unredacted, per explicit request; New Clients is Deal
-  // Production's own pvNewClientsBtn), Deal Production + Follow-Ups +
-  // Messages (Production group), Change password + Sign out (Account
-  // group). Finance and Marketing stay fully hidden, same as before.
+  // Dashboard spec, revised the same day to add Pipeline + Follow-Ups back,
+  // then to drop the full Deal Production nav item) spans several of those
+  // groups now instead of living in just one: Team Dashboard (Overview),
+  // Pipeline + New Clients + Clients (Clients group -- Pipeline is the same
+  // top-level revenue-by-round board Admin sees, identical and unredacted,
+  // per explicit request; New Clients is Deal Production's own
+  // pvNewClientsBtn, a locked/filtered queue -- the full, unrestricted Deal
+  // Production nav item (pvNavBtn) itself stays Admin-only, deliberately
+  // NOT in this list even though GET/PATCH /api/production still has to
+  // stay in EMPLOYEE_API since New Clients and the Team Dashboard drawer
+  // both read it), Follow-Ups + Messages (Production group), Change
+  // password + Sign out (Account group). Finance and Marketing stay fully
+  // hidden, same as before.
   var ALLOWED_GROUPS = { ov: 1, cl: 1, pr: 1, ac: 1 };
   var ALLOWED_IDS = {
-    teamNavBtn: 1, pipelineNavBtn: 1, pvNavBtn: 1, pvNewClientsBtn: 1, clientsNavBtn: 1,
+    teamNavBtn: 1, pipelineNavBtn: 1, pvNewClientsBtn: 1, clientsNavBtn: 1,
     fuNavBtn: 1, msgNavBtn: 1, changePwNavBtn: 1, signOutNavBtn: 1
   };
   function gateNav() {
