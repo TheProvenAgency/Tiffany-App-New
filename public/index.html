@@ -628,6 +628,13 @@ body:has(#sidebar.collapsed) .pipe-scrolltrack{left:90px}
    board's own native one so there isn't a confusing second bar. */
 .pipe-board-scroll{scrollbar-width:none}
 .pipe-board-scroll::-webkit-scrollbar{display:none}
+/* The client-detail drawer overlays the right edge of the viewport (it
+   doesn't shrink main/the board), so with it open it can cover the last
+   column even when the board itself has no natural overflow to scroll
+   away from. Padding the board out by the drawer's width whenever it's
+   open gives real scroll room to drag that last column clear -- see the
+   updatePipeScroll() calls added alongside drawer open/close. */
+body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
 .statchips span{background:#f8f9fc;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
 .statchips b{color:var(--ink)}
@@ -2298,7 +2305,7 @@ let curClient=null;
 // all (see openProductionOnlyClient) -- {id, name} of the Deal Production
 // record, so Add note / + Follow-up task still have somewhere to write.
 let curProdOnly=null;
-function closeDrawer(){$('drawer').classList.remove('open');curClient=null;curProdOnly=null;}
+function closeDrawer(){$('drawer').classList.remove('open');curClient=null;curProdOnly=null;requestAnimationFrame(updatePipeScroll);}
 async function openClient(id){
   curProdOnly=null;
   const r=await fetch('/api/clients/'+id);if(!r.ok)return;
@@ -2311,7 +2318,7 @@ async function openClient(id){
   // left only on the Payment history section now.
   const moneyVisible=d.moneyVisible!==false;
   document.querySelectorAll('.drawer .employeeHide').forEach(el=>el.style.display=moneyVisible?'':'none');
-  $('drawer').classList.add('open');
+  $('drawer').classList.add('open');requestAnimationFrame(updatePipeScroll);
   $('dName').textContent=c.name;
   // Round is a GHL tag (round:N), independent of any Deal Production stage
   // shown separately in the Process section -- editable here for both
@@ -2425,7 +2432,7 @@ async function openProductionOnlyClient(id){
   // available -- see addNoteUI/saveTaskUI, which write to the Deal
   // Production record and a client-tagged task instead when curProdOnly is set.
   document.querySelectorAll('.drawer .employeeHide, .drawer .ghlOnly').forEach(el=>el.style.display='none');
-  $('drawer').classList.add('open');
+  $('drawer').classList.add('open');requestAnimationFrame(updatePipeScroll);
   $('dName').textContent=p.name;
   $('dMeta').innerHTML=`${p.pkg?'package: <b>'+escUser(p.pkg)+'</b>':''}<br><span class="cardsub">No GoHighLevel contact matched yet — showing Deal Production only.</span>`;
   $('dStats').innerHTML='';
