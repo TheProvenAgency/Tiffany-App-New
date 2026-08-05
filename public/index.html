@@ -1128,11 +1128,7 @@ section.view{display:none} section.view.on{display:block}
       <h3 class="cardtitle">Credit Repair Delivery — active clients by round</h3>
       <div class="statchips" id="pipeStats" style="margin-top:10px"></div>
       <div class="pipe-chev-row" id="pipeChevrons"></div>
-      <div id="pipeBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px"></div>
-      <div style="display:flex;justify-content:center;gap:10px;margin-top:10px">
-        <button class="btn ghost" onclick="scrollPipeline(-1)">‹ Scroll left</button>
-        <button class="btn ghost" onclick="scrollPipeline(1)">Scroll right ›</button>
-      </div>
+      <div id="pipeBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:14px"></div>
     </div>
   </section>
 
@@ -2014,14 +2010,6 @@ function focusPipeCol(i){
   if(chev)chev.classList.add('active');
   if(col){ col.classList.add('hl'); col.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
 }
-// Explicit ‹ › controls below the board, on top of the visible scrollbar
-// and the click-to-jump chevrons above -- moves roughly one column
-// (230px width + 12px gap) per click.
-function scrollPipeline(dir){
-  const board=$('pipeBoard');
-  if(board)board.scrollBy({left:dir*242,behavior:'smooth'});
-}
-
 /* ================= clients ================= */
 async function loadClients(){
   const qs=new URLSearchParams({page,pageSize:25,sort,dir,q:$('q').value,status:$('fStatus').value,deal:$('fDeal').value,round:$('fRound').value,affiliate:$('fAffiliate').value});
