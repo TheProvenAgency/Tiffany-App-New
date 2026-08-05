@@ -80,26 +80,53 @@ test('an employee reads the top-level Pipeline identical to Admin, revenue inclu
   assert.deepEqual(await empRes.json(), await adminRes.json(), 'byte-for-byte the same as what Admin sees');
 });
 
-test('an employee reads Clients with money fields redacted', async () => {
+test('an employee reads Clients with totalSpent/numberOfPayments/mfsnStatus visible (table + Mark affiliate action), but not mfsnCommission', async () => {
+  // As of 2026-08-05: the Clients table shows Total Spent/# Pays/Affiliate
+  // to both roles, and the drawer's Mark affiliate/not action needs the
+  // real mfsnStatus to render correctly -- moneyVisible now only gates the
+  // drawer's raw dollar amounts (stat tiles, Payment history), which is
+  // purely a client-side rendering choice in openClient(), not a server
+  // redaction. mfsnCommission (a literal dollar figure) is the one field
+  // still stripped server-side either way.
   const r = await req('/api/clients', { cookie: employeeCookie });
   assert.equal(r.status, 200);
   const d = await r.json();
   assert.equal(d.moneyVisible, false);
   assert.ok(d.clients.length > 0, 'demo data should seed at least one client');
   for (const c of d.clients) {
-    assert.ok(!('totalSpent' in c), 'totalSpent must not reach an employee');
-    assert.ok(!('numberOfPayments' in c), 'numberOfPayments must not reach an employee');
-    assert.ok(!('mfsnStatus' in c), 'mfsnStatus (affiliate/commission) must not reach an employee');
-    assert.ok(!('mfsnCommission' in c), 'mfsnCommission (a dollar figure) must not reach an employee');
+    assert.ok('totalSpent' in c, 'totalSpent now reaches an employee (table parity)');
+    assert.ok('numberOfPayments' in c, 'numberOfPayments now reaches an employee (table parity)');
+    assert.ok('mfsnStatus' in c, 'mfsnStatus now reaches an employee (Mark affiliate action)');
+    assert.ok(!('mfsnCommission' in c), 'mfsnCommission (a dollar figure) must still never reach an employee');
   }
 
   const detail = await req('/api/clients/' + d.clients[0].id, { cookie: employeeCookie });
   assert.equal(detail.status, 200);
   const dd = await detail.json();
   assert.equal(dd.moneyVisible, false);
-  assert.ok(!('totalSpent' in dd.client));
-  assert.ok(!('numberOfPayments' in dd.client));
-  assert.deepEqual(dd.payments, [], 'payment history is a list of dollar amounts -- dropped entirely');
+  assert.ok('totalSpent' in dd.client);
+  assert.ok(!('mfsnCommission' in dd.client));
+  assert.deepEqual(dd.payments, [], 'the raw payment-history list (dollar amounts) still only comes back for a real admin');
+});
+
+test('an employee can mark a client active/inactive, mark affiliate status, and send an SMS', async () => {
+  const list = await (await req('/api/clients?pageSize=1', { cookie: employeeCookie })).json();
+  const id = list.clients[0].id;
+
+  const status = await req(`/api/clients/${id}/status`, { method: 'POST', cookie: employeeCookie, body: { status: 'inactive' } });
+  assert.equal(status.status, 200);
+  const afterStatus = await (await req(`/api/clients/${id}`, { cookie: employeeCookie })).json();
+  assert.equal(afterStatus.client.status, 'inactive');
+
+  const affiliate = await req(`/api/clients/${id}/affiliate`, { method: 'POST', cookie: employeeCookie, body: { override: 'affiliate' } });
+  assert.equal(affiliate.status, 200);
+  const afterAffiliate = await (await req(`/api/clients/${id}`, { cookie: employeeCookie })).json();
+  assert.equal(afterAffiliate.client.mfsnStatus, 'affiliate');
+
+  const sms = await req(`/api/clients/${id}/sms`, { method: 'POST', cookie: employeeCookie, body: { message: 'Hi, following up on your file.' } });
+  assert.equal(sms.status, 200);
+  const smsBody = await sms.json();
+  assert.equal(smsBody.ok, true);
 });
 
 test('an employee can add a note to a client from the Pipeline/Clients detail panel', async () => {
@@ -124,6 +151,34 @@ test('an employee can create and assign a follow-up task from the detail panel',
   const task = await created.json();
   assert.equal(task.clientId, clientId);
   assert.equal(task.title, 'Chase login for round 2');
+});
+
+test('an employee can move a GHL-sourced client to a different round (Pipeline column)', async () => {
+  const list = await (await req('/api/clients?pageSize=1', { cookie: employeeCookie })).json();
+  const id = list.clients[0].id;
+  const r = await req(`/api/clients/${id}/round`, {
+    method: 'POST', cookie: employeeCookie, body: { round: '4' }
+  });
+  assert.equal(r.status, 200);
+  const detail = await (await req(`/api/clients/${id}`, { cookie: employeeCookie })).json();
+  assert.equal(detail.client.round, '4');
+
+  // Clearing it (round: null) moves the card back to New / Onboarding.
+  const cleared = await req(`/api/clients/${id}/round`, {
+    method: 'POST', cookie: employeeCookie, body: { round: null }
+  });
+  assert.equal(cleared.status, 200);
+  const after = await (await req(`/api/clients/${id}`, { cookie: employeeCookie })).json();
+  assert.equal(after.client.round, null);
+});
+
+test('round must be a whole number', async () => {
+  const list = await (await req('/api/clients?pageSize=1', { cookie: adminCookie })).json();
+  const id = list.clients[0].id;
+  const r = await req(`/api/clients/${id}/round`, {
+    method: 'POST', cookie: adminCookie, body: { round: 'not-a-number' }
+  });
+  assert.equal(r.status, 400);
 });
 
 test('an admin still sees full money fields on Clients', async () => {

@@ -59,13 +59,16 @@ test('an employee can update a dispute round on one lead', async () => {
   assert.equal((await lead('C1')).tu.r, 3);
 });
 
-test('an employee cannot change stage, and the lead is left untouched', async () => {
-  const before = (await lead('C1')).stage;
+// Reversed 2026-08-05: moving a client between pipeline stages/columns from
+// the Pipeline detail panel was explicitly opened to both roles (see
+// EMPLOYEE_FIELDS in lib/auth.js). va (ownership reassignment) did not
+// change -- still admin-only, see the mixed-fields test right below.
+test('an employee can change stage', async () => {
   const r = await req('/api/production/C1', {
     method: 'PATCH', cookie: employeeCookie, body: { stage: 'Completed' }
   });
-  assert.equal(r.status, 403);
-  assert.equal((await lead('C1')).stage, before, 'a rejected patch must change nothing');
+  assert.equal(r.status, 200);
+  assert.equal((await lead('C1')).stage, 'Completed');
 });
 
 test('a patch mixing allowed and forbidden fields is rejected wholesale', async () => {

@@ -541,7 +541,7 @@ section.view{display:none} section.view.on{display:block}
 /* Process section (drawer) -- Deal Production's stage/bureau/next-step
    info shown alongside a GHL contact record, or standalone when a card has
    no GHL match (see openProductionOnlyClient). No dollar figures here. */
-.proc-stage{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#efeae0;color:#7a7461}
+.proc-stage-select{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#efeae0;color:#7a7461;border:1px solid var(--line);cursor:pointer}
 .proc-next{background:var(--gold-soft);color:#8a6516;border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;margin-top:10px}
 .proc-bureaus{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .proc-mini{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
@@ -1280,11 +1280,11 @@ section.view{display:none} section.view.on{display:block}
   </div>
   <div class="dbody">
     <div class="dsec" id="dProcessSec" style="display:none"><h4>Process</h4><div id="dProcess"></div></div>
-    <div class="dsec employeeHide"><h4>Send text (via GoHighLevel)</h4>
+    <div class="dsec ghlOnly"><h4>Send text (via GoHighLevel)</h4>
       <textarea id="dSms" placeholder="Type a message…"></textarea>
       <div class="dactions"><button class="btn primary" onclick="sendSmsUI()">Send SMS</button><span class="testres" id="dSmsRes"></span></div>
     </div>
-    <div class="dsec employeeHide"><h4>MyFreeScoreNow affiliate</h4>
+    <div class="dsec ghlOnly"><h4>MyFreeScoreNow affiliate</h4>
       <div id="dAffiliate"></div>
     </div>
     <div class="dsec"><h4>Add note</h4>
@@ -2073,20 +2073,17 @@ async function loadClients(){
   const maxP=Math.max(1,Math.ceil(d.total/d.pageSize));
   if(page>maxP){page=maxP;return loadClients();}
   $('pageInfo').textContent=`${d.total.toLocaleString()} clients · page ${d.page}/${maxP}`;
-  // moneyVisible comes from the server (see GET /api/clients in server.js) --
-  // false for a real Employee or an Admin previewing as one, in which case
-  // c.totalSpent/numberOfPayments/mfsnStatus are already stripped from d.clients,
-  // not just hidden here. This just keeps the now-pointless th/select out of the way.
-  const moneyVisible=d.moneyVisible!==false;
-  document.querySelectorAll('.moneyCol').forEach(el=>el.style.display=moneyVisible?'':'none');
+  // Total Spent/# Pays/Affiliate are shown to both roles as of 2026-08-05
+  // (explicit request for admin parity on this table) -- .moneyCol classes
+  // are left on the th/select in the markup but no longer toggled.
   $('tbody').innerHTML=d.clients.map(c=>`<tr style="cursor:pointer" onclick="openClient('${c.id}')">
     <td><b>${c.name||''}</b></td><td>${c.email||''}</td><td>${c.phone||''}</td>
     <td><span class="pill ${c.status}">${c.status}</span></td>
     <td>${c.deal||'—'}</td><td>${c.round?'R'+c.round:'—'}</td>
-    ${moneyVisible?`<td><b>${fmt$(c.totalSpent)}</b></td><td>${c.numberOfPayments||0}</td>`:''}
+    <td><b>${fmt$(c.totalSpent)}</b></td><td>${c.numberOfPayments||0}</td>
     <td>${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</td>
     <td>${c.createdAt?c.createdAt.slice(0,10):'—'}</td>
-    ${moneyVisible?`<td>${mfsnPill(c.mfsnStatus)}</td>`:''}</tr>`).join('');
+    <td>${mfsnPill(c.mfsnStatus)}</td></tr>`).join('');
 }
 document.querySelectorAll('th[data-s]').forEach(th=>th.addEventListener('click',()=>{
   const s=th.dataset.s;if(sort===s)dir=dir==='asc'?'desc':'asc';else{sort=s;dir='desc';}page=1;loadClients();
@@ -2299,28 +2296,33 @@ async function openClient(id){
   curProdOnly=null;
   const r=await fetch('/api/clients/'+id);if(!r.ok)return;
   const d=await r.json();const c=d.client;curClient=c;
+  // moneyVisible now only gates the raw dollar amounts (Total spent/#
+  // payments stat tiles, Payment history) -- Send text, Mark active/
+  // inactive, Mark affiliate/not, and Add note/+Follow-up task all work
+  // for both roles as of 2026-08-05 (explicit request for admin parity on
+  // these actions specifically, numbers still excluded). .employeeHide is
+  // left only on the Payment history section now.
   const moneyVisible=d.moneyVisible!==false;
-  // Employee-facing sections (send text, mark active/inactive, MFSN
-  // affiliate, add-note+follow-up-task, payment history) call endpoints
-  // that stay admin-only server-side (see EMPLOYEE_API in lib/auth.js) --
-  // hide them rather than offer a control that would only 403. Employees
-  // still get read-only Notes/Open tasks, and write notes via Deal
-  // Production's own note field (reached from Pipeline) instead.
   document.querySelectorAll('.drawer .employeeHide').forEach(el=>el.style.display=moneyVisible?'':'none');
   $('drawer').classList.add('open');
   $('dName').textContent=c.name;
+  // Round is a GHL tag (round:N), independent of any Deal Production stage
+  // shown separately in the Process section -- editable here for both
+  // roles since 2026-08-05 (see POST /api/clients/:id/round).
+  const roundOpts=['','1','2','3','4','5','6','7','8','9'].map(r=>
+    `<option value="${r}"${(c.round||'')===r?' selected':''}>${r?'Round '+r:'No round (new/onboarding)'}</option>`).join('');
   $('dMeta').innerHTML=`${c.email||''}${c.phone?' · '+c.phone:''}<br>
-    <span class="pill ${c.status}">${c.status}</span>&nbsp; ${c.deal?'package: <b>'+c.deal+'</b>':''} ${c.round?' · round <b>'+c.round+'</b>':''}
+    <span class="pill ${c.status}">${c.status}</span>&nbsp; ${c.deal?'package: <b>'+c.deal+'</b>':''}
+    · <select class="proc-stage-select" onchange="changeRoundUI('${c.id}',this.value)">${roundOpts}</select>
     ${c.createdAt?' · joined '+c.createdAt.slice(0,10):''}`;
   $('dStats').innerHTML=(moneyVisible?`
     <div class="tone-green"><div class="l">Total spent</div><div class="v money">${fmt$(c.totalSpent)}</div></div>
     <div><div class="l"># payments</div><div class="v">${c.numberOfPayments||d.payments.length||0}</div></div>`:'')+
     `<div><div class="l">Last payment</div><div class="v" style="font-size:13px">${c.lastPaymentDate?c.lastPaymentDate.slice(0,10):'—'}</div></div>`;
-  if(moneyVisible)$('dActions').innerHTML=c.status==='active'
+  $('dActions').innerHTML=c.status==='active'
     ?`<button class="btn ghost" onclick="setStatusUI('inactive')">Mark inactive</button>`
     :`<button class="btn primary" onclick="setStatusUI('active')">Mark active (reactivated)</button>`;
-  else $('dActions').innerHTML='';
-  if(moneyVisible)$('dAffiliate').innerHTML=`${mfsnPill(c.mfsnStatus)}
+  $('dAffiliate').innerHTML=`${mfsnPill(c.mfsnStatus)}
     <span class="cardsub" style="margin-left:8px">${c.mfsnOverride?'manually set':(c.mfsnMatched?'matched by email/name against her MyFreeScoreNow list':'no match found on her MyFreeScoreNow list')}</span>
     <div class="dactions" style="margin-top:10px">
       ${c.mfsnStatus!=='affiliate'?'<button class="btn ghost" onclick="setAffiliateUI(\'affiliate\')">Mark Affiliate</button>':''}
@@ -2370,12 +2372,36 @@ function renderProcess(production){
     const txt=st==='none'?label+' —':label+' R'+(b.r||0)+(st==='done'?' ✓':st==='login'?' ⛔':st==='ready'?' ready':'');
     return `<span class="proc-mini ${st}">${txt}</span>`;
   }).join('');
+  const STAGE_OPTS=['Onboarding','Ready','In rounds','Completed'];
   $('dProcess').innerHTML=`
-    <span class="proc-stage">${escUser(production.stage||'—')}</span>
+    <select class="proc-stage-select" onchange="changeStageUI('${production.id}',this.value)">
+      ${STAGE_OPTS.map(s=>`<option${s===production.stage?' selected':''}>${s}</option>`).join('')}
+    </select>
     ${production.va?`<span class="cardsub" style="margin-left:8px">Assigned: ${escUser(production.va)}</span>`:''}
     <div class="proc-bureaus">${bureaus}</div>
     <div class="proc-docs">${procDocsDone(production)}/${procDocsTotal(production)} documents collected${production.days!=null?' · '+production.days+'d in '+(production.stage||'this stage').toLowerCase():''}</div>
     <div class="proc-next">${escUser(procNextStep(production))}</div>`;
+}
+// Moves a client to a different pipeline stage/column from the detail
+// panel -- open to both roles (2026-08-05, see EMPLOYEE_FIELDS in
+// lib/auth.js). Refreshes whichever panel is open (a GHL-matched contact
+// via openClient, or the production-only fallback) so the Process section
+// and the rest of the drawer reflect the move immediately. Note: moving a
+// card to Ready/In rounds makes it drop off the Pipeline board itself --
+// that board only shows Onboarding and Completed from Deal Production (see
+// prodStageKey in server.js's /api/pipeline) -- it'll still show on Deal
+// Production's own Kanban, which has all four stages.
+async function changeStageUI(productionId,stage){
+  await fetch('/api/production/'+encodeURIComponent(productionId),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({stage})});
+  if(curClient)openClient(curClient.id);
+  else if(curProdOnly)openProductionOnlyClient(curProdOnly.id);
+}
+// Moves a GHL-sourced (no Deal Production match) client to a different
+// round -- the Pipeline board's "column" for that kind of card. round=''
+// clears it back to the "New / Onboarding" bucket.
+async function changeRoundUI(clientId,round){
+  await fetch('/api/clients/'+encodeURIComponent(clientId)+'/round',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({round:round||null})});
+  if(curClient)openClient(curClient.id);
 }
 // A Pipeline card with no GHL contact match at all (an old Deal Production
 // sheet-import that was never reconciled) -- GET /api/production/:id is the
@@ -2385,13 +2411,13 @@ async function openProductionOnlyClient(id){
   const r=await fetch('/api/production/'+encodeURIComponent(id));if(!r.ok)return;
   const d=await r.json();const p=d.client;if(!p)return;
   curClient=null;curProdOnly={id:p.id,name:p.name};
-  // No GHL contact behind this card -- SMS/status/affiliate/payment history
-  // all act against a GHL contact id this card doesn't have, so hide those
-  // sections outright rather than offer a control with nothing to save to.
-  // Add note / + Follow-up task stay available -- see addNoteUI/saveTaskUI,
-  // which write to the Deal Production record and a client-tagged task
-  // instead when curProdOnly is set.
-  document.querySelectorAll('.drawer .employeeHide').forEach(el=>el.style.display='none');
+  // No GHL contact behind this card -- SMS/status/affiliate (.ghlOnly) and
+  // payment history (.employeeHide) all act against a GHL contact id this
+  // card doesn't have, so hide those sections outright rather than offer a
+  // control with nothing to save to. Add note / + Follow-up task stay
+  // available -- see addNoteUI/saveTaskUI, which write to the Deal
+  // Production record and a client-tagged task instead when curProdOnly is set.
+  document.querySelectorAll('.drawer .employeeHide, .drawer .ghlOnly').forEach(el=>el.style.display='none');
   $('drawer').classList.add('open');
   $('dName').textContent=p.name;
   $('dMeta').innerHTML=`${p.pkg?'package: <b>'+escUser(p.pkg)+'</b>':''}<br><span class="cardsub">No GoHighLevel contact matched yet — showing Deal Production only.</span>`;

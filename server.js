@@ -1142,6 +1142,39 @@ app.post('/api/clients/:id/tags', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Move a client to a different round -- the Pipeline board's "column" for a
+// GHL-sourced card (see /api/pipeline). round lives on GHL as a 'round:N'
+// tag (see lib/ghl.js's tag('round:') parsing that decorates c.round in the
+// first place), so this swaps the old tag for the new one, same pattern as
+// setStatus above. round: null clears it, moving the card back to the
+// board's "New / Onboarding" bucket. Explicitly open to both roles
+// (2026-08-05) -- Deal Production's own `stage` field got the same
+// treatment, see EMPLOYEE_FIELDS in lib/auth.js.
+app.post('/api/clients/:id/round', async (req, res) => {
+  try {
+    const round = req.body.round != null && String(req.body.round).trim() !== '' ? String(req.body.round).trim() : null;
+    if (round && !/^\d+$/.test(round)) return res.status(400).json({ error: 'round must be a whole number' });
+    if (READ_ONLY && liveMode()) return refuseWrite(res, 'setRound', `${req.params.id} -> ${round}`);
+    const clients = await getClients();
+    const c = clients.find(x => x.id === req.params.id);
+    if (!c) return res.status(404).json({ error: 'not found' });
+    const removeTag = c.round ? ['round:' + c.round] : [];
+    const addTag = round ? ['round:' + round] : [];
+    if (liveMode()) {
+      if (addTag.length) await ghl.addTags(store.getConfig(), req.params.id, addTag);
+      if (removeTag.length) await ghl.removeTags(store.getConfig(), req.params.id, removeTag).catch(() => {});
+      store.clearCache();
+    } else {
+      const dc = demoData().clients.find(x => x.id === req.params.id);
+      if (dc) {
+        dc.tags = (dc.tags || []).filter(t => !removeTag.includes(t)).concat(addTag.filter(t => !(dc.tags || []).includes(t)));
+        dc.round = round;
+      }
+    }
+    res.json({ ok: true, round });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // send SMS via GHL (live mode only)
 app.post('/api/clients/:id/sms', async (req, res) => {
   try {

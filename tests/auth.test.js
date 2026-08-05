@@ -155,15 +155,18 @@ test('an employee reads the top-level Pipeline board identical to Admin (explici
   assert.ok(auth.canAccess('employee', 'GET', '/api/pipeline'));
 });
 
-test('an employee reads Clients read-only, but can add a note (money redaction happens in server.js, not here)', () => {
+test('an employee reads Clients, and can note/SMS/mark-active/mark-affiliate (money redaction happens in server.js, not here)', () => {
   assert.ok(auth.canAccess('employee', 'GET', '/api/clients'));
   assert.ok(auth.canAccess('employee', 'GET', '/api/clients/c1'));
   // Added 2026-08-05 -- routine client contact from the Pipeline/Clients
   // detail panel, same spirit as Deal Production's own note field.
   assert.ok(auth.canAccess('employee', 'POST', '/api/clients/c1/notes'));
-  for (const [m, p] of [['POST', '/api/clients'], ['POST', '/api/clients/c1/status'],
-                        ['POST', '/api/clients/c1/affiliate'],
-                        ['POST', '/api/clients/c1/sms'], ['POST', '/api/clients/c1/contact'],
+  // Also opened 2026-08-05 -- explicit request for admin parity on these
+  // specific drawer actions (raw dollar amounts still redacted elsewhere).
+  assert.ok(auth.canAccess('employee', 'POST', '/api/clients/c1/status'));
+  assert.ok(auth.canAccess('employee', 'POST', '/api/clients/c1/affiliate'));
+  assert.ok(auth.canAccess('employee', 'POST', '/api/clients/c1/sms'));
+  for (const [m, p] of [['POST', '/api/clients'], ['POST', '/api/clients/c1/contact'],
                         ['POST', '/api/clients/c1/tags']]) {
     assert.equal(auth.canAccess('employee', m, p), false, `employee must not reach ${m} ${p}`);
   }
@@ -191,9 +194,11 @@ test('an employee is denied the bulk production overwrite', () => {
   assert.equal(auth.canAccess('employee', 'POST', '/api/production'), false);
 });
 
-test('an employee is denied routes that write to live GoHighLevel', () => {
-  assert.equal(auth.canAccess('employee', 'POST', '/api/clients/abc/sms'), false);
-  assert.equal(auth.canAccess('employee', 'POST', '/api/clients/abc/status'), false);
+test('an employee is denied contact-edit and generic-tag GoHighLevel writes', () => {
+  // SMS/status/affiliate are open as of 2026-08-05 (see the read-Clients
+  // test above) -- these two are the writes that stayed admin-only.
+  assert.equal(auth.canAccess('employee', 'POST', '/api/clients/abc/contact'), false);
+  assert.equal(auth.canAccess('employee', 'POST', '/api/clients/abc/tags'), false);
 });
 
 test('an unknown route is denied to employees by default', () => {
@@ -233,10 +238,13 @@ test('an employee may not rewrite the notes array', () => {
   assert.deepEqual(denied, ['notes']);
 });
 
-test('an employee may not change stage or va', () => {
-  // stage moves a lead through the pipeline; va reassigns ownership.
-  const { denied } = auth.filterEditable('employee', { stage: 'Completed', va: 'Someone' });
-  assert.deepEqual(denied.sort(), ['stage', 'va']);
+test('an employee may change stage but not va', () => {
+  // stage moves a lead through the pipeline -- opened to both roles
+  // 2026-08-05 (Pipeline detail panel). va reassigns ownership and stayed
+  // admin-only.
+  const { allowed, denied } = auth.filterEditable('employee', { stage: 'Completed', va: 'Someone' });
+  assert.deepEqual(allowed, { stage: 'Completed' });
+  assert.deepEqual(denied, ['va']);
 });
 
 test('an admin may change any field', () => {
