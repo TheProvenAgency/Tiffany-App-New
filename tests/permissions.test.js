@@ -102,6 +102,30 @@ test('an employee reads Clients with money fields redacted', async () => {
   assert.deepEqual(dd.payments, [], 'payment history is a list of dollar amounts -- dropped entirely');
 });
 
+test('an employee can add a note to a client from the Pipeline/Clients detail panel', async () => {
+  const list = await (await req('/api/clients?pageSize=1', { cookie: employeeCookie })).json();
+  const id = list.clients[0].id;
+  const r = await req(`/api/clients/${id}/notes`, {
+    method: 'POST', cookie: employeeCookie, body: { text: 'left a note from the pipeline panel' }
+  });
+  assert.equal(r.status, 200);
+  const detail = await (await req(`/api/clients/${id}`, { cookie: employeeCookie })).json();
+  assert.ok(detail.notes.some(n => n.text === 'left a note from the pipeline panel'));
+});
+
+test('an employee can create and assign a follow-up task from the detail panel', async () => {
+  const list = await (await req('/api/clients?pageSize=1', { cookie: adminCookie })).json();
+  const clientId = list.clients[0].id, clientName = list.clients[0].name;
+  const created = await req('/api/tasks', {
+    method: 'POST', cookie: employeeCookie,
+    body: { title: 'Chase login for round 2', clientId, clientName, assignedTo: null }
+  });
+  assert.equal(created.status, 200);
+  const task = await created.json();
+  assert.equal(task.clientId, clientId);
+  assert.equal(task.title, 'Chase login for round 2');
+});
+
 test('an admin still sees full money fields on Clients', async () => {
   const r = await req('/api/clients', { cookie: adminCookie });
   assert.equal(r.status, 200);

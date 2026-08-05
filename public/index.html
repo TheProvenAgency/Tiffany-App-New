@@ -1129,6 +1129,10 @@ section.view{display:none} section.view.on{display:block}
       <div class="statchips" id="pipeStats" style="margin-top:10px"></div>
       <div class="pipe-chev-row" id="pipeChevrons"></div>
       <div id="pipeBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px"></div>
+      <div style="display:flex;justify-content:center;gap:10px;margin-top:10px">
+        <button class="btn ghost" onclick="scrollPipeline(-1)">‹ Scroll left</button>
+        <button class="btn ghost" onclick="scrollPipeline(1)">Scroll right ›</button>
+      </div>
     </div>
   </section>
 
@@ -1281,7 +1285,7 @@ section.view{display:none} section.view.on{display:block}
     <div class="dsec employeeHide"><h4>MyFreeScoreNow affiliate</h4>
       <div id="dAffiliate"></div>
     </div>
-    <div class="dsec employeeHide"><h4>Add note</h4>
+    <div class="dsec"><h4>Add note</h4>
       <div class="mentionwrap"><textarea id="dNote" placeholder="Log a call, promise-to-pay, dispute update… (type @ to mention someone)" oninput="mentionInput(this,'dNoteMbox')" onkeydown="return mentionKeydown(event,this,'dNoteMbox')"></textarea><div class="mentionbox" id="dNoteMbox" style="display:none"></div></div>
       <div class="dactions"><button class="btn ghost" onclick="addNoteUI()">Save note</button>
       <button class="btn ghost" onclick="toggleTaskForm()">+ Follow-up task</button></div>
@@ -2010,6 +2014,13 @@ function focusPipeCol(i){
   if(chev)chev.classList.add('active');
   if(col){ col.classList.add('hl'); col.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
 }
+// Explicit ‹ › controls below the board, on top of the visible scrollbar
+// and the click-to-jump chevrons above -- moves roughly one column
+// (230px width + 12px gap) per click.
+function scrollPipeline(dir){
+  const board=$('pipeBoard');
+  if(board)board.scrollBy({left:dir*242,behavior:'smooth'});
+}
 
 /* ================= clients ================= */
 async function loadClients(){
@@ -2196,15 +2207,18 @@ async function toggleTaskForm(show){
   }
 }
 async function saveTaskUI(){
-  if(!curClient)return;
+  if(!curClient&&!curProdOnly)return;
   const title=$('tfTitle').value.trim();
   if(!title){$('tfRes').textContent='Title required';$('tfRes').className='testres bad';return;}
   const due=$('tfDue').value||null;
   const assignedTo=$('tfAssignee').value||null;
   const notes=$('tfNotes').value.trim()||null;
-  await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due,notes,assignedTo,clientId:curClient.id,clientName:curClient.name})});
+  const clientId=curClient?curClient.id:curProdOnly.id;
+  const clientName=curClient?curClient.name:curProdOnly.name;
+  await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due,notes,assignedTo,clientId,clientName})});
   toggleTaskForm(false);
-  loadTasks();openClient(curClient.id);
+  loadTasks();
+  if(curClient)openClient(curClient.id);else openProductionOnlyClient(curProdOnly.id);
 }
 
 /* ================= social ================= */
@@ -2232,8 +2246,13 @@ async function refreshSocial(){
 
 /* ================= drawer ================= */
 let curClient=null;
-function closeDrawer(){$('drawer').classList.remove('open');curClient=null;}
+// Set instead of curClient when a Pipeline card has no GHL contact match at
+// all (see openProductionOnlyClient) -- {id, name} of the Deal Production
+// record, so Add note / + Follow-up task still have somewhere to write.
+let curProdOnly=null;
+function closeDrawer(){$('drawer').classList.remove('open');curClient=null;curProdOnly=null;}
 async function openClient(id){
+  curProdOnly=null;
   const r=await fetch('/api/clients/'+id);if(!r.ok)return;
   const d=await r.json();const c=d.client;curClient=c;
   const moneyVisible=d.moneyVisible!==false;
@@ -2321,10 +2340,13 @@ function renderProcess(production){
 async function openProductionOnlyClient(id){
   const r=await fetch('/api/production/'+encodeURIComponent(id));if(!r.ok)return;
   const d=await r.json();const p=d.client;if(!p)return;
-  curClient=null;
-  // No GHL contact behind this card -- SMS/status/affiliate/notes/payments
+  curClient=null;curProdOnly={id:p.id,name:p.name};
+  // No GHL contact behind this card -- SMS/status/affiliate/payment history
   // all act against a GHL contact id this card doesn't have, so hide those
   // sections outright rather than offer a control with nothing to save to.
+  // Add note / + Follow-up task stay available -- see addNoteUI/saveTaskUI,
+  // which write to the Deal Production record and a client-tagged task
+  // instead when curProdOnly is set.
   document.querySelectorAll('.drawer .employeeHide').forEach(el=>el.style.display='none');
   $('drawer').classList.add('open');
   $('dName').textContent=p.name;
@@ -2335,7 +2357,10 @@ async function openProductionOnlyClient(id){
   $('dNotes').innerHTML=(p.notes&&p.notes.length)?p.notes.map(n=>`<div class="noterow">${escUser(n.text)}<div class="mut">${n.who?escUser(n.who)+' · ':''}${n.when?escUser(n.when):''}</div></div>`).join(''):'<div class="cardsub">No notes yet.</div>';
   $('dPays').innerHTML='';
   $('dDisputes').innerHTML='';
-  $('dTasks').innerHTML='<div class="cardsub">No open tasks for this client.</div>';
+  const tasksRes=await(await fetch('/api/tasks')).json();
+  const myTasks=(tasksRes.open||[]).filter(t=>t.clientId===p.id);
+  $('dTasks').innerHTML=myTasks.length?myTasks.map(t=>`<div class="evrow"><span>${escUser(t.title)}${t.assignedToName?' <span class="cardsub">→ '+escUser(t.assignedToName)+'</span>':''}${t.notes?'<br><span class="cardsub">'+escUser(t.notes)+'</span>':''}</span><span class="mut">${t.due||''}</span></div>`).join('')
+    :'<div class="cardsub">No open tasks for this client.</div>';
   $('dSms').value='';$('dNote').value='';$('dSmsRes').textContent='';
   toggleTaskForm(false);
   renderProcess({id:p.id,stage:p.stage,days:p.days,tu:p.tu,eq:p.eq,ex:p.ex,docs:p.docs,va:p.va});
@@ -2355,9 +2380,17 @@ async function setAffiliateUI(override){
   openClient(curClient.id);loadDashboard();
 }
 async function addNoteUI(){
-  const text=$('dNote').value.trim();if(!text||!curClient)return;
-  await fetch('/api/clients/'+curClient.id+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
-  openClient(curClient.id);
+  const text=$('dNote').value.trim();if(!text)return;
+  if(curClient){
+    await fetch('/api/clients/'+curClient.id+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    openClient(curClient.id);
+  }else if(curProdOnly){
+    // No GHL contact behind this card -- goes on the Deal Production
+    // record's own note field instead (server stamps who/when from the
+    // session, same as Deal Production's own drawer).
+    await fetch('/api/production/'+encodeURIComponent(curProdOnly.id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:text})});
+    openProductionOnlyClient(curProdOnly.id);
+  }
 }
 async function sendSmsUI(){
   const message=$('dSms').value.trim();if(!message||!curClient)return;

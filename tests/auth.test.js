@@ -155,11 +155,14 @@ test('an employee reads the top-level Pipeline board identical to Admin (explici
   assert.ok(auth.canAccess('employee', 'GET', '/api/pipeline'));
 });
 
-test('an employee reads Clients read-only (money redaction happens in server.js, not here)', () => {
+test('an employee reads Clients read-only, but can add a note (money redaction happens in server.js, not here)', () => {
   assert.ok(auth.canAccess('employee', 'GET', '/api/clients'));
   assert.ok(auth.canAccess('employee', 'GET', '/api/clients/c1'));
+  // Added 2026-08-05 -- routine client contact from the Pipeline/Clients
+  // detail panel, same spirit as Deal Production's own note field.
+  assert.ok(auth.canAccess('employee', 'POST', '/api/clients/c1/notes'));
   for (const [m, p] of [['POST', '/api/clients'], ['POST', '/api/clients/c1/status'],
-                        ['POST', '/api/clients/c1/affiliate'], ['POST', '/api/clients/c1/notes'],
+                        ['POST', '/api/clients/c1/affiliate'],
                         ['POST', '/api/clients/c1/sms'], ['POST', '/api/clients/c1/contact'],
                         ['POST', '/api/clients/c1/tags']]) {
     assert.equal(auth.canAccess('employee', m, p), false, `employee must not reach ${m} ${p}`);

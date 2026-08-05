@@ -118,3 +118,30 @@ test('the production-only fallback route works for both roles (no money in it ei
     assert.equal(d.client.notes.length, 1);
   }
 });
+
+// The Pipeline panel's Add note / + Follow-up task now work even when a
+// card has no GHL contact match -- openProductionOnlyClient in index.html
+// writes the note straight to the Deal Production record's own note field
+// (PATCH .../notes semantics via the `note` patch key) and tags a task with
+// the production record's own id, exactly like these two calls.
+test('an employee can add a note to a production-only (no-GHL-match) card', async () => {
+  const r = await req('/api/production/S-unmatched', {
+    method: 'PATCH', cookie: employeeCookie, body: { note: 'employee note, no GHL contact behind this one' }
+  });
+  assert.equal(r.status, 200);
+  const d = await (await req('/api/production/S-unmatched', { cookie: employeeCookie })).json();
+  assert.ok(d.client.notes.some(n => n.text === 'employee note, no GHL contact behind this one'));
+});
+
+test('an employee can create and assign a task against a production-only card', async () => {
+  const created = await req('/api/tasks', {
+    method: 'POST', cookie: employeeCookie,
+    body: { title: 'Follow up on sheet-only client', clientId: 'S-unmatched', clientName: 'Sheet-Only Client', assignedTo: null }
+  });
+  assert.equal(created.status, 200);
+  const task = await created.json();
+  assert.equal(task.clientId, 'S-unmatched');
+
+  const list = await (await req('/api/tasks', { cookie: employeeCookie })).json();
+  assert.ok(list.open.some(t => t.clientId === 'S-unmatched' && t.title === 'Follow up on sheet-only client'));
+});
