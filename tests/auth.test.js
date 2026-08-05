@@ -143,12 +143,16 @@ test('an employee may reach the Deal Production routes', () => {
 });
 
 test('an employee is denied the money and admin routes', () => {
-  // /api/clients is NOT in this list -- see the redacted-Clients tests
-  // below (2026-08-05 Company vs Team Dashboard spec).
-  for (const p of ['/api/dashboard', '/api/config', '/api/pipeline',
-                   '/api/reactivation', '/api/social']) {
+  // /api/clients and /api/pipeline are NOT in this list -- Clients is
+  // redacted server-side (see the tests below), and Pipeline was
+  // explicitly opened up identical to Admin's own view on 2026-08-05.
+  for (const p of ['/api/dashboard', '/api/config', '/api/reactivation', '/api/social']) {
     assert.equal(auth.canAccess('employee', 'GET', p), false, `employee must not reach ${p}`);
   }
+});
+
+test('an employee reads the top-level Pipeline board identical to Admin (explicit request, unredacted)', () => {
+  assert.ok(auth.canAccess('employee', 'GET', '/api/pipeline'));
 });
 
 test('an employee reads Clients read-only (money redaction happens in server.js, not here)', () => {
@@ -162,17 +166,14 @@ test('an employee reads Clients read-only (money redaction happens in server.js,
   }
 });
 
-test('an employee may no longer use Follow-Ups', () => {
-  // Reversed 2026-08-05: the Company vs Team Dashboard spec dropped
-  // Follow-Ups from the Employee nav and asked for it to be blocked at the
-  // route level too, not just hidden.
-  assert.equal(auth.canAccess('employee', 'GET', '/api/tasks'), false);
-  assert.equal(auth.canAccess('employee', 'POST', '/api/tasks'), false);
-  assert.equal(auth.canAccess('employee', 'PATCH', '/api/tasks/t1'), false);
-  assert.equal(auth.canAccess('employee', 'DELETE', '/api/tasks/t1'), false);
-  assert.equal(auth.canAccess('employee', 'GET', '/api/tasks/t1/notes'), false);
-  assert.equal(auth.canAccess('employee', 'POST', '/api/tasks/t1/notes'), false);
-  assert.equal(auth.canAccess('employee', 'DELETE', '/api/task-notes/n1'), false);
+test('an employee may use Follow-Ups (a shared team to-do list, not scoped per user)', () => {
+  assert.ok(auth.canAccess('employee', 'GET', '/api/tasks'));
+  assert.ok(auth.canAccess('employee', 'POST', '/api/tasks'));
+  assert.ok(auth.canAccess('employee', 'PATCH', '/api/tasks/t1'));
+  assert.ok(auth.canAccess('employee', 'DELETE', '/api/tasks/t1'));
+  assert.ok(auth.canAccess('employee', 'GET', '/api/tasks/t1/notes'));
+  assert.ok(auth.canAccess('employee', 'POST', '/api/tasks/t1/notes'));
+  assert.ok(auth.canAccess('employee', 'DELETE', '/api/task-notes/n1'));
 });
 
 test('an employee may read the login directory (for assignee/@mention lookups) but not manage it', () => {

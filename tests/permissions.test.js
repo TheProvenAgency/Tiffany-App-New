@@ -60,15 +60,24 @@ after(() => {
 // ------------------------- the boundary -------------------------
 
 test('an employee is refused the money and admin APIs', async () => {
-  // /api/clients is deliberately not in this list -- the 2026-08-05 Company
-  // vs Team Dashboard spec opens a redacted Clients view to employees (see
-  // the "an employee reads Clients with money fields redacted" tests
-  // below). /api/pipeline stays 403: unlike Deal Production, it's a real
-  // revenue board (totalRevenue, per-client totalSpent).
-  for (const p of ['/api/dashboard', '/api/config', '/api/pipeline', '/api/social']) {
+  // /api/clients and /api/pipeline are deliberately not in this list --
+  // Clients opens redacted (see the tests below), and Pipeline was
+  // explicitly opened up identical to Admin's own view on 2026-08-05.
+  for (const p of ['/api/dashboard', '/api/config', '/api/social']) {
     const r = await req(p, { cookie: employeeCookie });
     assert.equal(r.status, 403, `${p} should be 403 for an employee, got ${r.status}`);
   }
+});
+
+test('an employee reads the top-level Pipeline identical to Admin, revenue included', async () => {
+  // Explicit request on 2026-08-05: unlike Clients, this one is NOT
+  // redacted for employees -- same totalRevenue/per-client totalSpent an
+  // Admin sees.
+  const empRes = await req('/api/pipeline', { cookie: employeeCookie });
+  assert.equal(empRes.status, 200);
+  const adminRes = await req('/api/pipeline', { cookie: adminCookie });
+  assert.equal(adminRes.status, 200);
+  assert.deepEqual(await empRes.json(), await adminRes.json(), 'byte-for-byte the same as what Admin sees');
 });
 
 test('an employee reads Clients with money fields redacted', async () => {
@@ -138,26 +147,30 @@ test('an employee can read the login directory, for the assignee dropdown', asyn
   assert.ok(!('password' in (list[0] || {})), 'no password field leaks to an employee');
 });
 
-test('an employee is refused Follow-Ups entirely', async () => {
-  // Reversed 2026-08-05: the Company vs Team Dashboard spec dropped
-  // Follow-Ups from the Employee nav and asked for it to be "blocked at the
-  // route level," not just hidden -- an employee used to be able to
-  // create/note/complete a task here.
+test('an employee can create, note, and complete a Follow-Ups task', async () => {
   const created = await req('/api/tasks', {
     method: 'POST', cookie: employeeCookie,
     body: { title: 'employee follow-up' }
   });
-  assert.equal(created.status, 403);
-  assert.equal((await req('/api/tasks', { cookie: employeeCookie })).status, 403);
+  assert.equal(created.status, 200);
+  const task = await created.json();
 
-  // Made as admin so there's a real task id to probe the sub-routes with.
-  const adminCreated = await req('/api/tasks', {
-    method: 'POST', cookie: adminCookie, body: { title: 'admin follow-up' }
+  const noted = await req(`/api/tasks/${task.id}/notes`, {
+    method: 'POST', cookie: employeeCookie,
+    body: { text: 'left a note as an employee' }
   });
-  const task = await adminCreated.json();
-  assert.equal((await req(`/api/tasks/${task.id}`, { method: 'PATCH', cookie: employeeCookie, body: { done: true } })).status, 403);
-  assert.equal((await req(`/api/tasks/${task.id}/notes`, { cookie: employeeCookie })).status, 403);
-  assert.equal((await req(`/api/tasks/${task.id}/notes`, { method: 'POST', cookie: employeeCookie, body: { text: 'x' } })).status, 403);
+  assert.equal(noted.status, 200);
+
+  const listed = await req(`/api/tasks/${task.id}/notes`, { cookie: employeeCookie });
+  assert.equal(listed.status, 200);
+  const notes = await listed.json();
+  assert.equal(notes.length, 1);
+  assert.equal(notes[0].authorName, 'VA One');
+
+  const patched = await req(`/api/tasks/${task.id}`, {
+    method: 'PATCH', cookie: employeeCookie, body: { done: true }
+  });
+  assert.equal(patched.status, 200);
 });
 
 // ------------------------- dashboard layout default -------------------------

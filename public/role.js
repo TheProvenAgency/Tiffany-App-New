@@ -40,16 +40,18 @@
   // (.railbtn, one per group) always visible on the far left, plus a panel
   // of grouped .navgroup containers (Overview/Clients/Production/Finance/
   // Marketing/Account). The Employee nav (per the 2026-08-05 Company vs Team
-  // Dashboard spec) spans several of those groups now instead of living in
-  // just one: Team Dashboard (Overview), Pipeline + New Clients + Clients
-  // (Clients group; Pipeline is production.js's own pvNavBtn relabeled —
-  // see production.js — New Clients is its pvNewClientsBtn), Messages
-  // (Production group), Change password + Sign out (Account group). Finance
-  // and Marketing stay fully hidden, same as before.
+  // Dashboard spec, revised the same day to add Pipeline + Follow-Ups back)
+  // spans several of those groups now instead of living in just one: Team
+  // Dashboard (Overview), Pipeline + New Clients + Clients (Clients group --
+  // Pipeline is the same top-level revenue-by-round board Admin sees,
+  // identical and unredacted, per explicit request; New Clients is Deal
+  // Production's own pvNewClientsBtn), Deal Production + Follow-Ups +
+  // Messages (Production group), Change password + Sign out (Account
+  // group). Finance and Marketing stay fully hidden, same as before.
   var ALLOWED_GROUPS = { ov: 1, cl: 1, pr: 1, ac: 1 };
   var ALLOWED_IDS = {
-    teamNavBtn: 1, pvNavBtn: 1, pvNewClientsBtn: 1, clientsNavBtn: 1,
-    msgNavBtn: 1, changePwNavBtn: 1, signOutNavBtn: 1
+    teamNavBtn: 1, pipelineNavBtn: 1, pvNavBtn: 1, pvNewClientsBtn: 1, clientsNavBtn: 1,
+    fuNavBtn: 1, msgNavBtn: 1, changePwNavBtn: 1, signOutNavBtn: 1
   };
   function gateNav() {
     // teamNavBtn only exists once team.js's own /api/me check has resolved

@@ -15,16 +15,12 @@ fetch('/api/me').then(function(r){return r.json();}).then(function(m){
     var sbtn=document.getElementById('pvSheetBtn'); if(sbtn)sbtn.style.display='';
   }
   // Employee (or an Admin previewing as one, since m.role is the EFFECTIVE
-  // role -- see GET /api/me in server.js): this module is their Pipeline
-  // and New Clients nav destination too, so relabel/repoint the button this
-  // file already injects, and add a second one for the locked New Clients
-  // queue. Admin's own "Deal Production" button/nav is untouched.
+  // role -- see GET /api/me in server.js): pvNavBtn ("Deal Production")
+  // stays exactly as Admin sees it -- the real top-level Pipeline view is
+  // now open to employees too (see index.html's pipelineNavBtn + role.js),
+  // so there's no need to relabel this one to stand in for it anymore.
+  // Just add the locked New Clients queue button.
   if(m&&m.role==='employee'){
-    var pvBtn=document.getElementById('pvNavBtn');
-    if(pvBtn){
-      pvBtn.lastChild.textContent='Pipeline';
-      pvBtn.setAttribute('onclick','pvGoBoard()');
-    }
     var navCl=document.getElementById('navClients');
     if(navCl&&!document.getElementById('pvNewClientsBtn')){
       var nb=document.createElement('button');nb.id='pvNewClientsBtn';nb.setAttribute('onclick','pvGoNewClients()');
@@ -399,9 +395,10 @@ function renderProduction(){
   if(!document.getElementById('pvChips')){return;}
   if(!loaded){ loadThen(function(){renderProduction();}); return; }
   document.getElementById('pvFoot').textContent='Team-shared client book ('+fmt(CLIENTS.length)+' clients from the credit-repair sheet) — every status, document, and note saves to the server for the whole team. Logins and credentials are never shown.';
-  // Locked mode (Employee "New Clients") is a single fixed queue -- no
-  // switching to Overview/Board from there. Full Pipeline access (pvGoBoard)
-  // always clears lockedFilter first, so this never affects Admin.
+  // Locked mode (Employee "New Clients", see pvGoNewClients below) is a
+  // single fixed queue -- no switching to Overview/Board from there.
+  // Normal Deal Production navigation always leaves lockedFilter false, so
+  // this never affects Admin.
   var tabs=document.querySelector('#view-production .pv-tabs');
   if(tabs)tabs.style.display=lockedFilter?'none':'';
   renderChips();
@@ -419,24 +416,15 @@ window.pvSetPV=function(v){
   document.getElementById('pvBoardView').style.display=v==='board'?'':'none';
   renderProduction();
 };
-// Employee "Pipeline" nav entry point (also used to relabel pvNavBtn's
-// onclick above) -- the full module, landing on the Kanban board, nothing
-// locked or hidden ("strip nothing here" per the build spec, since none of
-// Deal Production carries a dollar figure).
-window.pvGoBoard=function(){
-  lockedFilter=false; curFilter='all'; curPage=1;
-  showView('production'); pvSetPV('board');
-  var pt=document.getElementById('pageTitle'); if(pt)pt.textContent='Pipeline';
-};
 // Employee "New Clients" nav entry point -- Queue, forced to the
 // 'newclients' filter, chips/tab-switcher hidden (see renderChips/
 // renderProduction above) so it reads as one fixed worklist.
 window.pvGoNewClients=function(){
   lockedFilter=true; curFilter='newclients'; curPage=1;
   showView('production'); pvSetPV('queue');
-  // showView('production') always highlights pvNavBtn ("Pipeline") as the
-  // active nav item -- point the highlight at New Clients instead since
-  // that's the button actually clicked.
+  // showView('production') always highlights pvNavBtn ("Deal Production")
+  // as the active nav item -- point the highlight at New Clients instead
+  // since that's the button actually clicked.
   var pvBtn=document.getElementById('pvNavBtn'); if(pvBtn)pvBtn.classList.remove('on');
   var ncBtn=document.getElementById('pvNewClientsBtn'); if(ncBtn)ncBtn.classList.add('on');
   var pt=document.getElementById('pageTitle'); if(pt)pt.textContent='New Clients';
