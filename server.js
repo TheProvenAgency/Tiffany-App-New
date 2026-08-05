@@ -1385,7 +1385,10 @@ app.get('/api/pipeline', async (req, res) => {
       .sort((a, b) => order(a[0]) - order(b[0]))
       .map(([name, v]) => ({
         name, count: v.clients.length, revenue: Math.round(v.revenue),
-        clients: v.clients.sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0)).slice(0, 30)
+        // Every client in the column, not just the top 30 by spend -- the
+        // board's own column scrolls (see .pipe-col in index.html) so
+        // there's somewhere for the rest to go.
+        clients: v.clients.sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0))
       }));
     res.json({
       totalActive: active.length + prodMerged,
