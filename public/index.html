@@ -608,15 +608,20 @@ section.view{display:none} section.view.on{display:block}
 .pipe-chev .pc-count{font-size:16px;font-weight:800;margin-top:1px}
 .pipe-col{transition:box-shadow .2s ease,border-color .2s ease}
 .pipe-col.hl{border-color:#7c5cff !important;box-shadow:0 0 0 3px rgba(124,92,255,.22)}
-/* Every round/stage is a separate column here -- an obvious horizontal
-   scrollbar at the bottom of the board (rather than the default
-   thin/hover-only one) is the cue that there's more to the right, on top
-   of the chevron row above already letting you jump straight to one. */
-#pipeBoard{scrollbar-width:auto;scrollbar-color:#7c5cff #efeae0}
-#pipeBoard::-webkit-scrollbar{height:14px}
-#pipeBoard::-webkit-scrollbar-track{background:#efeae0;border-radius:8px}
-#pipeBoard::-webkit-scrollbar-thumb{background:#7c5cff;border-radius:8px;border:3px solid #efeae0}
-#pipeBoard::-webkit-scrollbar-thumb:hover{background:#6a4ce0}
+/* A real native scrollbar's visibility depends on the browser/OS (Safari
+   and macOS's default "only while scrolling" setting hide it no matter
+   what CSS says) -- this is a plain div track+thumb instead, always
+   rendered, drag or click to move -- see pipeScrollInit()/updatePipeScroll
+   below. Every round/stage is a separate column, so this is the cue
+   there's more to the right, on top of the click-to-jump chevrons above. */
+.pipe-scrolltrack{height:12px;background:#efeae0;border-radius:7px;margin-top:10px;position:relative;cursor:pointer}
+.pipe-scrollthumb{position:absolute;top:0;left:0;height:100%;background:#7c5cff;border-radius:7px;cursor:grab;min-width:30px}
+.pipe-scrollthumb:hover{background:#6a4ce0}
+.pipe-scrollthumb.dragging{cursor:grabbing;background:#6a4ce0}
+/* The custom track above is the only visible scroll control -- hide the
+   board's own native one so there isn't a confusing second bar. */
+.pipe-board-scroll{scrollbar-width:none}
+.pipe-board-scroll::-webkit-scrollbar{display:none}
 
 .statchips span{background:#f8f9fc;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
 .statchips b{color:var(--ink)}
@@ -1128,7 +1133,8 @@ section.view{display:none} section.view.on{display:block}
       <h3 class="cardtitle">Credit Repair Delivery — active clients by round</h3>
       <div class="statchips" id="pipeStats" style="margin-top:10px"></div>
       <div class="pipe-chev-row" id="pipeChevrons"></div>
-      <div id="pipeBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:14px"></div>
+      <div id="pipeBoard" class="pipe-board-scroll" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:4px"></div>
+      <div class="pipe-scrolltrack" id="pipeScrollTrack"><div class="pipe-scrollthumb" id="pipeScrollThumb"></div></div>
     </div>
   </section>
 
@@ -2002,6 +2008,7 @@ async function loadPipeline(){
         <div style="color:var(--muted);font-size:11px;margin-top:2px">${c.deal||''}${c.totalSpent?' · '+fmt$(c.totalSpent):''}</div></div>`).join('')}
       </div>
     </div>`).join('');
+  requestAnimationFrame(updatePipeScroll);
 }
 function focusPipeCol(i){
   document.querySelectorAll('.pipe-chev.active').forEach(el=>el.classList.remove('active'));
@@ -2010,6 +2017,55 @@ function focusPipeCol(i){
   if(chev)chev.classList.add('active');
   if(col){ col.classList.add('hl'); col.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
 }
+
+/* ---- custom horizontal scroll bar for #pipeBoard -- plain div track+thumb,
+   not a native scrollbar, so it renders the same in every browser/OS
+   regardless of "only show scrollbars while scrolling" settings. ---- */
+function updatePipeScroll(){
+  const board=$('pipeBoard'),track=$('pipeScrollTrack'),thumb=$('pipeScrollThumb');
+  if(!board||!track||!thumb)return;
+  const scrollable=board.scrollWidth-board.clientWidth;
+  if(scrollable<=1){track.style.display='none';return;}
+  track.style.display='';
+  const trackW=track.clientWidth;
+  const thumbW=Math.max(30,trackW*(board.clientWidth/board.scrollWidth));
+  thumb.style.width=thumbW+'px';
+  thumb.style.left=((trackW-thumbW)*(board.scrollLeft/scrollable))+'px';
+}
+(function initPipeScrollbar(){
+  const board=$('pipeBoard'),track=$('pipeScrollTrack'),thumb=$('pipeScrollThumb');
+  if(!board||!track||!thumb)return;
+  board.addEventListener('scroll',updatePipeScroll);
+  window.addEventListener('resize',updatePipeScroll);
+  let dragging=false,startX=0,startLeft=0;
+  function down(e){
+    dragging=true;thumb.classList.add('dragging');
+    startX=(e.touches?e.touches[0].clientX:e.clientX);
+    startLeft=board.scrollLeft;
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  }
+  function move(e){
+    if(!dragging)return;
+    const clientX=(e.touches?e.touches[0].clientX:e.clientX);
+    const scrollable=board.scrollWidth-board.clientWidth;
+    board.scrollLeft=startLeft+(clientX-startX)*(scrollable/track.clientWidth);
+  }
+  function up(){dragging=false;thumb.classList.remove('dragging');document.body.style.userSelect='';}
+  thumb.addEventListener('mousedown',down);
+  thumb.addEventListener('touchstart',down,{passive:false});
+  document.addEventListener('mousemove',move);
+  document.addEventListener('touchmove',move,{passive:false});
+  document.addEventListener('mouseup',up);
+  document.addEventListener('touchend',up);
+  // Click anywhere on the track (not the thumb itself) to jump straight there.
+  track.addEventListener('click',e=>{
+    if(e.target===thumb)return;
+    const rect=track.getBoundingClientRect();
+    const ratio=(e.clientX-rect.left)/rect.width;
+    board.scrollLeft=ratio*(board.scrollWidth-board.clientWidth);
+  });
+})();
 /* ================= clients ================= */
 async function loadClients(){
   const qs=new URLSearchParams({page,pageSize:25,sort,dir,q:$('q').value,status:$('fStatus').value,deal:$('fDeal').value,round:$('fRound').value,affiliate:$('fAffiliate').value});
