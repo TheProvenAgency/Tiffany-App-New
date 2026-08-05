@@ -538,6 +538,18 @@ section.view{display:none} section.view.on{display:block}
 .drawer .close{position:absolute;top:16px;right:18px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
 .dsec{margin-top:20px}
 .dsec h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+/* Process section (drawer) -- Deal Production's stage/bureau/next-step
+   info shown alongside a GHL contact record, or standalone when a card has
+   no GHL match (see openProductionOnlyClient). No dollar figures here. */
+.proc-stage{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#efeae0;color:#7a7461}
+.proc-next{background:var(--gold-soft);color:#8a6516;border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;margin-top:10px}
+.proc-bureaus{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.proc-mini{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.proc-mini.done{background:var(--green-soft);color:#1f6a45}
+.proc-mini.ready{background:var(--blue-soft);color:#27508c}
+.proc-mini.login{background:var(--red-soft);color:#8f2b25}
+.proc-mini.none{background:#efeae0;color:#a49a86}
+.proc-docs{color:var(--muted);font-size:11.5px;margin-top:8px}
 /* soft tinted stat tiles -- no hard border, just a color wash so the eye
    can tell "this is money" (green), "this needs attention" (red/gold),
    or "this is just a count" (neutral) without reading the label first. */
@@ -596,6 +608,15 @@ section.view{display:none} section.view.on{display:block}
 .pipe-chev .pc-count{font-size:16px;font-weight:800;margin-top:1px}
 .pipe-col{transition:box-shadow .2s ease,border-color .2s ease}
 .pipe-col.hl{border-color:#7c5cff !important;box-shadow:0 0 0 3px rgba(124,92,255,.22)}
+/* Every round/stage is a separate column here -- an obvious horizontal
+   scrollbar at the bottom of the board (rather than the default
+   thin/hover-only one) is the cue that there's more to the right, on top
+   of the chevron row above already letting you jump straight to one. */
+#pipeBoard{scrollbar-width:auto;scrollbar-color:#7c5cff #efeae0}
+#pipeBoard::-webkit-scrollbar{height:14px}
+#pipeBoard::-webkit-scrollbar-track{background:#efeae0;border-radius:8px}
+#pipeBoard::-webkit-scrollbar-thumb{background:#7c5cff;border-radius:8px;border:3px solid #efeae0}
+#pipeBoard::-webkit-scrollbar-thumb:hover{background:#6a4ce0}
 
 .statchips span{background:#f8f9fc;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
 .statchips b{color:var(--ink)}
@@ -1252,6 +1273,7 @@ section.view{display:none} section.view.on{display:block}
     <div class="dactions" id="dActions"></div>
   </div>
   <div class="dbody">
+    <div class="dsec" id="dProcessSec" style="display:none"><h4>Process</h4><div id="dProcess"></div></div>
     <div class="dsec employeeHide"><h4>Send text (via GoHighLevel)</h4>
       <textarea id="dSms" placeholder="Type a message…"></textarea>
       <div class="dactions"><button class="btn primary" onclick="sendSmsUI()">Send SMS</button><span class="testres" id="dSmsRes"></span></div>
@@ -1975,7 +1997,7 @@ async function loadPipeline(){
       <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="font-size:13px">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span></div>
       <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:10px">${col.revenue?fmt$(col.revenue):'—'}</div>
       <div style="overflow-y:auto;max-height:min(560px,calc(100vh - 340px));padding-right:2px">
-      ${col.clients.map(c=>`<div onclick="openClient('${c.id}')" style="cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px">
+      ${col.clients.map(c=>`<div onclick="${c.kind==='production'?`openProductionOnlyClient('${c.id}')`:`openClient('${c.id}')`}" style="cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px">
         <div style="font-weight:600;font-size:12.5px">${c.name}</div>
         <div style="color:var(--muted);font-size:11px;margin-top:2px">${c.deal||''}${c.totalSpent?' · '+fmt$(c.totalSpent):''}</div></div>`).join('')}
       </div>
@@ -2254,6 +2276,69 @@ async function openClient(id){
     :'<div class="cardsub">No open tasks for this client.</div>';
   $('dSms').value='';$('dNote').value='';$('dSmsRes').textContent='';
   toggleTaskForm(false);
+  renderProcess(d.production);
+}
+
+/* ---- Process section: Deal Production's stage/bureau/next-step, shown
+   alongside a GHL contact record when there's a match (server cross-
+   references by ghlId, see findProductionMatch in server.js), or standalone
+   via openProductionOnlyClient below when a Pipeline card has no GHL match
+   at all. No dollar figures anywhere in here. ---- */
+function procBureaus(p){return [['TransUnion',p.tu],['Equifax',p.eq],['Experian',p.ex]];}
+function procAnyLogin(p){return procBureaus(p).some(([,b])=>b&&b.st==='login');}
+function procAnyReady(p){for(const [,b] of procBureaus(p))if(b&&b.st==='ready')return b;return null;}
+function procDocsDone(p){return Object.values(p.docs||{}).filter(Boolean).length;}
+function procDocsTotal(p){return Object.keys(p.docs||{}).length||8;}
+function procNextStep(p){
+  if(p.stage==='Onboarding')return 'Onboard the client and collect documents.';
+  if(procAnyLogin(p))return 'MyFreeScoreNow login is blocked — chase before the next round.';
+  if(procDocsDone(p)<procDocsTotal(p))return 'Collect the remaining documents before disputing.';
+  const ready=procAnyReady(p);
+  if(ready)return 'Ready to submit round '+ready.r+'.';
+  if(p.stage==='Completed')return 'Program complete — consider a mentorship upsell.';
+  return 'Awaiting the next dispute window.';
+}
+function renderProcess(production){
+  const sec=$('dProcessSec');
+  if(!production){ sec.style.display='none'; $('dProcess').innerHTML=''; return; }
+  sec.style.display='';
+  const bureaus=procBureaus(production).map(([label,b])=>{
+    const st=(b&&b.st)||'none';
+    const txt=st==='none'?label+' —':label+' R'+(b.r||0)+(st==='done'?' ✓':st==='login'?' ⛔':st==='ready'?' ready':'');
+    return `<span class="proc-mini ${st}">${txt}</span>`;
+  }).join('');
+  $('dProcess').innerHTML=`
+    <span class="proc-stage">${escUser(production.stage||'—')}</span>
+    ${production.va?`<span class="cardsub" style="margin-left:8px">Assigned: ${escUser(production.va)}</span>`:''}
+    <div class="proc-bureaus">${bureaus}</div>
+    <div class="proc-docs">${procDocsDone(production)}/${procDocsTotal(production)} documents collected${production.days!=null?' · '+production.days+'d in '+(production.stage||'this stage').toLowerCase():''}</div>
+    <div class="proc-next">${escUser(procNextStep(production))}</div>`;
+}
+// A Pipeline card with no GHL contact match at all (an old Deal Production
+// sheet-import that was never reconciled) -- GET /api/production/:id is the
+// same route the Deal Production drawer already uses, already
+// employee-permitted, no money in it either way.
+async function openProductionOnlyClient(id){
+  const r=await fetch('/api/production/'+encodeURIComponent(id));if(!r.ok)return;
+  const d=await r.json();const p=d.client;if(!p)return;
+  curClient=null;
+  // No GHL contact behind this card -- SMS/status/affiliate/notes/payments
+  // all act against a GHL contact id this card doesn't have, so hide those
+  // sections outright rather than offer a control with nothing to save to.
+  document.querySelectorAll('.drawer .employeeHide').forEach(el=>el.style.display='none');
+  $('drawer').classList.add('open');
+  $('dName').textContent=p.name;
+  $('dMeta').innerHTML=`${p.pkg?'package: <b>'+escUser(p.pkg)+'</b>':''}<br><span class="cardsub">No GoHighLevel contact matched yet — showing Deal Production only.</span>`;
+  $('dStats').innerHTML='';
+  $('dActions').innerHTML='';
+  $('dAffiliate').innerHTML='';
+  $('dNotes').innerHTML=(p.notes&&p.notes.length)?p.notes.map(n=>`<div class="noterow">${escUser(n.text)}<div class="mut">${n.who?escUser(n.who)+' · ':''}${n.when?escUser(n.when):''}</div></div>`).join(''):'<div class="cardsub">No notes yet.</div>';
+  $('dPays').innerHTML='';
+  $('dDisputes').innerHTML='';
+  $('dTasks').innerHTML='<div class="cardsub">No open tasks for this client.</div>';
+  $('dSms').value='';$('dNote').value='';$('dSmsRes').textContent='';
+  toggleTaskForm(false);
+  renderProcess({id:p.id,stage:p.stage,days:p.days,tu:p.tu,eq:p.eq,ex:p.ex,docs:p.docs,va:p.va});
 }
 async function setStatusUI(status){
   if(!curClient)return;

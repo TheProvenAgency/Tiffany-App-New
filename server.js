@@ -994,6 +994,25 @@ app.get('/api/clients', async (req, res) => {
 });
 
 // ------------------------- client detail + management -------------------------
+
+// Cross-references a GHL contact against Deal Production by ghlId (stamped
+// on a production record whenever it's reconciled from a real GHL contact --
+// see 'G' + c.id / ghlId: c.id below and in the sheet-sync route). Deal
+// Production is the actual system of record for "where a client is in the
+// process" -- stage, per-bureau round status, documents -- so a client
+// detail panel opened from Pipeline or the Clients table can show it
+// alongside the GHL contact record instead of just a flat round number.
+// No dollar figures in here, so this needs no role redaction either way.
+function findProductionMatch(ghlId) {
+  if (!ghlId) return null;
+  const prod = readProd() || [];
+  return prod.find(p => p.ghlId === ghlId) || null;
+}
+function productionSummary(p) {
+  if (!p) return null;
+  return { id: p.id, stage: p.stage, days: p.days || 0, tu: p.tu, eq: p.eq, ex: p.ex, docs: p.docs, va: p.va };
+}
+
 app.get('/api/clients/:id', async (req, res) => {
   try {
     const clients = withAffiliateTags(await getClients());
@@ -1015,7 +1034,8 @@ app.get('/api/clients/:id', async (req, res) => {
       notes: store.getNotes(c.id).sort((a, b) => b.at.localeCompare(a.at)),
       tasks: store.getTasks().filter(t => t.clientId === c.id && !t.done),
       worked: store.getWorked()[c.id] || null,
-      moneyVisible
+      moneyVisible,
+      production: productionSummary(findProductionMatch(c.id))
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1367,7 +1387,10 @@ app.get('/api/pipeline', async (req, res) => {
     for (const c of active) {
       const key = c.round ? 'Round ' + c.round : 'New / Onboarding';
       cols[key] = cols[key] || { clients: [], revenue: 0 };
-      cols[key].clients.push({ id: c.id, name: c.name, deal: c.deal, totalSpent: c.totalSpent, lastPaymentDate: c.lastPaymentDate });
+      // kind:'ghl' -- a real GHL contact id, so the client-side detail panel
+      // opens it via GET /api/clients/:id (which now also carries the Deal
+      // Production cross-reference itself, see findProductionMatch above).
+      cols[key].clients.push({ id: c.id, kind: 'ghl', name: c.name, deal: c.deal, totalSpent: c.totalSpent, lastPaymentDate: c.lastPaymentDate });
       cols[key].revenue += c.totalSpent || 0;
     }
     const prod = readProd() || [];
@@ -1377,7 +1400,17 @@ app.get('/api/pipeline', async (req, res) => {
       const key = prodStageKey[p.stage];
       if (!key) continue; // 'Ready' isn't part of this board -- only onboarding/completed bookend it
       cols[key] = cols[key] || { clients: [], revenue: 0 };
-      cols[key].clients.push({ id: p.id, name: p.name, deal: p.pkg, totalSpent: 0, lastPaymentDate: null });
+      // These come from Deal Production, not the GHL contact list -- p.id
+      // is a production-only id and would 404 against /api/clients/:id.
+      // Use the real GHL contact id when this record has one (reconciled
+      // from GHL, see 'G' + c.id / ghlId: c.id elsewhere in this file), and
+      // fall back to a production-only detail lookup (GET /api/production/:id)
+      // when it doesn't -- e.g. an old sheet-import with no GHL match yet.
+      cols[key].clients.push({
+        id: p.ghlId || p.id, kind: p.ghlId ? 'ghl' : 'production',
+        name: p.name, deal: p.pkg, totalSpent: 0, lastPaymentDate: null,
+        production: productionSummary(p)
+      });
       prodMerged++;
     }
     const order = k => k === 'New / Onboarding' ? 0 : k === 'Done' ? 999 : parseInt(k.replace('Round ', '')) || 500;
