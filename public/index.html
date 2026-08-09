@@ -105,8 +105,23 @@ body:has(#sidebar.collapsed) .navCollapseToggle{left:78px}
 .navrail .railbtn:hover{background:#f4f6fa;color:var(--sidebar-ink)}
 .navrail .railbtn.on{background:var(--pink);color:#fff}
 .navpanel{width:238px;min-width:238px;background:var(--sidebar);color:var(--sidebar-ink);height:100%;
-  display:flex;flex-direction:column;padding:14px 0;overflow-y:auto;transition:margin-left .16s ease,opacity .16s ease;
+  display:flex;flex-direction:column;padding:14px 0 64px;overflow-y:auto;transition:margin-left .16s ease,opacity .16s ease;
   border-right:1px solid var(--sidebar-line);box-shadow:0 0 24px rgba(24,27,44,.06)}
+/* Settings pinned to the sidebar's bottom-left (Admina pattern), CSS-only:
+   the button keeps its exact DOM spot inside the Account group and its
+   onclick untouched -- position:fixed just paints it at the bottom of the
+   fixed sidebar (left 72px = 64px rail + the 8px button margin, width
+   222px = the same calc(100% - 16px) every nav button gets). It hides
+   with the panel automatically: ancestor opacity:0 + pointer-events:none
+   from aside.collapsed .navpanel apply to fixed descendants too. The
+   64px bottom padding on .navpanel above reserves room so scrolled nav
+   content never sits underneath it; the solid sidebar background +
+   hairline top border keep it legible over anything scrolling past. */
+.nav[data-g="ac"] button[onclick^="openSettings"]{position:fixed;left:72px;bottom:12px;width:222px;margin:0;
+  background:var(--sidebar);border-top:1px solid var(--sidebar-line);border-radius:11px;z-index:5}
+/* (this selector outranks the generic .nav button:hover, so restate the
+   hover feedback at matching specificity) */
+.nav[data-g="ac"] button[onclick^="openSettings"]:hover{background:var(--sidebar-line)}
 aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
 .brand{display:flex;align-items:center;gap:11px;padding:16px 18px 16px;border-bottom:1px solid var(--sidebar-line)}
 .brand img{height:38px;width:auto;display:block;flex:0 0 auto}
@@ -158,7 +173,7 @@ aside.collapsed .navpanel{margin-left:-238px;opacity:0;pointer-events:none}
    to 0 in lockstep with the sidebar via the body:has() rule below. */
 main{flex:1;min-width:0;padding:0 26px 40px;margin-left:302px;transition:margin-left .16s ease}
 body:has(#sidebar.collapsed) main{margin-left:64px}
-header{display:flex;align-items:center;gap:14px;padding:16px 0 10px;position:sticky;top:0;background:var(--bg);z-index:40}
+header{display:flex;align-items:center;gap:14px;padding:18px 0 14px;position:sticky;top:0;background:var(--bg);z-index:40}
 /* Header icon row (theme toggle + Messages/Notifications dropdowns) --
    modeled on Admina's circular header buttons: plain neutral icon in a
    soft rounded square, filled/tinted on hover, small red dot instead of
@@ -176,7 +191,7 @@ html[data-theme="dark"] .hdr-sun{display:none}
 html[data-theme="dark"] .hdr-moon{display:block}
 .hdr-dd{position:relative}
 .hdr-ddpanel{display:none;position:absolute;right:0;top:46px;width:320px;background:var(--card);
-  border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 28px rgba(20,30,25,.14);
+  border:1px solid var(--line);border-radius:14px;box-shadow:4px 8px 24px 0 rgba(182,182,182,.2);
   overflow:hidden;z-index:60}
 .hdr-dd.open .hdr-ddpanel{display:block}
 .hdr-ddhead{padding:12px 16px;font-weight:700;font-size:13.5px;color:var(--ink);
@@ -200,7 +215,11 @@ header h1{font-size:19px;margin:0;font-weight:700}
 .search{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:250px;font-size:13px;color:var(--ink)}
 .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--rose));color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
 /* filter row */
-.filters{display:flex;align-items:center;gap:8px;background:var(--filters-bg);border-radius:12px;padding:7px 10px;margin-bottom:16px;flex-wrap:wrap;transition:background .2s ease}
+/* filter row floats flat on the page canvas (Admina restraint) -- the
+   tinted --filters-bg well is gone; the active chip's white pill and the
+   .gran segmented control (which keeps its light well, it groups real
+   options) provide all the structure needed. */
+.filters{display:flex;align-items:center;gap:8px;background:none;border-radius:12px;padding:4px 0;margin-bottom:16px;flex-wrap:wrap;transition:background .2s ease}
 .chip{background:none;border:none;padding:6px 12px;border-radius:8px;font-size:12.5px;color:var(--muted);cursor:pointer;font-weight:600}
 .chip.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .rangebox{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
@@ -209,11 +228,12 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .gran{margin-left:auto;display:flex;gap:2px;background:var(--filters-well);border-radius:9px;padding:3px}
 .gran button{border:none;background:none;padding:5px 13px;font-size:12.5px;border-radius:7px;color:var(--muted);cursor:pointer;font-weight:600}
 .gran button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-/* cards -- rounder + a softer lifted shadow so cards read as distinct
-   surfaces at a glance, closer to the reference dashboards. */
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:none}
-.card.hero{border-top:1px solid var(--line)}
-.card.moneycard{border-top:1px solid var(--line)}
+/* cards -- Admina treatment: no hard border, separation comes from the
+   soft card shadow (Admina's --shadow-7 / .card box-shadow, read from
+   admina-assets/css/style.css) plus whitespace. In dark mode the shadow
+   is invisible and the card-vs-bg contrast (dark-2 on dark-1) does the
+   separating, exactly like Admina's own dark theme. */
+.card{background:var(--card);border:none;border-radius:20px;padding:24px;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05)}
 /* gradient KPI stat cards -- the "at a glance" headline numbers, in
    Tiffany's brand colors (pink/rose) plus a couple of complementary
    accents so four in a row don't read as one flat block. */
@@ -224,13 +244,13 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
    cards off-screen to the right. min-width:0 on the card itself and a
    hard max-width on the sparkline close the same hole from the other
    side. */
-.kpi{background:var(--card);border:1px solid var(--line);border-top-width:3px;border-top-style:solid;border-radius:16px;padding:16px 18px;
-  box-shadow:0 1px 3px rgba(20,20,30,.04);display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;overflow:hidden}
+.kpi{background:var(--card);border:none;border-top:3px solid transparent;border-radius:16px;padding:18px 20px;
+  box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05);display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;overflow:hidden}
 .kpi>div{display:flex;flex-direction:column;min-width:0}
-.kpi .ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:10px;flex:0 0 auto}
-.kpi .l{font-size:11px;color:var(--muted);font-weight:600}
-.kpi b{display:block;font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--ink);margin-top:2px}
-.kpi .delta{font-size:11px;font-weight:700;margin-top:3px;display:inline-flex;align-items:center;gap:3px}
+.kpi .ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:12px;flex:0 0 auto}
+.kpi .l{font-size:11px;color:var(--muted);font-weight:500}
+.kpi b{display:block;font-size:22px;font-weight:800;letter-spacing:-.01em;line-height:1.2;color:var(--ink);margin-top:5px}
+.kpi .delta{font-size:11px;font-weight:700;margin-top:6px;display:inline-flex;align-items:center;gap:3px}
 .kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--gold)}
 .kpi .spark{display:block;width:76px!important;max-width:76px;height:40px!important;max-height:40px;flex:0 0 auto}
 .kpi .miniring{width:44px;height:44px;border-radius:50%;padding:5px;flex:0 0 auto;
@@ -264,14 +284,14 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .cb-ring.ring{position:absolute;right:0;bottom:0;width:clamp(38px,14cqw,56px);height:clamp(38px,14cqw,56px);padding:clamp(3px,1cqw,5px)}
 .cb-ring.ring .hole b{font-size:clamp(8.5px,3cqw,12px)}
 .cb-ring.ring .hole span{font-size:clamp(5px,1.6cqw,6.5px)}
-.grid{display:grid;gap:14px}
+.grid{display:grid;gap:20px}
 /* ============ customizable dashboard grid (GridStack.js) ============
    True free-form drag-anywhere + drag-resize, with other cards pushed
    aside/down automatically -- GridStack handles all of the collision
    and reflow logic; we just theme it and toggle edit mode on/off. */
-.dashbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.grid-stack{margin:0 -7px}
-.grid-stack-item-content{position:absolute;inset:7px;overflow:hidden;background:none;
+.dashbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.grid-stack{margin:0 -10px}
+.grid-stack-item-content{position:absolute;inset:10px;overflow:hidden;background:none;
   /* lets any card inside size its text/number off the ACTUAL box it's been
      dragged/resized to (via the cq* units below), instead of every card
      reading the same size regardless of how big or small it's been made */
@@ -439,12 +459,11 @@ h3.cardtitle{margin:0;font-size:14.5px;display:flex;align-items:center;gap:8px}
 .cardtitle .cico i{font-size:15px;line-height:1}
 .rv-kpi-donut{border-top-color:var(--line)!important}
 h3.cardtitle .sub{display:block}
-.cardsub{color:var(--muted);font-size:12px;margin-top:2px}
+.cardsub{color:var(--muted);font-size:12px;margin-top:4px}
 .linklike{margin-left:auto;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none}
 /* hero */
 .hero{display:grid;grid-template-columns:1fr}
-.hero .big{font-size:50px;font-weight:900;letter-spacing:-.02em;margin:6px 0 2px;color:var(--green);
-  text-shadow:0 1px 0 rgba(255,255,255,.5)}
+.hero .big{font-size:50px;font-weight:900;letter-spacing:-.02em;margin:8px 0 4px;color:var(--green)}
 .hero .big sup{font-size:24px;font-weight:800;vertical-align:26px;color:var(--green)}
 .hero .note{color:var(--muted);font-size:12.5px}
 .hero .note b.up{color:var(--green)} .hero .note b.down{color:var(--red)}
@@ -476,7 +495,7 @@ h3.cardtitle .sub{display:block}
 .segbar .cb-seg{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
 .segbar .cb-segpct{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
 .segbar .cb-segbar{height:10px;width:100%;border-radius:6px}
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .tile{border:1px solid var(--line);border-radius:13px;padding:clamp(7px,2.4cqh,11px) clamp(8px,2.6cqw,13px);cursor:pointer;transition:transform .15s ease,border-color .15s ease;min-width:0}
 .tile:hover{border-color:#c9cedb;transform:translateY(-2px)}
 .tile .dot2{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
@@ -528,7 +547,17 @@ tr:hover td{background:#f8f9fc}
 .tbar input{flex:1;min-width:180px}
 .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--muted);font-size:12.5px}
 .pager button{background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink)}
-section.view{display:none} section.view.on{display:block}
+section.view{display:none} section.view.on{display:block;animation:viewFade .25s ease}
+/* View-swap fade -- Admina's real tab/panel entry animation (tsFade in
+   admina-assets/css/style.css: opacity 0->1 over 0.25s ease with a 6px
+   offset, fired by the same display:none->block flip we use). Their
+   offset is translateX(6px) on a horizontally-swapping menu panel; for
+   full-page views entering below the header the same 6px ride is
+   vertical. No fill-mode: once it finishes, no transform lingers (so
+   nothing inside is ever left with a transformed containing block --
+   all fixed-position drawers/overlays live outside these sections
+   anyway). */
+@keyframes viewFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* drawer */
 .drawer{position:fixed;top:0;right:-580px;width:560px;max-width:95vw;height:100vh;background:#fff;border-left:1px solid var(--line);
   z-index:120;transition:right .25s;overflow-y:auto;box-shadow:-18px 0 50px rgba(30,25,15,.15)}
@@ -552,19 +581,15 @@ section.view{display:none} section.view.on{display:block}
 .proc-mini.login{background:var(--red-soft);color:#8f2b25}
 .proc-mini.none{background:#efeae0;color:#a49a86}
 .proc-docs{color:var(--muted);font-size:11.5px;margin-top:8px}
-/* soft tinted stat tiles -- no hard border, just a color wash so the eye
-   can tell "this is money" (green), "this needs attention" (red/gold),
-   or "this is just a count" (neutral) without reading the label first. */
+/* stat tiles float flat on the card (Admina restraint) -- the nested
+   gray wells (--tile-bg / tone-* washes, which had all converged on the
+   same neutral tint anyway, carrying no meaning) are gone; label/number
+   contrast does the work. Hover lift retained on clickable ones. */
 .dstat{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,2cqw,10px);margin-top:clamp(8px,2.6cqh,14px)}
-.dstat div{background:var(--tile-bg);border-radius:14px;padding:clamp(7px,2.2cqh,12px) clamp(8px,2.6cqw,14px);transition:transform .15s ease,background .2s ease;min-width:0}
-.dstat div[onclick]:hover{transform:translateY(-2px)}
+.dstat div{background:none;border-radius:14px;padding:clamp(7px,2.2cqh,12px) clamp(8px,2.6cqw,14px);transition:transform .15s ease,background .2s ease;min-width:0}
+.dstat div[onclick]:hover{transform:translateY(-2px);background:var(--tile-bg-2)}
 .dstat .l{font-size:clamp(8px,2.4cqw,10px);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dstat .v{font-size:clamp(12.5px,4.2cqw,17px);font-weight:800;margin-top:3px}
-.dstat div.tone-green{background:var(--tile-bg-2)}
-.dstat div.tone-red{background:var(--tile-bg-2)}
-.dstat div.tone-gold{background:var(--tile-bg-2)}
-.dstat div.tone-blue{background:var(--tile-bg-2)}
-.dstat div.tone-pink{background:var(--tile-bg-2)}
+.dstat .v{font-size:clamp(12.5px,4.2cqw,17px);font-weight:800;margin-top:4px}
 .evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eef0f5;font-size:12.5px}
 .evrow .mut{color:var(--muted)}
 .noterow{background:#f8f9fc;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
