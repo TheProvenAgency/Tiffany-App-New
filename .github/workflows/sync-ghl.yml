@@ -1,0 +1,39 @@
+name: Sync GHL to Deal Production
+
+# Runs the same gap-fill as the admin "Reconcile" button, automatically,
+# every 12 hours -- picks up new GHL contacts that haven't been manually
+# reconciled into Deal Production yet.
+#
+# Triggered externally (not an in-process setInterval in server.js) because
+# the app runs on Render's free tier, which has no persistent disk and
+# spins the instance down after ~15 minutes of no traffic -- an in-process
+# timer would be killed on every idle spin-down and never reliably
+# accumulate 12 hours of uptime. GitHub Actions' own scheduler is always-on
+# regardless of what the target app is doing, and calling the URL also
+# naturally wakes a sleeping free-tier instance the same way any request
+# would.
+#
+# Requires two repo secrets (Settings -> Secrets and variables -> Actions):
+#   RENDER_APP_URL  -- e.g. https://msfs-dashboard.onrender.com (no trailing slash)
+#   CRON_SECRET     -- must match the CRON_SECRET env var set on Render
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  workflow_dispatch: {} # allows a manual "Run workflow" click to test it on demand
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger GHL reconcile
+        run: |
+          status=$(curl -s -o response.json -w '%{http_code}' -X POST \
+            "${{ secrets.RENDER_APP_URL }}/internal/cron/sync-ghl" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}")
+          echo "HTTP status: $status"
+          cat response.json
+          if [ "$status" -ne 200 ]; then
+            echo "::error::GHL sync failed with status $status"
+            exit 1
+          fi

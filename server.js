@@ -263,7 +263,8 @@ app.get('/api/sso', (req, res) => {
 // session yet. The token itself (see auth.verifyAppToken) is what proves
 // they're allowed to be there, not a cookie.
 app.use((req, res, next) => {
-  const open = req.path.startsWith('/webhooks/') || req.path === '/api/login' || req.path === '/api/sso'
+  const open = req.path.startsWith('/webhooks/') || req.path.startsWith('/internal/cron/')
+    || req.path === '/api/login' || req.path === '/api/sso'
     || req.path === '/login.html' || req.path === '/favicon.ico'
     || req.path === '/set-password.html' || req.path === '/api/set-password';
   if (open) return next();
@@ -1487,13 +1488,14 @@ app.get('/api/config', (req, res) => {
 app.get('/api/config/webhook-secret', (req, res) => {
   res.json({ secret: store.getConfig().webhookSecret || '' });
 });
-app.post('/api/config', (req, res) => {
+app.post('/api/config', async (req, res) => {
   const allowed = ['ghlToken', 'ghlLocationId', 'metaPageToken', 'fbPageId', 'igUserId', 'igHandle', 'fbPageUrl', 'webhookSecret', 'appPassword'];
   const patch = {};
   for (const k of allowed) if (typeof req.body[k] === 'string' && req.body[k] !== '' && !req.body[k].includes('••••')) patch[k] = req.body[k].trim();
   // Let the user paste the whole sub-account URL into the Location ID field.
   if (patch.ghlLocationId) patch.ghlLocationId = ghlcreds.extractLocationId(patch.ghlLocationId);
-  store.setConfig(patch);
+  // Postgres first, JSON backup after -- see store.setConfigPrimary().
+  await store.setConfigPrimary(patch);
   store.clearCache();
   res.json({ ok: true, mode: liveMode() ? 'live' : 'demo' });
 });
@@ -1990,21 +1992,46 @@ app.post('/api/production/sheet-sync', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Shared by the admin-triggered route below and the automatic 12h cron
+// route (see /internal/cron/sync-ghl) -- same gap-fill, same Postgres-first
+// write path, just two different triggers for calling it.
+async function runGhlReconcile() {
+  const clients = await getClients();
+  const prod = await readProd() || [];
+  const { toAdd, notInGhl } = affiliate.reconcileProduction(clients, prod);
+  const newRecords = toAdd.map(makeProdRecordFromGhl);
+  if (newRecords.length) await dealProd.appendProdRecords(prod, newRecords);
+  return {
+    addedCount: newRecords.length,
+    added: newRecords.map(r => ({ id: r.id, name: r.name, email: r.email })),
+    notInGhlCount: notInGhl.length,
+    notInGhl: notInGhl.map(c => ({ id: c.id, name: c.name }))
+  };
+}
+
 app.post('/api/production/reconcile', async (req, res) => {
-  try {
-    const clients = await getClients();
-    const prod = await readProd() || [];
-    const { toAdd, notInGhl } = affiliate.reconcileProduction(clients, prod);
-    const newRecords = toAdd.map(makeProdRecordFromGhl);
-    if (newRecords.length) await dealProd.appendProdRecords(prod, newRecords);
-    res.json({
-      ok: true,
-      addedCount: newRecords.length,
-      added: newRecords.map(r => ({ id: r.id, name: r.name, email: r.email })),
-      notInGhlCount: notInGhl.length,
-      notInGhl: notInGhl.map(c => ({ id: c.id, name: c.name }))
-    });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  try { res.json({ ok: true, ...(await runGhlReconcile()) }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Machine-to-machine trigger for the automatic 12h GHL -> Deal Production
+// sync (see .github/workflows/sync-ghl.yml) -- gated by CRON_SECRET, a
+// plain env var separate from the Settings-configured webhookSecret (same
+// reasoning as SSO_SHARED_SECRET/TICKETS_SHARED_SECRET: a leak of one
+// shared secret shouldn't grant the other). No admin session is involved
+// since GitHub Actions can't hold a login cookie -- this path is exempted
+// from the session gate above the same way /webhooks/* is, and enforces
+// its own auth here instead.
+app.post('/internal/cron/sync-ghl', async (req, res) => {
+  const configured = process.env.CRON_SECRET || '';
+  if (!configured) return res.status(503).json({ error: 'CRON_SECRET not configured' });
+  const provided = Buffer.from(String(req.headers['x-cron-secret'] || ''));
+  const expected = Buffer.from(configured);
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+    return res.status(401).json({ error: 'bad secret' });
+  }
+  try { res.json({ ok: true, ...(await runGhlReconcile()) }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Update one lead. The UI used to POST all 3,578 records on every keystroke,
@@ -2076,8 +2103,13 @@ app.patch('/api/production/:id', async (req, res) => {
 });
 
 // Only listen when run directly, so tests can mount the app on a free port.
+// Restore config from Postgres first (see store.hydrateConfigFromPostgres --
+// matters on hosts with no persistent disk, where config.json is wiped on
+// every restart); never block boot on it failing/hanging.
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
+  store.hydrateConfigFromPostgres().catch(() => {}).finally(() => {
+    app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
+  });
 }
 
 module.exports = app;

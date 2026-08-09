@@ -122,6 +122,7 @@ All webhooks require a `?secret=` query param checked against a configured secre
 | `SSO_SHARED_SECRET` | Signs/verifies the Proven Agency SSO link-out token. |
 | `PROVEN_DASHBOARD_URL` | Base URL support tickets are forwarded to (defaults to the production Proven Agency dashboard). |
 | `TICKETS_SHARED_SECRET` | Auth secret for the support-ticket forward/sync with Proven Agency's dashboard. |
+| `CRON_SECRET` | Auth secret for `POST /internal/cron/sync-ghl` (checked via `x-cron-secret` header, timing-safe compare) -- the automatic 12h GHL-to-Deal-Production sync, triggered by `.github/workflows/sync-ghl.yml` since Render's free tier has no always-on process to run an in-process timer reliably. Separate from `webhookSecret` (Settings-configured) so a leak of one doesn't grant the other. Must match the `CRON_SECRET` GitHub Actions repo secret. |
 | `BIZ_TZ` | Business timezone used for date-range grouping/filtering. |
 
 GHL, Meta, and webhook secrets are **not** environment variables — they're entered in
@@ -160,10 +161,25 @@ unrelated 10-minute GHL client cache).
 
 **2. JSON-PRIMARY, Postgres-mirror** — everything still routed through `lib/store.js`
 (notes, tasks, notifications, tickets, dashboard layouts, affiliate overrides, MFSN
-members, follower snapshots, app config/secrets). Write functions fire an un-awaited,
+members, follower snapshots). Write functions fire an un-awaited,
 best-effort mirror into Postgres after every JSON write (see the long comment at the top
 of `lib/store.js`) — JSON stays authoritative for reads and return values; nothing in
 `server.js` needed to change for this tier. Two real, documented limitations here:
+
+**Exception — app config/secrets (GHL/Meta tokens, webhook secret, Location ID) are
+Postgres-PRIMARY**, via `store.setConfigPrimary()`, used only by `POST /api/config` (the
+Settings save route): the `app_settings` write is `await`ed *before* `config.json` is
+written as the backup — same ordering as tier 1. `getConfig()` itself still reads
+synchronously from JSON only (it's called un-awaited throughout `server.js`; making it
+async would require touching every call site) — `store.hydrateConfigFromPostgres()`
+closes that gap by restoring any missing fields from `app_settings` once at boot, before
+the server starts accepting requests, which matters specifically on a host with no
+persistent disk (e.g. Render's free tier): `config.json` is wiped on every
+restart/spin-down, so without this a saved GHL token would silently revert to empty on
+the next cold start even though it's safely sitting in Postgres. Every *other*
+`setConfig()` call site (user management, SSO, invite secret) is unaffected — none of
+that data is mirrored to `app_settings` in the first place, so there's no durability
+gain from awaiting a Postgres round-trip on those flows.
 
 - **JSON ids and Postgres ids don't match** (JS `Date.now()+random` strings vs. Postgres
   `bigint identity`). A successful mirror insert patches the resulting Postgres id back
