@@ -8,9 +8,14 @@ A single-tenant business command center for "Ms. Financial Solutions" (a credit-
 business), pulling together **GoHighLevel** (clients/pipeline/SMS), **Fanbasis/Commas**
 (payments), **DisputeFox** (dispute rounds), **MyFreeScoreNow** (affiliate gap), and
 **Meta** (IG/FB follower growth) into one dashboard. One Node process, two runtime
-dependencies (Express, and `pg` for the optional Postgres mirror described below).
-Vanilla-JS frontend, JSON-file persistence (source of truth), optionally mirrored to
-Postgres. Deployed on Render free tier, auto-deploys on push to `main`.
+dependencies (Express, and `pg` for Postgres/Supabase). Vanilla-JS frontend.
+Persistence is a two-tier split, not a single model — Deal Production and app
+config/secrets are **Postgres-primary** (Supabase is the source of truth, JSON is a live
+backup); everything else routed through `lib/store.js` (notes, tasks, tickets, etc.) is
+still **JSON-primary** with a best-effort Postgres mirror. See "Postgres: two different
+priority patterns" below before assuming either direction for a given piece of data.
+Deployed on Render free tier (no persistent disk attached — see Deployment), auto-deploys
+on push to `main`.
 
 It boots in **demo mode** with realistic sample data (`lib/demo.js`) and flips to
 **live mode** the moment GHL keys are saved in ⚙ Settings.
@@ -38,7 +43,18 @@ There is no `render.yaml`/`Dockerfile`; Render is configured directly in its das
   - `auth.js` — accounts, sessions (scrypt + opaque random tokens, role never in the
     cookie), and the **deny-by-default** permission tables (`EMPLOYEE_API`,
     `EMPLOYEE_ASSETS`) that gate both `/api/*` routes and static assets.
-  - `store.js` — JSON-file persistence (no DB). Reads/writes everything under `DATA_DIR`.
+  - `store.js` — JSON-file persistence under `DATA_DIR`, plus a best-effort Postgres
+    mirror for most of it (see the two-tier note below). Also owns the generic
+    `cached(key, ttlMs, fn)` TTL cache (used for the 30s Deal Production roster cache and
+    the 10-minute GHL client cache) — concurrent callers on a cold/expired key share ONE
+    in-flight call via a promise-dedup map, not one call each (fixed 2026-08; a stampede
+    here used to mean N callers each re-triggering `readProd()`'s ~18-20s cold
+    reconstruction at once). `setConfigPrimary()`/`hydrateConfigFromPostgres()` are the
+    Postgres-primary exception for app config — see the two-tier note.
+  - `production.js` — Deal Production, Postgres-primary (see the two-tier note below).
+    `readProd`, `readOneProdRecord`, `appendProdRecords`, `patchProdRecord`,
+    `writeJsonBackup`/`readJsonBackup`. This is what `server.js` calls for every Deal
+    Production read/write; never read `production.json` directly.
   - `ghl.js` — GoHighLevel v2 API client (retries 429/5xx with backoff, 20s timeout).
   - `ghlcreds.js` — validates/normalizes pasted GHL credentials so Settings can name the
     real problem (v1 JWT vs v2 token, token pasted into Location field, etc).
@@ -71,8 +87,17 @@ There is no `render.yaml`/`Dockerfile`; Render is configured directly in its das
 - **`seed/production-seed.json`** — ~3,578 real client records; seeds `production.json`
   on first run. Deliberately kept out of anything served publicly.
 - **`tests/`** — `node:test`, no framework. One file per concern, mirroring `lib/`.
+- **`.github/workflows/sync-ghl.yml`** — GitHub Actions cron (every 12h,
+  `workflow_dispatch` also available for a manual trigger) that calls
+  `POST /internal/cron/sync-ghl` on the live app to gap-fill new GHL contacts into Deal
+  Production automatically. External trigger by necessity, not an in-process
+  `setInterval` — see Deployment for why.
 - **`docs/HANDOFF.md`** — running session notes: what was built, open blockers, and
   roadmap. Check it for current status before starting new work.
+- **`HANDOFF.md`** (repo root) — a separate, self-contained reference doc written for a
+  fresh session working in a UI-refactored clone of this app; covers functionality,
+  architecture decisions, and what's verified vs. untested. Update it too if a change
+  here would affect what that document claims.
 
 ### Auth model
 
@@ -86,6 +111,14 @@ an employee. Hiding UI elements is cosmetic only; the server is the real boundar
 
 `READ_ONLY=1` disarms the two routes that can mutate live GHL data (status tag
 write-back, sending SMS) so real credentials can be used locally without side effects.
+
+`/webhooks/*` and `/internal/cron/*` are the only paths exempt from the session gate
+entirely (checked by path prefix before the gate runs) — each enforces its own secret
+instead: webhooks via `checkSecret`'s `?secret=`/`x-webhook-secret`, and
+`/internal/cron/sync-ghl` via a timing-safe compare against `CRON_SECRET` (a plain env
+var, deliberately separate from the Settings-configured webhook secret — see
+Environment variables). Neither ever needs a login session, since both are called by
+machines (Zapier/n8n, GitHub Actions), not a signed-in person.
 
 ## How frontend and backend connect
 
@@ -116,7 +149,7 @@ All webhooks require a `?secret=` query param checked against a configured secre
 | Variable | Purpose |
 |---|---|
 | `PORT` | HTTP port (defaults otherwise). |
-| `DATA_DIR` | Where JSON state (config, sessions, production data) is persisted. Set to `/data` (a persistent disk) on Render; falls back to the repo root locally. |
+| `DATA_DIR` | Where JSON state (config, sessions, production data) is persisted. **Unset on the current Render deployment** — no persistent disk is attached, so this falls back to the repo root inside the container, which is wiped on every restart/spin-down (see Deployment). If a persistent disk is ever attached, point this at its mount path (e.g. `/data`) to make JSON durable there too. |
 | `APP_PASSWORD` | Legacy/initial login password, migrated into the first `admin` account on boot. |
 | `READ_ONLY` | When `1`, disables the two live-GHL write routes (status write-back, SMS send). |
 | `SSO_SHARED_SECRET` | Signs/verifies the Proven Agency SSO link-out token. |
@@ -166,6 +199,17 @@ best-effort mirror into Postgres after every JSON write (see the long comment at
 of `lib/store.js`) — JSON stays authoritative for reads and return values; nothing in
 `server.js` needed to change for this tier. Two real, documented limitations here:
 
+- **JSON ids and Postgres ids don't match** (JS `Date.now()+random` strings vs. Postgres
+  `bigint identity`). A successful mirror insert patches the resulting Postgres id back
+  onto the JSON record as `.pgId`; later updates/deletes look for `.pgId` to mirror the
+  same mutation, and skip Postgres cleanly if it's missing.
+- **No `users` migration has run** — `notifications`, `ticket_views`, and per-user
+  `dashboard_layouts` all need a real `users.id` foreign key with no lookup path
+  available, so these three stay JSON-only for now (skip Postgres entirely, not even a
+  best-effort attempt). `clients` IS populated (see tier 1 above), so anything in this
+  tier that resolves a client by `ghl_contact_id` (`client_notes`, `worked_status`,
+  `affiliate_overrides`) now has a real chance of succeeding once a client is linked.
+
 **Exception — app config/secrets (GHL/Meta tokens, webhook secret, Location ID) are
 Postgres-PRIMARY**, via `store.setConfigPrimary()`, used only by `POST /api/config` (the
 Settings save route): the `app_settings` write is `await`ed *before* `config.json` is
@@ -181,16 +225,12 @@ the next cold start even though it's safely sitting in Postgres. Every *other*
 that data is mirrored to `app_settings` in the first place, so there's no durability
 gain from awaiting a Postgres round-trip on those flows.
 
-- **JSON ids and Postgres ids don't match** (JS `Date.now()+random` strings vs. Postgres
-  `bigint identity`). A successful mirror insert patches the resulting Postgres id back
-  onto the JSON record as `.pgId`; later updates/deletes look for `.pgId` to mirror the
-  same mutation, and skip Postgres cleanly if it's missing.
-- **No `users` migration has run** — `notifications`, `ticket_views`, and per-user
-  `dashboard_layouts` all need a real `users.id` foreign key with no lookup path
-  available, so these three stay JSON-only for now (skip Postgres entirely, not even a
-  best-effort attempt). `clients` IS populated (see tier 1 above), so anything in this
-  tier that resolves a client by `ghl_contact_id` (`client_notes`, `worked_status`,
-  `affiliate_overrides`) now has a real chance of succeeding once a client is linked.
+**Planned, deliberately deferred: extending Postgres-primary to the rest of tier 2**
+(notes, tasks, tickets, dashboard layouts, etc.). This is on the roadmap, not an
+oversight — do not start it without an explicit go-ahead. It's a real gap in the
+meantime: this host has no persistent disk (see Deployment), so anything still on the
+JSON-primary/Postgres-mirror pattern does NOT currently survive a restart, unlike Deal
+Production and app config (both already fixed, above).
 
 Both tiers connect through `lib/db.js` (`isEnabled()`/`query()`/`withTransaction()`) —
 note its `types.setTypeParser(1082, ...)` line, which exists because `pg`'s default
@@ -201,7 +241,12 @@ there).
 ## Data flow summary
 
 1. **Clients/pipeline/SMS**: GHL is the hub. `lib/ghl.js` pulls contacts (cached 10 min);
-   status/round changes and SMS sends write back to GHL live (blocked by `READ_ONLY`).
+   status/round changes and SMS sends write back to GHL live (blocked by `READ_ONLY`). A
+   GHL contact only crosses into the Postgres-backed Deal Production system via one of
+   three specific triggers — it is NOT a continuous background sync: (a) the automatic
+   12h gap-fill (`.github/workflows/sync-ghl.yml` → `POST /internal/cron/sync-ghl`, same
+   logic as the admin "Reconcile" button), (b) sheet-sync from a pasted CSV, or (c) a real
+   Fanbasis/Commas payment auto-onboarding a brand-new payer (below).
 2. **Payments**: Fanbasis/Commas Zap → `/webhooks/fanbasis`(`/commas`) → recorded as a
    payment event; in live mode also upserts a GHL contact and a Deal Production row
    (idempotent — matched by GHL dedup + a Deal Production roster check). That Deal
