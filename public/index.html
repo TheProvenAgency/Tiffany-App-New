@@ -1343,7 +1343,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     </div>
     <div class="dactions"><button class="btn ghost" onclick="testMeta()">Test Meta</button><span class="testres" id="r_meta"></span></div>
     <label style="margin-top:20px">Webhook secret</label>
-    <input id="s_webhookSecret" placeholder="any-random-string">
+    <div class="dactions"><input id="s_webhookSecret" placeholder="any-random-string" style="flex:1"><button class="btn ghost" onclick="copyWebhookSecret()">Copy</button><span class="testres" id="r_webhookSecretCopy"></span></div>
     <div class="hookurl" id="hookFan"></div>
     <div class="hookurl" id="hookFox"></div>
     <div class="hookurl" id="hookMfsn"></div>
@@ -2498,6 +2498,25 @@ async function openSettings(){
   $('hookMfsn').textContent='MyFreeScoreNow (n8n: scheduled member-list pull) → POST '+base+'/webhooks/mfsn?secret=…';
   loadUsers();
   $('overlay').classList.add('show');
+}
+
+// Copies the real webhook secret straight to the clipboard without ever
+// putting it into the page as visible text (the input stays blank / the
+// masked placeholder throughout -- see GET /api/config/webhook-secret in
+// server.js, which is the only place the real value is ever sent back).
+async function copyWebhookSecret(){
+  const el=$('r_webhookSecretCopy');
+  const r=await fetch('/api/config/webhook-secret');
+  if(!r.ok){el.textContent='No secret set yet — save one first';el.className='testres bad';return;}
+  const {secret}=await r.json();
+  if(!secret){el.textContent='No secret set yet — save one first';el.className='testres bad';return;}
+  try{
+    await navigator.clipboard.writeText(secret);
+    el.textContent='Copied ✓';el.className='testres ok';
+  }catch(e){
+    el.textContent='Clipboard blocked by the browser — copy manually';el.className='testres bad';
+  }
+  setTimeout(()=>{el.textContent='';},3000);
 }
 
 /* ---------- team management (admin only; employees never see Settings) ---------- */

@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const store = require('./lib/store');
+const dealProd = require('./lib/production'); // Deal Production, Postgres-primary -- see that file's header comment
 const auth = require('./lib/auth');
 const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
@@ -696,7 +697,7 @@ function inRange(dateStr, from, to) {
 app.get('/api/dashboard', async (req, res) => {
   try {
     const { from, to, granularity = 'day' } = req.query;
-    const [clients, smsSeries] = await Promise.all([getClients(), getSmsSeries()]);
+    const [clients, smsSeries, dashboardProdList] = await Promise.all([getClients(), getSmsSeries(), readProd()]);
     const payments = getPaymentEvents();
 
     const paysIn = payments.filter(p => inRange(p.at, from, to));
@@ -899,7 +900,7 @@ app.get('/api/dashboard', async (req, res) => {
         // byRound above, which further breaks "In rounds" out by round
         // number.
         byStage: (() => {
-          const prod = readProd() || [];
+          const prod = dashboardProdList || [];
           const st = { Onboarding: 0, Ready: 0, 'In rounds': 0, Completed: 0 };
           prod.forEach(c => { if (st[c.stage] !== undefined) st[c.stage]++; });
           return st;
@@ -1003,9 +1004,9 @@ app.get('/api/clients', async (req, res) => {
 // detail panel opened from Pipeline or the Clients table can show it
 // alongside the GHL contact record instead of just a flat round number.
 // No dollar figures in here, so this needs no role redaction either way.
-function findProductionMatch(ghlId) {
+async function findProductionMatch(ghlId) {
   if (!ghlId) return null;
-  const prod = readProd() || [];
+  const prod = await readProd() || [];
   return prod.find(p => p.ghlId === ghlId) || null;
 }
 function productionSummary(p) {
@@ -1035,7 +1036,7 @@ app.get('/api/clients/:id', async (req, res) => {
       tasks: store.getTasks().filter(t => t.clientId === c.id && !t.done),
       worked: store.getWorked()[c.id] || null,
       moneyVisible,
-      production: productionSummary(findProductionMatch(c.id))
+      production: productionSummary(await findProductionMatch(c.id))
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1426,7 +1427,7 @@ app.get('/api/pipeline', async (req, res) => {
       cols[key].clients.push({ id: c.id, kind: 'ghl', name: c.name, deal: c.deal, totalSpent: c.totalSpent, lastPaymentDate: c.lastPaymentDate });
       cols[key].revenue += c.totalSpent || 0;
     }
-    const prod = readProd() || [];
+    const prod = await readProd() || [];
     const prodStageKey = { Onboarding: 'New / Onboarding', Completed: 'Done' };
     let prodMerged = 0;
     for (const p of prod) {
@@ -1471,9 +1472,20 @@ app.get('/api/config', (req, res) => {
   res.json({
     ghlToken: mask(c.ghlToken), ghlLocationId: c.ghlLocationId,
     metaPageToken: mask(c.metaPageToken), fbPageId: c.fbPageId, igUserId: c.igUserId,
-    webhookSecret: c.webhookSecret ? '(set)' : '', appPassword: c.appPassword ? '(set)' : '(default)',
+    // A fixed run of asterisks, not "(set)" -- "(set)" reads too much like
+    // "not set" at a glance, which has previously led to someone assuming a
+    // secret was missing and typing a new one over a working integration.
+    webhookSecret: c.webhookSecret ? '**********' : '', appPassword: c.appPassword ? '(set)' : '(default)',
     mode: liveMode() ? 'live' : 'demo'
   });
+});
+// Lets an admin copy the real webhook secret straight to the clipboard
+// (see copyWebhookSecret() in index.html) without ever rendering it as
+// visible page text -- GET /api/config above deliberately never returns it.
+// Same permission boundary as every other /api/config route (admin-only by
+// the deny-by-default gate; not added to EMPLOYEE_API).
+app.get('/api/config/webhook-secret', (req, res) => {
+  res.json({ secret: store.getConfig().webhookSecret || '' });
 });
 app.post('/api/config', (req, res) => {
   const allowed = ['ghlToken', 'ghlLocationId', 'metaPageToken', 'fbPageId', 'igUserId', 'igHandle', 'fbPageUrl', 'webhookSecret', 'appPassword'];
@@ -1573,7 +1585,7 @@ async function ensureClientFromPayment(ev) {
     store.clearCache(); // brand-new contact -- next /api/clients read should see it
   }
 
-  const prod = readProd() || [];
+  const prod = await readProd() || [];
   const already = prod.some(c => c.ghlId === contact.id
     || (ev.email && c.email && c.email.toLowerCase() === ev.email.toLowerCase()));
   if (!already) {
@@ -1583,7 +1595,7 @@ async function ensureClientFromPayment(ev) {
       when: new Date().toISOString().slice(0, 10), who: 'System',
       text: `Auto-added from a Commas/Fanbasis payment ($${ev.amount}${ev.product ? ' · ' + ev.product : ''}) — verify package, stage, and documents.`
     }];
-    writeProd(prod.concat([rec]));
+    await dealProd.appendProdRecords(prod, [rec]); // Postgres first, JSON backup -- see lib/production.js
   }
   return { ghlId: contact.id, duplicate: !!r.duplicate, addedToProduction: !already };
 }
@@ -1703,25 +1715,10 @@ setInterval(takeSnapshot, 6 * 60 * 60 * 1000).unref(); // every 6h
 setTimeout(takeSnapshot, 15 * 1000).unref(); // shortly after boot
 
 // ------------------------- Deal Production (client work desk) — shared team persistence -------------------------
-const PROD_FILE = path.join(process.env.DATA_DIR || __dirname, 'production.json');
-// Held outside public/ on purpose: 3,578 real client records must not be
-// downloadable from a browser.
-const PROD_SEED = path.join(__dirname, 'seed', 'production-seed.json');
-
-function readProd() {
-  try { return JSON.parse(fs.readFileSync(PROD_FILE, 'utf8')); } catch (e) { /* fall through to seed */ }
-
-  // First run on a fresh disk. Without this the tracker comes up empty and
-  // looks broken rather than new.
-  try {
-    const seed = JSON.parse(fs.readFileSync(PROD_SEED, 'utf8'));
-    if (!Array.isArray(seed)) return null;
-    writeProd(seed);
-    console.log(`Seeded Deal Production with ${seed.length} clients`);
-    return seed;
-  } catch (e) { return null; }
-}
-function writeProd(d) { try { fs.writeFileSync(PROD_FILE, JSON.stringify(d)); return true; } catch (e) { return false; } }
+// Postgres-primary (Supabase), JSON is a live backup + fallback -- see
+// lib/production.js's header comment for the full read/write design.
+// readProd/writeProd are now async; every call site below awaits them.
+const readProd = dealProd.readProd;
 // Which clients are on MyFreeScoreNow under her affiliate link
 // ("affiliate"), on MyFreeScoreNow but not under her link ("notAffiliate"
 // -- the group worth reaching out to), or not on MyFreeScoreNow at all
@@ -1782,9 +1779,9 @@ app.post('/api/mfsn-old-status', (req, res) => {
 // the current roster + synced member list on every call; nothing is
 // persisted here, so it always reflects the latest /webhooks/mfsn sync.
 // Admin-only (not in the employee allowlist, so denied by default).
-app.get('/api/mfsn-gap', (req, res) => {
+app.get('/api/mfsn-gap', async (req, res) => {
   try {
-    const clients = readProd() || [];
+    const clients = await readProd() || [];
     const gap = affiliate.productionGap(clients, store.getMfsnMembers());
     res.json({
       counts: gap.counts,
@@ -1804,22 +1801,30 @@ function withMfsnTags(clients) {
   return clients.map(c => ({ ...c, mfsn: tagOf.get(c.id) || null }));
 }
 
-app.get('/api/production', (req, res) => { res.json({ clients: withMfsnTags(readProd()), mode: liveMode() ? 'live' : 'demo' }); });
-
-// One lead, for an open drawer to poll cheaply instead of pulling all 3,578.
-app.get('/api/production/:id', (req, res) => {
-  const list = readProd();
-  const lead = Array.isArray(list) ? list.find(c => c.id === req.params.id) : null;
-  if (!lead) return res.status(404).json({ error: 'no such lead' });
-  const [tagged] = Array.isArray(list) ? withMfsnTags([lead]) : [lead];
-  // Stable shape: a never-edited lead still reports updatedAt, so pollers can
-  // rely on the field existing.
-  res.json({ client: { updatedAt: null, updatedBy: null, ...tagged } });
+app.get('/api/production', async (req, res) => {
+  try { res.json({ clients: withMfsnTags(await readProd()), mode: liveMode() ? 'live' : 'demo' }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// One lead, for an open drawer to poll cheaply instead of pulling all 3,578
+// -- goes through a targeted single-record query (dealProd.readOneProdRecord),
+// NOT the full-roster readProd(), so this stays fast regardless of table size.
+app.get('/api/production/:id', async (req, res) => {
+  try {
+    const lead = await dealProd.readOneProdRecord(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'no such lead' });
+    const [tagged] = withMfsnTags([lead]);
+    // Stable shape: a never-edited lead still reports updatedAt, so pollers can
+    // rely on the field existing.
+    res.json({ client: { updatedAt: null, updatedBy: null, ...tagged } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Legacy full-replace path -- JSON only (see lib/production.js
+// writeProdJsonOnly's comment). Superseded by PATCH /api/production/:id.
 app.post('/api/production', (req, res) => {
   const c = req.body && req.body.clients;
   if (!Array.isArray(c)) return res.status(400).json({ error: 'clients array required' });
-  writeProd(c);
+  dealProd.writeProdJsonOnly(c);
   res.json({ ok: true, count: c.length });
 });
 
@@ -1933,7 +1938,7 @@ app.post('/api/production/sheet-sync', async (req, res) => {
     const rows = sheet.parseCsv(csv);
     const sheetRows = sheet.normalizeSheetRows(rows);
     const clients = await getClients();
-    const prod = readProd() || [];
+    const prod = await readProd() || [];
     const { updates, toCreate, unmatched, duplicateNames } = sheet.reconcileSheet(sheetRows, clients, prod);
 
     if (apply) {
@@ -1941,6 +1946,14 @@ app.post('/api/production/sheet-sync', async (req, res) => {
       for (const u of updates) {
         const rec = byId.get(u.id);
         if (!rec) continue;
+        // Postgres first (targeted per-record update, same path as a
+        // regular drawer PATCH) -- u.patch already matches the field names
+        // patchProdRecord expects (tu/eq/ex/pkg/stage/ghlId/name/email/phone,
+        // see lib/sheet.js reconcileSheet()); u.sheetNote becomes a real
+        // note row via the same `note` field the drawer's PATCH uses.
+        await dealProd.patchProdRecord(u.id, { ...u.patch, note: u.sheetNote || undefined }, 'Sheet');
+        // Keep the in-memory record (and therefore the JSON backup written
+        // below via appendProdRecords) in sync with the same change.
         Object.assign(rec, u.patch);
         if (u.sheetNote) {
           rec.notes = rec.notes || [];
@@ -1956,7 +1969,9 @@ app.post('/api/production/sheet-sync', async (req, res) => {
         cfpb: c.cfpb || [],
         notes: [{ when: new Date().toISOString().slice(0, 10), who: 'Sheet', text: c.notes || 'Added from the Credit Repair sheet — not previously tracked in Deal Production.' }]
       }));
-      writeProd(prod.concat(created));
+      // Postgres first for the brand-new records too, JSON backup written
+      // last with the FULL merged roster (updates above + these creates).
+      await dealProd.appendProdRecords(prod, created);
     }
 
     res.json({
@@ -1978,10 +1993,10 @@ app.post('/api/production/sheet-sync', async (req, res) => {
 app.post('/api/production/reconcile', async (req, res) => {
   try {
     const clients = await getClients();
-    const prod = readProd() || [];
+    const prod = await readProd() || [];
     const { toAdd, notInGhl } = affiliate.reconcileProduction(clients, prod);
     const newRecords = toAdd.map(makeProdRecordFromGhl);
-    if (newRecords.length) writeProd(prod.concat(newRecords));
+    if (newRecords.length) await dealProd.appendProdRecords(prod, newRecords);
     res.json({
       ok: true,
       addedCount: newRecords.length,
@@ -1996,10 +2011,17 @@ app.post('/api/production/reconcile', async (req, res) => {
 // so whoever saved last silently erased everyone else's work. Patching a single
 // record means two people on different leads never collide.
 //
-// readProd/writeProd are synchronous, so this read-modify-write cannot be
-// interleaved by another request. No lock is needed.
-app.patch('/api/production/:id', (req, res) => {
-  const list = readProd();
+// Postgres-primary: the actual persistence a patch depends on is
+// dealProd.patchProdRecord()'s targeted per-row Postgres UPDATE, which is
+// safe under real concurrency on its own (unlike the old synchronous
+// whole-array JSON approach this comment used to describe). The JSON
+// backup below still reads/mutates/writes the full array, so two PATCHes
+// to two DIFFERENT records landing in the same instant could theoretically
+// clobber each other on the JSON side only -- acceptable given JSON is now
+// a backup, not the source of truth; Postgres has both changes correctly
+// either way.
+app.patch('/api/production/:id', async (req, res) => {
+  const list = await readProd();
   if (!Array.isArray(list)) return res.status(503).json({ error: 'no production data loaded' });
 
   const idx = list.findIndex(c => c.id === req.params.id);
@@ -2019,6 +2041,12 @@ app.patch('/api/production/:id', (req, res) => {
   }
 
   const note = allowed.note;
+  const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+
+  // Postgres first, per the "webhooks/APIs store to Supabase first, then
+  // JSON" requirement -- a targeted update to just the affected tables.
+  await dealProd.patchProdRecord(req.params.id, { ...allowed }, who);
+
   delete allowed.note;
 
   // Deep-merge the sub-objects so a partial patch (one document, one round
@@ -2032,19 +2060,18 @@ app.patch('/api/production/:id', (req, res) => {
     }
   }
   if (note && String(note).trim()) {
-    const me = getUsers().find(u => u.id === req.user.userId);
     lead.notes = (lead.notes || []).concat([{
       when: new Date().toISOString().slice(0, 10),
-      who: me ? me.name : 'Unknown',
+      who,
       text: String(note).trim()
     }]);
   }
 
   // A monotonic stamp so an open drawer elsewhere can tell the lead moved.
   lead.updatedAt = new Date().toISOString();
-  lead.updatedBy = (getUsers().find(u => u.id === req.user.userId) || {}).name || null;
+  lead.updatedBy = who;
   list[idx] = lead;
-  writeProd(list);
+  dealProd.writeJsonBackup(list);
   res.json({ ok: true, client: lead });
 });
 

@@ -6,3 +6,15 @@ data/
 # repo root — sessions.json holds live session tokens and must never be committed.
 sessions.json
 production.json
+
+# Real client PII: names + thousands of plaintext CFPB portal passwords.
+# Already migrated into Supabase (see docs/postgres-schema-design.sql and
+# scripts/build-migration-sql.js) -- this raw export must never enter git
+# history, private repo or not.
+MSF CREDIT CLIENTS - Credit Repair.csv
+
+# Local tool state (npx skills add / Claude Code's own skill cache) -- not
+# project source, not needed for the app to run.
+.agents/
+.claude/
+skills-lock.json
