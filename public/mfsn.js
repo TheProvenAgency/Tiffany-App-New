@@ -1,7 +1,7 @@
 /* Credit Monitoring — MyFreeScoreNow affiliate book. Figures from the affiliate portal (Jul 28 2026). */
 (function(){
-var C={ink:'#211d18',blue:'#3b82f6',green:'#0e9e56',gold:'#f59e0b',red:'#e11d48',teal:'#06b6d4',purple:'#8b5cf6',orange:'#f97316',pink:'#ff2e9a'};
-var PAL=['#3563a8','#2e7d54','#b98a2f','#b3372f','#2f8f8a','#6b5bd0','#c06a2b','#c14d8a','#6f8f2f','#5a6b7d'];
+var C={ink:'#1F2937',blue:'#3b82f6',green:'#45B369',gold:'#FF9F29',red:'#EF4A00',teal:'#00B8F2',purple:'#8252E9',orange:'#F86624',pink:'#DE3ACE'};
+var PAL=['#144BD6','#45B369','#F4941E','#E30A0A','#00B8F2','#7F27FF','#F86624','#DE3ACE','#16A34A','#6B7280'];
 var charts={}, curSub='overview';
 
 /* ---------- real figures (MyFreeScoreNow affiliate portal) ---------- */
@@ -42,21 +42,21 @@ var css=''+
 '#view-mfsn .mf-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '#view-mfsn .mf-kpi .v{font-size:22px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
 '#view-mfsn .mf-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
-'#view-mfsn .mf-kpi.hero{background:var(--ink);border-top-color:#2e7d54}#view-mfsn .mf-kpi.hero .l{color:#c7c0b4}#view-mfsn .mf-kpi.hero .v{color:#fff}#view-mfsn .mf-kpi.hero .s{color:#a49c8e}'+
+'#view-mfsn .mf-kpi.hero{background:var(--ink);border-top-color:#45B369}#view-mfsn .mf-kpi.hero .l{color:#D1D5DB}#view-mfsn .mf-kpi.hero .v{color:#fff}#view-mfsn .mf-kpi.hero .s{color:#9CA3AF}'+
 '#view-mfsn .mf-grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-bottom:16px}'+
 '#view-mfsn .mf-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
 '#view-mfsn .mf-card h3{margin:0 0 3px;font-size:14px}#view-mfsn .mf-card .cap{color:var(--muted);font-size:12px;margin:0 0 12px}'+
 '#view-mfsn .mf-wrap{position:relative;height:260px}'+
 '#view-mfsn .mf-tablewrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto}'+
 '#view-mfsn table.mf-table{width:100%;border-collapse:collapse;font-size:12.5px}'+
-'#view-mfsn .mf-table th{position:sticky;top:0;background:#efe9df;text-align:left;padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}'+
+'#view-mfsn .mf-table th{position:sticky;top:0;background:var(--tile-bg);text-align:left;padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}'+
 '#view-mfsn .mf-table th.r,#view-mfsn .mf-table td.r{text-align:right}'+
-'#view-mfsn .mf-table td{padding:9px 12px;border-bottom:1px solid #f0ece3;vertical-align:middle;font-variant-numeric:tabular-nums}'+
-'#view-mfsn .mf-table tbody tr:hover{background:#faf7f1}#view-mfsn .mf-table tfoot td{font-weight:800;border-top:2px solid var(--line);background:#faf7f1}'+
-'#view-mfsn .mf-brow{display:grid;grid-template-columns:1.3fr 1fr 74px;gap:12px;align-items:center;padding:11px 4px;border-bottom:1px solid #f0ece3}#view-mfsn .mf-brow:last-child{border-bottom:none}'+
+'#view-mfsn .mf-table td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}'+
+'#view-mfsn .mf-table tbody tr:hover{background:var(--bg)}#view-mfsn .mf-table tfoot td{font-weight:800;border-top:2px solid var(--line);background:var(--bg)}'+
+'#view-mfsn .mf-brow{display:grid;grid-template-columns:1.3fr 1fr 74px;gap:12px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line)}#view-mfsn .mf-brow:last-child{border-bottom:none}'+
 '#view-mfsn .mf-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle}'+
 '#view-mfsn .mf-bn{font-weight:700;font-size:13px}#view-mfsn .mf-ba{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}'+
-'#view-mfsn .mf-prog{height:9px;background:#efe9df;border-radius:6px;overflow:hidden}#view-mfsn .mf-prog>i{display:block;height:100%;border-radius:6px}'+
+'#view-mfsn .mf-prog{height:9px;background:var(--tile-bg);border-radius:6px;overflow:hidden}#view-mfsn .mf-prog>i{display:block;height:100%;border-radius:6px}'+
 '#view-mfsn .mf-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}';
 
 /* ---------- shell ---------- */
@@ -137,7 +137,7 @@ function killChart(k){if(charts[k]){charts[k].destroy();charts[k]=null;}}
 function drawComm(){
   if(!window.Chart)return;var el=document.getElementById('mfComm');if(!el)return;killChart('cm');
   charts.cm=new Chart(el.getContext('2d'),{type:'bar',data:{labels:COMM_TREND.labels,datasets:[{data:COMM_TREND.vals,backgroundColor:COMM_TREND.labels.map(function(_,i){return PAL[i%PAL.length];}),borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 function drawMig(){
   if(!window.Chart)return;var el=document.getElementById('mfMig');if(!el)return;killChart('mg');
@@ -171,7 +171,7 @@ function sparkTooltipEl(){
   if(!el){
     el=document.createElement('div');
     el.id='rvkTooltip';
-    el.style.cssText='position:fixed;pointer-events:none;z-index:9999;background:#20222b;color:#fff;'+
+    el.style.cssText='position:fixed;pointer-events:none;z-index:9999;background:#1F2937;color:#fff;'+
       'font-size:11.5px;line-height:1.45;padding:7px 11px;border-radius:9px;box-shadow:0 8px 22px rgba(0,0,0,.28);'+
       'opacity:0;transition:opacity .08s ease;white-space:nowrap;transform:translate(-50%,-100%)';
     document.body.appendChild(el);
@@ -253,9 +253,9 @@ function initMFDashKpis(){
   // small hoverable donut shows the actual breakdown instead of a bare
   // number sitting there with nothing to interact with.
   var donuts=[
-    {id:'mfkDonutEnrolled', labels:['Active monitoring','Not yet active'], vals:[M.active, Math.max(M.enrolled-M.active,0)], colors:[C.blue,'#e3e7ee']},
-    {id:'mfkDonutUpgraded', labels:['Upgraded','Need upgrade'], vals:[M.upgraded, M.toUpgrade], colors:[C.teal,'#f5e6c4']},
-    {id:'mfkDonutNewActives', labels:['New actives','Remaining to target'], vals:[M.newActives, Math.max(M.targetActives-M.newActives,0)], colors:[C.purple,'#e3e7ee']}
+    {id:'mfkDonutEnrolled', labels:['Active monitoring','Not yet active'], vals:[M.active, Math.max(M.enrolled-M.active,0)], colors:[C.blue,'#DFE0E2']},
+    {id:'mfkDonutUpgraded', labels:['Upgraded','Need upgrade'], vals:[M.upgraded, M.toUpgrade], colors:[C.teal,'#FFEBA6']},
+    {id:'mfkDonutNewActives', labels:['New actives','Remaining to target'], vals:[M.newActives, Math.max(M.targetActives-M.newActives,0)], colors:[C.purple,'#DFE0E2']}
   ];
   donuts.forEach(function(d){
     var el=document.getElementById(d.id); if(!el)return;

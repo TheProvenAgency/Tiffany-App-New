@@ -83,7 +83,7 @@ aside{display:flex;height:100vh;position:fixed;top:0;left:0;z-index:50}
 /* Floating tab that opens/closes the whole sidebar -- lives outside the
    aside so it's still reachable even when the panel is fully collapsed. */
 .navCollapseToggle{position:fixed;top:14px;left:282px;z-index:70;width:40px;height:40px;border:1px solid rgba(0,0,0,.06);border-radius:12px;
-  background:#fff;color:#3a3730;display:flex;align-items:center;justify-content:center;
+  background:#fff;color:#374151;display:flex;align-items:center;justify-content:center;
   cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.16);transition:left .16s ease,box-shadow .12s ease,transform .12s ease}
 .navCollapseToggle svg{width:19px;height:19px}
 .navCollapseToggle:hover{box-shadow:0 6px 18px rgba(0,0,0,.22);transform:translateY(-1px)}
@@ -125,7 +125,7 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
 .brand{display:flex;align-items:center;gap:11px;padding:16px 18px 16px;border-bottom:1px solid var(--sidebar-line)}
 .brand img{height:38px;width:auto;display:block;flex:0 0 auto}
 .brand .word{display:flex;flex-direction:column;line-height:1.15;min-width:0}
-.brand .word b{font-size:13.5px;font-weight:700;color:#20222b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .word b{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand .word span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-dim);font-weight:600;margin-top:1px}
 .sec{font-size:11px;letter-spacing:.16em;color:var(--sidebar-dim);text-transform:uppercase;padding:18px 16px 6px;font-weight:600}
 /* Every group and every heading stays visible all the time now -- no .on
@@ -150,15 +150,14 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
 html[data-theme="dark"] .nav button:hover{background:var(--sidebar-line)}
 /* Active nav pill -- matches Admina's real active-nav treatment (their
    .twin-menu li.active a rule: background: color-mix(primary-600 12%,
-   transparent), color: primary-600) instead of a solid fill. Always the
-   single site-wide brand green (--pink, which is the real hex #16a34a
-   in this green theme -- see the :root block) at a light 14% tint, NOT
-   each row's own --ic icon color -- every active pill is the same
-   light green regardless of section. color-mix with transparent (not a
-   hardcoded hex) also means this needs no separate dark-mode override
-   -- it self-adjusts against whatever sidebar background is underneath. */
+   transparent), color: primary-600). Always the single site-wide brand
+   indigo (--pink, the real hex #4F46E5 -- see the :root block) at
+   Admina's 12% tint, NOT each row's own --ic icon color. color-mix with
+   transparent (not a hardcoded hex) also means this needs no separate
+   dark-mode override -- it self-adjusts against whatever sidebar
+   background is underneath. */
 .nav button.on{background:color-mix(in srgb, var(--pink) 12%, transparent);color:var(--pink);font-weight:600;box-shadow:none}
-.nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:11.5px;font-weight:700;padding:2px 8px}
+.nav .badge{margin-left:auto;background:#EF4A00;color:#fff;border-radius:10px;font-size:11.5px;font-weight:700;padding:2px 8px}
 .nav svg{width:15px;height:15px;opacity:.75}
 /* Icon rides plain (no chip box) inside the pill, like Admina's outline
    icons -- neutral gray by default regardless of section, flips to the
@@ -171,8 +170,8 @@ html[data-theme="dark"] .nav button:hover{background:var(--sidebar-line)}
 .sources{padding:0 18px 8px}
 .src{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sidebar-dim);padding:3.5px 0}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
-.dot.bad{background:#c0392b}
-.src .fix{margin-left:auto;color:#d98d84;font-size:10.5px;cursor:pointer}
+.dot.bad{background:#EF4A00}
+.src .fix{margin-left:auto;color:#F87171;font-size:10.5px;cursor:pointer}
 /* ============ main ============ */
 /* margin-left reserves the space the now-fixed aside occupies (320px =
    72px rail + 248px .navpanel, Admina's own rail/panel widths) so content
@@ -191,7 +190,7 @@ header{display:flex;align-items:center;gap:14px;padding:18px 0 14px;position:sti
   background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center;
   font-size:17px;cursor:pointer;transition:background .12s ease,color .12s ease}
 .hdr-ibtn:hover{background:var(--pink-soft);color:var(--pink)}
-.hdr-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#c0392b;border:2px solid var(--card)}
+.hdr-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#EF4A00;border:2px solid var(--card)}
 /* Theme toggle shows sun in light mode, moon in dark mode -- CSS-only swap,
    no JS re-render needed beyond flipping the [data-theme] attribute. */
 .hdr-moon{display:none}
@@ -262,25 +261,25 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--gold)}
 .kpi .spark{display:block;width:76px!important;max-width:76px;height:40px!important;max-height:40px;flex:0 0 auto}
 .kpi .miniring{width:44px;height:44px;border-radius:50%;padding:5px;flex:0 0 auto;
-  background:conic-gradient(var(--ring-c,var(--green)) calc(var(--pct,0)*1%),#eef4ee 0)}
+  background:conic-gradient(var(--ring-c,var(--green)) calc(var(--pct,0)*1%),#F3F4F6 0)}
 .kpi .miniring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
 .kpi .miniring .hole b{font-size:10.5px;font-weight:800;color:var(--ink)}
 /* money-dashboard reference: every KPI card lives in the same green family
    (green is money) instead of the old pink/purple/blue rainbow -- each card
    just gets its own shade + a small chart so four cards in a row still read
    as distinct at a glance. */
-.kpi.g1{border-top-color:#0e9e56}
-.kpi.g1 .ico{background:#dff7ea;color:#0e9e56}
-.kpi.g2{border-top-color:#0f9488}
-.kpi.g2 .ico{background:#dbf3f0;color:#0f9488}
-.kpi.g3{border-top-color:#65a30d}
-.kpi.g3 .ico{background:#eaf5d6;color:#65a30d}
+.kpi.g1{border-top-color:#45B369}
+.kpi.g1 .ico{background:#DAF0E1;color:#45B369}
+.kpi.g2{border-top-color:#16A34A}
+.kpi.g2 .ico{background:#DCFCE7;color:#16A34A}
+.kpi.g3{border-top-color:#22C55E}
+.kpi.g3 .ico{background:#F0FDF4;color:#22C55E}
 .kpi.g4{border-top-color:#166534}
-.kpi.g4 .ico{background:#dcf0e2;color:#166534}
+.kpi.g4 .ico{background:#BBF7D0;color:#166534}
 /* progress ring -- a lightweight donut gauge (conic-gradient, no chart
    library needed) for the handful of "% of something" figures. */
 .ring{width:clamp(56px,20cqw,92px);height:clamp(56px,20cqw,92px);border-radius:50%;padding:clamp(5px,1.6cqw,8px);flex:0 0 auto;
-  background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),#eef0f5 0)}
+  background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),#F3F4F6 0)}
 .ring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ring .hole b{font-size:clamp(11px,4.5cqw,17px);font-weight:800;color:var(--ink)}
 .ring .hole span{font-size:clamp(6.5px,2.2cqw,8.5px);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
@@ -362,9 +361,9 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
    gold for a caution/needs-attention figure. */
 .rv-kpi .rvktrend{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:500;margin-top:2px}
 .rv-kpi .rvktrend i{font-style:normal;font-size:13px;line-height:1}
-.rv-kpi .rvktrend.up{color:#16a34a}
-.rv-kpi .rvktrend.down{color:#dc2626}
-.rv-kpi .rvktrend.caution{color:#d97706}
+.rv-kpi .rvktrend.up{color:#45B369}
+.rv-kpi .rvktrend.down{color:#EF4A00}
+.rv-kpi .rvktrend.caution{color:#D69705}
 .rv-kpi .rvktrend.neutral{color:#4f46e5}
 /* Chart.js (responsive:true, maintainAspectRatio:false) sizes a canvas to
    fill its DIRECT parent's box -- when the canvas sat straight inside the
@@ -455,7 +454,7 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.kpi,
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-card,
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpis,
-.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpi{outline-color:var(--green);box-shadow:0 10px 30px rgba(0,0,0,.15)}
+.grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpi{outline-color:var(--pink);box-shadow:0 10px 30px rgba(0,0,0,.15)}
 .gs-placeholder>.placeholder-content{background:var(--pink-soft)!important;border-radius:16px}
 .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
@@ -505,7 +504,7 @@ h3.cardtitle .sub{display:block}
 .segbar .cb-segbar{height:10px;width:100%;border-radius:6px}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .tile{border:1px solid var(--line);border-radius:13px;padding:clamp(7px,2.4cqh,11px) clamp(8px,2.6cqw,13px);cursor:pointer;transition:transform .15s ease,border-color .15s ease;min-width:0}
-.tile:hover{border-color:#c9cedb;transform:translateY(-2px)}
+.tile:hover{border-color:#D1D5DB;transform:translateY(-2px)}
 .tile .dot2{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
 .tile b{font-size:clamp(13px,4.4cqw,19px)}
 .tile span{display:block;font-size:clamp(8.5px,2.6cqw,11px);color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -525,7 +524,7 @@ h3.cardtitle .sub{display:block}
 .att b{font-size:clamp(11px,3.2cqw,13px);display:block}
 .att span{font-size:11.5px;color:var(--muted)}
 .att .act{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
-.att .act.dark{background:#20222b;color:#fff;border-color:#20222b}
+.att .act.dark{background:#111827;color:#fff;border-color:#111827}
 /* feed */
 .feeditem{display:flex;gap:10px;align-items:center;padding:clamp(5px,1.6cqh,8px) 0;border-bottom:1px solid var(--line);font-size:clamp(10.5px,3cqw,12.5px)}
 .feeditem:last-child{border:none}
@@ -543,12 +542,12 @@ h3.cardtitle .sub{display:block}
 /* tables (clients etc.) */
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{color:var(--muted);text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
-td{padding:10px;border-bottom:1px solid #eef0f5}
-tr:hover td{background:#f8f9fc}
+td{padding:10px;border-bottom:1px solid var(--line)}
+tr:hover td{background:var(--bg)}
 .pill{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
 .pill.active{background:var(--green-soft);color:var(--green)}
 .pill.inactive{background:var(--red-soft);color:var(--red)}
-.pill.unknown{background:#eef0f5;color:var(--muted)}
+.pill.unknown{background:var(--tile-bg);color:var(--muted)}
 .pill.warn{background:var(--gold-soft);color:var(--gold)}
 .tbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .tbar input,.tbar select{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--ink)}
@@ -568,7 +567,7 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
 @keyframes viewFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* drawer */
 .drawer{position:fixed;top:0;right:-580px;width:560px;max-width:95vw;height:100vh;background:#fff;border-left:1px solid var(--line);
-  z-index:120;transition:right .25s;overflow-y:auto;box-shadow:-18px 0 50px rgba(30,25,15,.15)}
+  z-index:120;transition:right .25s;overflow-y:auto;box-shadow:-18px 0 50px rgba(0,0,0,.15)}
 .drawer.open{right:0}
 .drawer .dhead{padding:22px 24px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
 .drawer .dbody{padding:18px 24px 40px}
@@ -580,14 +579,14 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
 /* Process section (drawer) -- Deal Production's stage/bureau/next-step
    info shown alongside a GHL contact record, or standalone when a card has
    no GHL match (see openProductionOnlyClient). No dollar figures here. */
-.proc-stage-select{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#efeae0;color:#7a7461;border:1px solid var(--line);cursor:pointer}
-.proc-next{background:var(--gold-soft);color:#8a6516;border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;margin-top:10px}
+.proc-stage-select{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;background:var(--tile-bg);color:#6B7280;border:1px solid var(--line);cursor:pointer}
+.proc-next{background:var(--gold-soft);color:#C28800;border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;margin-top:10px}
 .proc-bureaus{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .proc-mini{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
-.proc-mini.done{background:var(--green-soft);color:#1f6a45}
-.proc-mini.ready{background:var(--blue-soft);color:#27508c}
-.proc-mini.login{background:var(--red-soft);color:#8f2b25}
-.proc-mini.none{background:#efeae0;color:#a49a86}
+.proc-mini.done{background:var(--green-soft);color:#006038}
+.proc-mini.ready{background:var(--blue-soft);color:#06307C}
+.proc-mini.login{background:var(--red-soft);color:#801D18}
+.proc-mini.none{background:var(--tile-bg);color:#9CA3AF}
 .proc-docs{color:var(--muted);font-size:11.5px;margin-top:8px}
 /* stat tiles float flat on the card (Admina restraint) -- the nested
    gray wells (--tile-bg / tone-* washes, which had all converged on the
@@ -598,33 +597,33 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
 .dstat div[onclick]:hover{transform:translateY(-2px);background:var(--tile-bg-2)}
 .dstat .l{font-size:clamp(8px,2.4cqw,10px);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dstat .v{font-size:clamp(12.5px,4.2cqw,17px);font-weight:800;margin-top:4px}
-.evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eef0f5;font-size:12.5px}
+.evrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
 .evrow .mut{color:var(--muted)}
-.noterow{background:#f8f9fc;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
+.noterow{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
 .noterow .mut{color:var(--muted);font-size:11px;margin-top:4px}
 .dsec textarea{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;min-height:58px;resize:vertical}
 .dsec input[type=text],.dsec input[type=date],.dsec select{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--ink)}
 .taskform{margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
 .taskform .row{display:flex;gap:8px;margin-top:8px}
 .taskform .row>*{flex:1;min-width:0}
-.tasknotesform{background:#f8f9fc;border:1px solid var(--line);border-top:none;border-radius:0 0 12px 12px;margin:-9px 0 8px;padding:14px}
+.tasknotesform{background:var(--bg);border:1px solid var(--line);border-top:none;border-radius:0 0 12px 12px;margin:-9px 0 8px;padding:14px}
 .notebox{width:100%;box-sizing:border-box;background:#fff;border:1px solid var(--line);border-radius:10px;
   padding:12px 14px;font-size:14px;font-family:inherit;line-height:1.4;min-height:96px;resize:vertical}
-.notebox:focus{outline:none;border-color:#20222b}
+.notebox:focus{outline:none;border-color:var(--pink)}
 .mentionwrap{position:relative}
-.mentionbox{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 20px rgba(30,25,15,.12);max-height:160px;overflow-y:auto}
+.mentionbox{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:160px;overflow-y:auto}
 .mentionbox .mopt{padding:8px 12px;font-size:13px;cursor:pointer}
 .mentionbox .mopt:hover,.mentionbox .mopt.sel{background:var(--gold-soft)}
 .dactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .btn{padding:9px 16px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}
-.btn.primary{background:#20222b;color:#fff}
+.btn.primary{background:var(--pink);color:#fff}
 .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
 .testres{font-size:12.5px;min-height:16px}
 .testres.ok{color:var(--green)}.testres.bad{color:var(--red)}
 /* tasks / react */
 .taskrow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px}
 .taskrow.done{opacity:.5}
-.taskrow input[type=checkbox]{width:16px;height:16px;accent-color:var(--green)}
+.taskrow input[type=checkbox]{width:16px;height:16px;accent-color:var(--pink)}
 .taskrow .tt{flex:1}
 .taskrow .due{font-size:11.5px;color:var(--gold)} .taskrow .due.over{color:var(--red);font-weight:700}
 .taskrow .cl{font-size:11.5px;color:var(--muted)} .taskrow .del{background:none;border:none;color:var(--muted);cursor:pointer}
@@ -634,7 +633,7 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
 .addtask select{min-width:150px}
 .statchips{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
 .pipe-chev-row{display:flex;gap:4px;margin:14px 0 18px;overflow-x:auto;padding:4px 2px 10px}
-.pipe-chev{--c:#7c5cff;flex:1 1 0;min-width:108px;clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%,10% 50%);
+.pipe-chev{--c:#7F27FF;flex:1 1 0;min-width:108px;clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%,10% 50%);
   background:var(--c);color:#fff;padding:11px 14px 11px 24px;cursor:pointer;transition:transform .15s ease,filter .15s ease,box-shadow .15s ease}
 .pipe-chev:first-child{clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%);padding-left:16px}
 .pipe-chev:hover{filter:brightness(1.07)}
@@ -642,7 +641,7 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
 .pipe-chev .pc-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.95}
 .pipe-chev .pc-count{font-size:16px;font-weight:800;margin-top:1px}
 .pipe-col{transition:box-shadow .2s ease,border-color .2s ease}
-.pipe-col.hl{border-color:#7c5cff !important;box-shadow:0 0 0 3px rgba(124,92,255,.22)}
+.pipe-col.hl{border-color:#7F27FF !important;box-shadow:0 0 0 3px rgba(127,39,255,.22)}
 /* A real native scrollbar's visibility depends on the browser/OS (Safari
    and macOS's default "only while scrolling" setting hide it no matter
    what CSS says) -- this is a plain div track+thumb instead, always
@@ -655,11 +654,11 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
    open -- matches main's left offset (320px normal / 72px collapsed
    sidebar, see main{margin-left} above) plus its 24px padding so it
    doesn't run under the nav. */
-.pipe-scrolltrack{position:fixed;left:344px;right:24px;bottom:12px;height:14px;background:#efeae0;border-radius:8px;cursor:pointer;z-index:130;transition:left .16s ease}
+.pipe-scrolltrack{position:fixed;left:344px;right:24px;bottom:12px;height:14px;background:var(--tile-bg);border-radius:8px;cursor:pointer;z-index:130;transition:left .16s ease}
 body:has(#sidebar.collapsed) .pipe-scrolltrack{left:96px}
-.pipe-scrollthumb{position:absolute;top:0;left:0;height:100%;background:#7c5cff;border-radius:8px;cursor:grab;min-width:30px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
-.pipe-scrollthumb:hover{background:#6a4ce0}
-.pipe-scrollthumb.dragging{cursor:grabbing;background:#6a4ce0}
+.pipe-scrollthumb{position:absolute;top:0;left:0;height:100%;background:#7F27FF;border-radius:8px;cursor:grab;min-width:30px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.pipe-scrollthumb:hover{background:#6f37e6}
+.pipe-scrollthumb.dragging{cursor:grabbing;background:#6f37e6}
 /* The custom track above is the only visible scroll control -- hide the
    board's own native one so there isn't a confusing second bar. */
 .pipe-board-scroll{scrollbar-width:none}
@@ -672,10 +671,10 @@ body:has(#sidebar.collapsed) .pipe-scrolltrack{left:96px}
    updatePipeScroll() calls added alongside drawer open/close. */
 body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
-.statchips span{background:#f8f9fc;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
+.statchips span{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12.5px;color:var(--muted)}
 .statchips b{color:var(--ink)}
 /* settings modal */
-.overlay{position:fixed;inset:0;background:rgba(30,25,15,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;overflow:auto;padding:40px 16px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;overflow:auto;padding:40px 16px}
 .overlay.show{display:flex}
 .modal{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:28px 30px}
 .modal h2{margin:0 0 4px;font-size:18px}
@@ -683,7 +682,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 .modal label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 5px}
 .modal input{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px}
 .modal .row{display:flex;gap:12px}.modal .row>div{flex:1}
-.hookurl{background:#f8f9fc;border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:11.5px;color:#7a6a3d;margin-top:6px;word-break:break-all}
+.hookurl{background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:11.5px;color:var(--muted);margin-top:6px;word-break:break-all}
 @media(max-width:1150px){.hero{grid-template-columns:1fr}.rail{border-left:none;padding-left:0;flex-direction:row}.tiles{grid-template-columns:repeat(2,1fr)}}
 /* Phone/small-tablet: the fixed 248px sidebar reserving that same margin
    on `main` would leave almost nothing for actual content on a ~375px
@@ -707,7 +706,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
      the panel is temporary/floating on top, and gives a big, easy target
      to dismiss it besides hunting for the small toggle circle. */
   body:has(#sidebar:not(.collapsed))::before{content:'';position:fixed;inset:0;left:320px;
-    background:rgba(20,16,10,.45);z-index:140}
+    background:rgba(0,0,0,.45);z-index:140}
   /* Dashboard grid at phone/tablet width: bypass GridStack's absolute
      x/y/w/h positioning (a 12-column desktop layout's row heights don't
      mean anything once every card is full width and its content reflows
@@ -769,36 +768,36 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     <div class="word"><b>Ms. Financial Solutions</b><span>Command Center</span></div>
   </div>
   <div class="sec" data-g="ov">Overview</div>
-  <div class="nav navgroup on" data-g="ov" id="nav" style="--rc:#ff2e9a">
-    <button data-v="dash" class="on" onclick="showView('dash')" style="--ic:#ff2e9a"><span class="ico2"><i class="ri-home-5-line"></i></span>Dashboard</button>
+  <div class="nav navgroup on" data-g="ov" id="nav" style="--rc:#DE3ACE">
+    <button data-v="dash" class="on" onclick="showView('dash')" style="--ic:#DE3ACE"><span class="ico2"><i class="ri-home-5-line"></i></span>Dashboard</button>
   </div>
   <div class="sec" data-g="cl">Clients</div>
-  <div class="nav navgroup" data-g="cl" id="navClients" style="--rc:#7c5cff">
-    <button id="pipelineNavBtn" data-v="pipeline" onclick="showView('pipeline')" style="--ic:#7c5cff"><span class="ico2"><i class="ri-filter-3-line"></i></span>Pipeline</button>
-    <button id="clientsNavBtn" data-v="clients" onclick="showView('clients')" style="--ic:#7c5cff"><span class="ico2"><i class="ri-team-line"></i></span>Clients</button>
-    <button data-v="react" onclick="showView('react')" style="--ic:#7c5cff"><span class="ico2"><i class="ri-refresh-line"></i></span>Reactivation <span class="badge" id="reactBadge"></span></button>
+  <div class="nav navgroup" data-g="cl" id="navClients" style="--rc:#7F27FF">
+    <button id="pipelineNavBtn" data-v="pipeline" onclick="showView('pipeline')" style="--ic:#7F27FF"><span class="ico2"><i class="ri-filter-3-line"></i></span>Pipeline</button>
+    <button id="clientsNavBtn" data-v="clients" onclick="showView('clients')" style="--ic:#7F27FF"><span class="ico2"><i class="ri-team-line"></i></span>Clients</button>
+    <button data-v="react" onclick="showView('react')" style="--ic:#7F27FF"><span class="ico2"><i class="ri-refresh-line"></i></span>Reactivation <span class="badge" id="reactBadge"></span></button>
   </div>
   <!-- Deal Production + Credit Monitoring inject themselves here (production.js, mfsn.js) -->
   <div class="sec" data-g="pr">Production</div>
-  <div class="nav navgroup" data-g="pr" id="navProduction" style="--rc:#2f8fd6">
-    <button id="fuNavBtn" data-v="tasks" onclick="showView('tasks')" style="--ic:#2f8fd6"><span class="ico2"><i class="ri-list-check-2"></i></span>Follow-Ups</button>
+  <div class="nav navgroup" data-g="pr" id="navProduction" style="--rc:#00B8F2">
+    <button id="fuNavBtn" data-v="tasks" onclick="showView('tasks')" style="--ic:#00B8F2"><span class="ico2"><i class="ri-list-check-2"></i></span>Follow-Ups</button>
   </div>
   <!-- Revenue + Personal Finances inject themselves here (revenue.js, personal-finances.js) -- money, so green -->
   <div class="sec" data-g="fi">Finance</div>
-  <div class="nav navgroup" data-g="fi" id="navFinance" style="--rc:#0e9e56"></div>
+  <div class="nav navgroup" data-g="fi" id="navFinance" style="--rc:#45B369"></div>
   <div class="sec" data-g="ma">Marketing</div>
-  <div class="nav navgroup" data-g="ma" style="--rc:#e08a3c">
-    <button data-v="social" onclick="showView('social')" style="--ic:#e08a3c"><span class="ico2"><i class="ri-sparkling-2-line"></i></span>Social</button>
+  <div class="nav navgroup" data-g="ma" style="--rc:#F86624">
+    <button data-v="social" onclick="showView('social')" style="--ic:#F86624"><span class="ico2"><i class="ri-sparkling-2-line"></i></span>Social</button>
   </div>
-  <div class="sec" data-g="ac">Account</div>
-  <div class="nav navgroup" data-g="ac" style="--rc:#8b93a3">
-    <button id="backToProvenBtn" style="--ic:#8b93a3;display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2"><i class="ri-arrow-left-line"></i></span>Back to Proven Agency</button>
-    <button onclick="openNotifications()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-notification-3-line"></i></span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
-    <button onclick="openSettings()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-settings-3-line"></i></span>Settings</button>
-    <button id="changePwNavBtn" onclick="openChangePw()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-key-2-line"></i></span>Change password</button>
-    <button onclick="showView('tickets')" style="--ic:#8b93a3"><span class="ico2"><i class="ri-coupon-3-line"></i></span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
-    <button onclick="openSupportTicket()" style="--ic:#8b93a3"><span class="ico2"><i class="ri-mail-line"></i></span>Submit a Support Ticket</button>
-    <button id="signOutNavBtn" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())" style="--ic:#8b93a3"><span class="ico2"><i class="ri-logout-box-r-line"></i></span>Sign out</button>
+  <div class="sec" data-g="ac">Settings</div>
+  <div class="nav navgroup" data-g="ac" style="--rc:#9CA3AF">
+    <button id="backToProvenBtn" style="--ic:#9CA3AF;display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2"><i class="ri-arrow-left-line"></i></span>Back to Proven Agency</button>
+    <button onclick="openNotifications()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-notification-3-line"></i></span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
+    <button onclick="openSettings()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-plug-line"></i></span>Settings &amp; Integrations</button>
+    <button id="changePwNavBtn" onclick="openChangePw()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-key-2-line"></i></span>Change password</button>
+    <button onclick="showView('tickets')" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-coupon-3-line"></i></span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
+    <button onclick="openSupportTicket()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-mail-line"></i></span>Submit a Support Ticket</button>
+    <button id="signOutNavBtn" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-logout-box-r-line"></i></span>Sign out</button>
   </div>
   <div class="spacer"></div>
   <div class="sec">Data sources</div>
@@ -815,8 +814,8 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
          hidden so a normal Admin load renders identically to before this
          existed; role.js reveals exactly one of the two once it knows the
          account's real role and whether a preview is already active. -->
-    <span class="livepill" id="previewBanner" style="display:none;background:var(--gold-soft,#f7e6c4);color:#8a6516;margin-right:8px;cursor:default">
-      Viewing as Employee <a href="#" id="exitPreviewBtn" style="margin-left:8px;color:#8a6516;font-weight:800;text-decoration:underline">Exit preview</a>
+    <span class="livepill" id="previewBanner" style="display:none;background:var(--gold-soft,#FFF9E2);color:#C28800;margin-right:8px;cursor:default">
+      Viewing as Employee <a href="#" id="exitPreviewBtn" style="margin-left:8px;color:#C28800;font-weight:800;text-decoration:underline">Exit preview</a>
     </span>
     <button class="btn ghost" id="viewAsEmployeeBtn" style="display:none;margin-right:8px">View as Employee</button>
     <input class="search" id="globalSearch" placeholder="Search clients, payments…">
@@ -930,7 +929,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
-            <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#16a34a"><i class="ri-price-tag-3-line"></i></span>Sales trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>
+            <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#45B369"><i class="ri-price-tag-3-line"></i></span>Sales trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>
             <div class="rv-tabs" id="rvGranDash">
               <button data-g="daily">Daily</button>
               <button data-g="weekly">Weekly</button>
@@ -945,7 +944,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
                in revenue.js keeps this in sync with whatever's drawn. -->
           <div class="rvk-split-legend" id="dashTrendLegend" style="margin-top:0">
             <span><i style="background:#3b82f6"></i>Commas</span>
-            <span id="dashTrendLegendMf"><i style="background:#f59e0b"></i>MFSN</span>
+            <span id="dashTrendLegendMf"><i style="background:#FF9F29"></i>MFSN</span>
           </div>
           <!-- Admina reference (Sales Overview): a small stack of colored
                stat tiles to the left of the chart instead of the number
@@ -975,7 +974,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="clientbase" gs-x="6" gs-y="0" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#7c5cff"><i class="ri-team-line"></i></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#7F27FF"><i class="ri-team-line"></i></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
           <div class="cardsub">Where every client sits right now</div>
           <div class="cb-wrap" style="position:relative;margin-top:10px">
             <div class="segbar" id="segbar"></div>
@@ -987,7 +986,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="attention" gs-x="3" gs-y="45" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><i class="ri-alert-line"></i></span> Needs attention</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-alert-line"></i></span> Needs attention</h3>
           <div class="cardsub">Fix these before trusting the numbers</div>
           <div id="attention" style="margin-top:6px"></div>
         </div>
@@ -995,7 +994,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="conversations" gs-x="0" gs-y="34" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#3563a8"><i class="ri-message-3-line"></i></span> Conversations <button class="linklike" onclick="showView('messages')">Open inbox →</button></h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#144BD6"><i class="ri-message-3-line"></i></span> Conversations <button class="linklike" onclick="showView('messages')">Open inbox →</button></h3>
           <div class="cardsub">SMS volume · inbound above the line, outbound below</div>
           <div class="convtotals">
             <div><b id="convIn">0</b><span class="rep" id="convRatio"></span><span>Inbound texts</span></div>
@@ -1007,7 +1006,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="revenue-package" gs-x="9" gs-y="9" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><i class="ri-vip-diamond-line"></i></span> Revenue by package</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-vip-diamond-line"></i></span> Revenue by package</h3>
           <div class="cardsub">All-time · Commas + Fanbasis sales</div>
           <div class="cwrap2" style="height:170px"><canvas id="chDeals"></canvas></div>
           <div id="dealsLegend" class="pkg-legend"></div>
@@ -1016,7 +1015,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="mentorship" gs-x="0" gs-y="29" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#0e9e56"><i class="ri-graduation-cap-line"></i></span> Mentorship program</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-graduation-cap-line"></i></span> Mentorship program</h3>
           <div class="cardsub">All-time mentorship sales</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:14px" id="mentorStats"></div>
         </div>
@@ -1024,7 +1023,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="rounds" gs-x="6" gs-y="16" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#8b5cf6"><i class="ri-refresh-line"></i></span> Customer lifecycle</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-refresh-line"></i></span> Customer lifecycle</h3>
           <div class="cardsub">Onboarding through completion, real pipeline counts</div>
           <div class="lc-wrap">
             <div class="cwrap2 lc-ring"><canvas id="chLifecycle"></canvas></div>
@@ -1035,7 +1034,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="social-growth" gs-x="0" gs-y="45" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><i class="ri-sparkling-2-line"></i></span> Social growth</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#F86624"><i class="ri-sparkling-2-line"></i></span> Social growth</h3>
           <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
           <div class="cwrap2"><canvas id="chSocial"></canvas></div>
         </div>
@@ -1043,7 +1042,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="churn" gs-x="6" gs-y="33" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#b3372f"><i class="ri-refresh-line"></i></span> Churn recency</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-refresh-line"></i></span> Churn recency</h3>
           <div class="cardsub">How long ago inactive clients lapsed</div>
           <div class="cwrap2"><canvas id="chChurn"></canvas></div>
         </div>
@@ -1058,7 +1057,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="dash-methods" gs-x="6" gs-y="25" gs-w="6" gs-h="8"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead">
-            <div class="adm-cicon" style="--ic:#b98a2f"><i class="ri-bank-card-2-line"></i></div>
+            <div class="adm-cicon" style="--ic:#F4941E"><i class="ri-bank-card-2-line"></i></div>
             <div class="adm-ctext"><h3>Payment methods</h3><div class="cap">Customer's most used payment options, all-time.</div></div>
             <!-- Decorative, matching the real Admina template itself --
                  its own Weekly/Monthly/Yearly <select> on this exact card
@@ -1091,7 +1090,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="dash-newcust" gs-x="9" gs-y="0" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead noline">
-            <div class="adm-cicon" style="--ic:#e0455c"><i class="ri-group-line"></i></div>
+            <div class="adm-cicon" style="--ic:#EF4444"><i class="ri-group-line"></i></div>
             <div class="adm-ctext"><h3>Customer Growth</h3><div class="cap">Customer retention rate</div></div>
           </div>
           <div class="rc-num" id="rcNum">--</div>
@@ -1114,7 +1113,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="dash-upgrade" gs-x="6" gs-y="7" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead noline">
-            <div class="adm-cicon" style="--ic:#0e9e56"><i class="ri-arrow-up-circle-line"></i></div>
+            <div class="adm-cicon" style="--ic:#45B369"><i class="ri-arrow-up-circle-line"></i></div>
             <div class="adm-ctext"><h3>Member upgrade progress</h3><div class="cap">Migrating the book to the new platform.</div></div>
           </div>
           <div class="rv-wrap sm"><canvas id="dashUpgradeChart"></canvas></div>
@@ -1128,7 +1127,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="social-snapshot" gs-x="0" gs-y="40" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><i class="ri-sparkling-2-line"></i></span> Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#F86624"><i class="ri-sparkling-2-line"></i></span> Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
           <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
           <div class="dstat" style="margin-top:12px">
             <div class="tone-pink"><div class="l">IG followers</div><div class="v">3,656</div></div>
@@ -1140,7 +1139,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 
       <div class="grid-stack-item" gs-id="top-content" gs-x="3" gs-y="40" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><i class="ri-trophy-line"></i></span> Top performing content</h3>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-trophy-line"></i></span> Top performing content</h3>
           <div class="cardsub">Public engagement · read Jul 14, 2026</div>
           <div id="topPostsMini" style="margin-top:6px"></div>
         </div>
@@ -1157,7 +1156,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="activity" gs-x="6" gs-y="39" gs-w="6" gs-h="13"><div class="grid-stack-item-content">
         <div class="card">
           <div class="adm-chead">
-            <div class="adm-cicon" style="--ic:#ff2e9a"><i class="ri-shopping-bag-3-line"></i></div>
+            <div class="adm-cicon" style="--ic:#DE3ACE"><i class="ri-shopping-bag-3-line"></i></div>
             <div class="adm-ctext"><h3>Recent Orders</h3><div class="cap">Latest sales, disputes &amp; new clients.</div></div>
             <select class="adm-select" id="feedPeriod" onchange="loadFeed()">
               <option value="all" selected>All time</option>
@@ -1225,7 +1224,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="statchips" id="reactStats" style="margin-top:10px"></div>
       <div class="tbar">
         <label style="display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px">
-          <input type="checkbox" id="hideWorked" onchange="rPage=1;loadReact()" style="accent-color:var(--green)"> Hide already-worked
+          <input type="checkbox" id="hideWorked" onchange="rPage=1;loadReact()" style="accent-color:var(--pink)"> Hide already-worked
         </label>
       </div>
       <div style="overflow-x:auto"><table>
@@ -1265,7 +1264,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     <!-- Static social stats — real numbers read from her public profiles on 07/14/2026 (nothing connected) -->
     <div class="grid" style="grid-template-columns:1fr 1fr">
       <div class="card">
-        <h3 class="cardtitle"><span class="cico" style="--ic:#e08a3c"><i class="ri-camera-line"></i></span> Instagram <span class="badge-soft badge-ok" title="Verified account">✔ VERIFIED</span>
+        <h3 class="cardtitle"><span class="cico" style="--ic:#F86624"><i class="ri-camera-line"></i></span> Instagram <span class="badge-soft badge-ok" title="Verified account">✔ VERIFIED</span>
           <a class="linklike" href="https://www.instagram.com/msfinancialsolutions_/" target="_blank">@msfinancialsolutions_ ↗</a></h3>
         <div class="cardsub">Static numbers · as seen on profile Jul 14, 2026</div>
         <div class="dstat" style="margin-top:14px">
@@ -1275,7 +1274,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div>
       <div class="card">
-        <h3 class="cardtitle"><span class="cico" style="--ic:#3563a8"><i class="ri-team-line"></i></span> Facebook group
+        <h3 class="cardtitle"><span class="cico" style="--ic:#144BD6"><i class="ri-team-line"></i></span> Facebook group
           <a class="linklike" href="https://www.facebook.com/groups/302248546068656/" target="_blank">open group ↗</a></h3>
         <div class="cardsub">Her community group — join link for clients</div>
         <div class="dstat" style="margin-top:14px;grid-template-columns:1fr">
@@ -1284,7 +1283,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       </div>
     </div>
     <div class="card" style="margin-top:14px">
-      <h3 class="cardtitle"><span class="cico" style="--ic:#b98a2f"><i class="ri-trophy-line"></i></span> Top performing content</h3>
+      <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-trophy-line"></i></span> Top performing content</h3>
       <div class="cardsub">Real public engagement, read Jul 14 2026 — connect Meta in Settings for automatic ranking</div>
       <div id="topPostsFull" style="margin-top:6px"></div>
     </div>
@@ -1312,7 +1311,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
   <!-- ================= TICKET REQUESTS ================= -->
   <section class="view" id="view-tickets">
     <div class="card">
-      <h3 class="cardtitle"><span class="cico" style="--ic:#8b93a3"><i class="ri-coupon-3-line"></i></span> Support Ticket Requests</h3>
+      <h3 class="cardtitle"><span class="cico" style="--ic:#9CA3AF"><i class="ri-coupon-3-line"></i></span> Support Ticket Requests</h3>
       <div class="cardsub">Everything submitted to The Proven Agency from this dashboard, and their replies.</div>
       <div id="ticketList" style="margin-top:10px"></div>
     </div>
@@ -1396,7 +1395,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <button class="btn ghost" onclick="addUser()">Add</button>
     </div>
     <span class="testres" id="r_user"></span>
-    <div id="r_userLink" style="display:none;margin-top:8px;padding:9px 12px;background:#f8f9fc;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
+    <div id="r_userLink" style="display:none;margin-top:8px;padding:9px 12px;background:var(--bg);border:1px solid var(--line);border-radius:9px;font-size:12.5px">
       <div style="margin-bottom:6px">Send this link to them — it lets them set their own password and signs them straight in:</div>
       <div style="display:flex;gap:8px;align-items:center">
         <input id="r_userLinkUrl" readonly style="flex:1;font-size:11.5px" onclick="this.select()">
@@ -1540,7 +1539,7 @@ function setPreset(p){preset=p;[from,to]=presetRange(p);granularity=pickGran(fro
 function applyCustom(){preset='';from=$('fromD').value||null;to=$('toD').value||null;granularity=pickGran(from,to);renderFilters();loadDashboard();}
 
 /* ================= charts ================= */
-Chart.defaults.color='#8d8577';Chart.defaults.borderColor='#eef0f5';
+Chart.defaults.color='#9CA3AF';Chart.defaults.borderColor='#F3F4F6';
 Chart.defaults.font.family="-apple-system,'Segoe UI',Inter,sans-serif";
 const charts={};
 /* Chart.js throws "Canvas is already in use" if a chart is still attached
@@ -1554,7 +1553,7 @@ function mkChart(id,cfg){const el=$(id);if(!el)return;const existing=charts[id]|
    everywhere else in the app; everything else moves from the old muted
    olive/tan set to punchier blue/purple/pink so charts read at a glance
    instead of blending into the background. */
-const GREEN='#0e9e56',RED='#e11d48',BLUE='#3b82f6',GOLD='#f59e0b',GRAY='#c9c3e0',INK='#211d18',PURPLE='#8b5cf6',PINK='#ff2e9a';
+const GREEN='#45B369',RED='#EF4A00',BLUE='#3b82f6',GOLD='#FF9F29',GRAY='#D1D5DB',INK='#1F2937',PURPLE='#8252E9',PINK='#DE3ACE';
 function grad(ctx,color,h){const g=ctx.createLinearGradient(0,0,0,h||190);g.addColorStop(0,color+'33');g.addColorStop(1,color+'00');return g;}
 
 /* ================= dashboard ================= */
@@ -1671,11 +1670,11 @@ async function loadDashboard(){
   // series with only 1-2 real data points -- normal right after a slow
   // start or a sync gap -- still shows something instead of a blank canvas.
   const revSpark=sparkPoints(s.revenue),paySpark=sparkPoints(s.payments),newSpark=sparkPoints(s.newClients);
-  mkChart('sparkLifetime',{type:'bar',data:{labels:labels(revSpark),datasets:[{data:vals(revSpark),backgroundColor:'#0e9e56',
+  mkChart('sparkLifetime',{type:'bar',data:{labels:labels(revSpark),datasets:[{data:vals(revSpark),backgroundColor:'#45B369',
     borderRadius:2,barPercentage:.7,minBarLength:2}]},options:{maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
-  mkChart('sparkAvg',{type:'line',data:{labels:labels(paySpark),datasets:[{data:vals(paySpark),borderColor:'#0f9488',
-    borderWidth:2,tension:.5,pointRadius:paySpark.length<=3?3:0,pointBackgroundColor:'#0f9488',fill:false}]},options:{maintainAspectRatio:false,
+  mkChart('sparkAvg',{type:'line',data:{labels:labels(paySpark),datasets:[{data:vals(paySpark),borderColor:'#16A34A',
+    borderWidth:2,tension:.5,pointRadius:paySpark.length<=3?3:0,pointBackgroundColor:'#16A34A',fill:false}]},options:{maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
   mkChart('sparkNew',{type:'bar',data:{labels:labels(newSpark),datasets:[{data:vals(newSpark),backgroundColor:'#166534',
     borderRadius:2,barPercentage:.7,minBarLength:2}]},options:{maintainAspectRatio:false,
@@ -1683,7 +1682,7 @@ async function loadDashboard(){
   const repeatPct=k.revenueTotal>0?Math.round((k.repeatRevenue||0)/k.revenueTotal*100):0;
   if($('ltvRing')){
     $('ltvRing').style.setProperty('--pct',repeatPct);
-    $('ltvRing').style.setProperty('--ring-c','#65a30d');
+    $('ltvRing').style.setProperty('--ring-c','#22C55E');
     $('ltvRingPct').textContent=repeatPct+'%';
   }
   mkChart('chHero',{type:'line',data:{labels:labels(s.revenue),datasets:[{data:vals(s.revenue),borderColor:GREEN,borderWidth:2,
@@ -1734,7 +1733,7 @@ async function loadDashboard(){
   // two-column HTML list (#dealsLegend) underneath, built from this same
   // prod/dealsTotal data right after the chart.
   const pkgData=prod.slice(0,6);
-  const pkgColors=[GREEN,PURPLE,BLUE,PINK,GOLD,'#a78bfa'];
+  const pkgColors=[GREEN,PURPLE,BLUE,PINK,GOLD,'#b66dff'];
   const dealsTotal=pkgData.reduce((s,x)=>s+x.revenue,0)||1;
   mkChart('chDeals',{type:'doughnut',data:{labels:pkgData.map(x=>x.key),datasets:[{data:pkgData.map(x=>x.revenue),
     backgroundColor:pkgColors,borderWidth:0,hoverOffset:6}]},
@@ -1760,9 +1759,9 @@ async function loadDashboard(){
       const ty=cy-inner*0.55;
       const {ctx}=chart;
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillStyle='#8d8577';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
+      ctx.fillStyle='#9CA3AF';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText('Total revenue',cx,ty-11);
-      ctx.fillStyle='#211d18';ctx.font='700 20px -apple-system,Segoe UI,Inter,sans-serif';
+      ctx.fillStyle='#1F2937';ctx.font='700 20px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText(fmt$(dealsTotal),cx,ty+9);
       ctx.restore();
     }},
@@ -1872,7 +1871,7 @@ async function loadDashboard(){
     var existingRc=charts['dashReturning']||Chart.getChart(el); if(existingRc) existingRc.destroy();
     var ctx=el.getContext('2d');
     var grad=ctx.createLinearGradient(0,0,0,el.parentElement.clientHeight||120);
-    grad.addColorStop(0,'rgba(14,158,86,.35)'); grad.addColorStop(1,'rgba(14,158,86,.02)');
+    grad.addColorStop(0,'rgba(69,179,105,.35)'); grad.addColorStop(1,'rgba(69,179,105,.02)');
     charts['dashReturning']=new Chart(ctx,{type:'line',data:{labels:series.map(function(s){return s.label;}),
       datasets:[{data:series.map(function(s){return s.rate;}),borderColor:GREEN,backgroundColor:grad,fill:true,tension:.4,pointRadius:0,borderWidth:2.5}]},
       options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+'% returning';}}}},
@@ -2049,7 +2048,7 @@ async function loadPipeline(){
     </div>`).join('');
 
   $('pipeBoard').innerHTML=d.columns.map((col,i)=>`
-    <div class="pipe-col" id="pipeCol_${i}" style="min-width:230px;flex:0 0 230px;background:#f8f9fc;border:1px solid var(--line);border-radius:12px;padding:12px;scroll-margin-inline-start:16px;display:flex;flex-direction:column">
+    <div class="pipe-col" id="pipeCol_${i}" style="min-width:230px;flex:0 0 230px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;scroll-margin-inline-start:16px;display:flex;flex-direction:column">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="font-size:13px">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span></div>
       <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:10px">${col.revenue?fmt$(col.revenue):'—'}</div>
       <div style="overflow-y:auto;max-height:min(560px,calc(100vh - 340px));padding-right:2px">

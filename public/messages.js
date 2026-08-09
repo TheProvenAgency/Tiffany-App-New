@@ -3,7 +3,7 @@ GHL's Conversations already aggregate for this sub-account). Self-contained modu
 same pattern as production.js: injects its own <section>, its own nav button under
 Production, and wraps window.showView rather than touching index.html's core script. */
 (function(){
-var CHAN_COLOR={SMS:'#2f8fd6',EMAIL:'#c98a1e',FACEBOOK:'#3b5998',INSTAGRAM:'#c0328a',WHATSAPP:'#25d366',CALL:'#6b6256',VOICEMAIL:'#6b6256',GMB:'#4285f4',LIVE_CHAT:'#0e9e56',REVIEW:'#e08a3c',OTHER:'#8b93a3'};
+var CHAN_COLOR={SMS:'#00B8F2',EMAIL:'#F4941E',FACEBOOK:'#3b5998',INSTAGRAM:'#DE3ACE',WHATSAPP:'#25d366',CALL:'#6B7280',VOICEMAIL:'#6B7280',GMB:'#4285f4',LIVE_CHAT:'#45B369',REVIEW:'#F86624',OTHER:'#9CA3AF'};
 function chanColor(k){return CHAN_COLOR[k]||CHAN_COLOR.OTHER;}
 var CONVOS=[], CHANNELS=[], curChannel='ALL', curSearch='', curId=null, curContactId=null, curChannelKey=null, sending=false, loaded=false, pollTimer=null;
 
@@ -20,9 +20,9 @@ var css=''+
 '#view-messages .msg-chip .dot{width:7px;height:7px;border-radius:50%}'+
 '#view-messages .msg-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}'+
 '#view-messages .msg-rows{overflow-y:auto;flex:1}'+
-'#view-messages .msg-row{display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid #f0ece3;cursor:pointer;align-items:flex-start}'+
-'#view-messages .msg-row:hover{background:#faf7f1}#view-messages .msg-row.on{background:var(--blue-soft)}'+
-'#view-messages .msg-avatar{width:34px;height:34px;border-radius:50%;background:var(--card2,#efeae0);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex:none;position:relative}'+
+'#view-messages .msg-row{display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start}'+
+'#view-messages .msg-row:hover{background:var(--bg)}#view-messages .msg-row.on{background:var(--blue-soft)}'+
+'#view-messages .msg-avatar{width:34px;height:34px;border-radius:50%;background:var(--card2,#F3F4F6);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex:none;position:relative}'+
 '#view-messages .msg-avatar .chandot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;border:2px solid var(--card)}'+
 '#view-messages .msg-rowmain{min-width:0;flex:1}'+
 '#view-messages .msg-rowtop{display:flex;justify-content:space-between;gap:8px}'+
@@ -43,7 +43,7 @@ var css=''+
 '#view-messages .msg-bubblewrap.in{align-self:flex-start;align-items:flex-start}'+
 '#view-messages .msg-bubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word}'+
 '#view-messages .msg-bubblewrap.out .msg-bubble{background:var(--ink);color:#fff;border-bottom-right-radius:4px}'+
-'#view-messages .msg-bubblewrap.in .msg-bubble{background:#efeae0;color:var(--ink);border-bottom-left-radius:4px}'+
+'#view-messages .msg-bubblewrap.in .msg-bubble{background:var(--tile-bg);color:var(--ink);border-bottom-left-radius:4px}'+
 '#view-messages .msg-bmeta{font-size:10px;color:var(--muted);margin-top:3px;padding:0 3px}'+
 '#view-messages .msg-noselect{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}'+
 '#view-messages .msg-composer{display:none;gap:8px;padding:12px 18px;border-top:1px solid var(--line);align-items:flex-end}'+

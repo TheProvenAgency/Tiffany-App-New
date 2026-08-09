@@ -19,19 +19,19 @@ var css=''+
 '#view-team .tm-cap{color:var(--muted);font-size:11.5px;margin:3px 0 12px}'+
 '#view-team .tm-sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin:12px 0 6px}'+
 '#view-team .tm-sec:first-of-type{margin-top:0}'+
-'#view-team .tm-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ece3;cursor:pointer}'+
+'#view-team .tm-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}'+
 '#view-team .tm-row:last-child{border-bottom:none}'+
-'#view-team .tm-row:hover{background:#faf7f1}'+
+'#view-team .tm-row:hover{background:var(--bg)}'+
 '#view-team .tm-nm{font-weight:700;font-size:12.5px}'+
 '#view-team .tm-pkg{color:var(--muted);font-size:11px;margin-top:1px}'+
 '#view-team .tm-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;flex:none}'+
-'#view-team .tag-blue{background:var(--blue-soft);color:#27508c}'+
-'#view-team .tag-gold{background:var(--gold-soft);color:#8a6516}'+
-'#view-team .tag-red{background:var(--red-soft);color:#8f2b25}'+
-'#view-team .tag-green{background:var(--green-soft);color:#1f6a45}'+
+'#view-team .tag-blue{background:var(--blue-soft);color:#06307C}'+
+'#view-team .tag-gold{background:var(--gold-soft);color:#C28800}'+
+'#view-team .tag-red{background:var(--red-soft);color:#801D18}'+
+'#view-team .tag-green{background:var(--green-soft);color:#006038}'+
 '#view-team .tm-empty{color:var(--muted);font-size:12px;padding:10px 0}'+
 '#view-team .tm-more{color:var(--muted);font-size:11px;padding-top:8px;text-align:center}'+
-'#view-team .tm-note{background:var(--gold-soft);color:#8a6516;border-radius:9px;padding:9px 12px;font-size:11.5px;margin-top:14px}';
+'#view-team .tm-note{background:var(--gold-soft);color:#C28800;border-radius:9px;padding:9px 12px;font-size:11.5px;margin-top:14px}';
 
 /* ---------- helpers (duplicated from production.js on purpose -- each
    module in this app owns its own small pure helpers rather than sharing a

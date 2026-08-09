@@ -1,8 +1,8 @@
 /* Revenue — total business income: Commas sales + MyFreeScoreNow affiliate commissions.
    Figures read from the Commas dashboard and the MyFreeScoreNow affiliate portal (Jul 28 2026). */
 (function(){
-var C={ink:'#211d18',blue:'#3b82f6',green:'#0e9e56',gold:'#f59e0b',red:'#e11d48',teal:'#06b6d4',purple:'#8b5cf6',orange:'#f97316',pink:'#ff2e9a',lime:'#6f8f2f',slate:'#5a6b7d'};
-var PAL=['#3563a8','#2e7d54','#b98a2f','#b3372f','#2f8f8a','#6b5bd0','#c06a2b','#c14d8a','#6f8f2f','#5a6b7d'];
+var C={ink:'#1F2937',blue:'#3b82f6',green:'#45B369',gold:'#FF9F29',red:'#EF4A00',teal:'#00B8F2',purple:'#8252E9',orange:'#F86624',pink:'#DE3ACE',lime:'#16A34A',slate:'#6B7280'};
+var PAL=['#144BD6','#45B369','#F4941E','#E30A0A','#00B8F2','#7F27FF','#F86624','#DE3ACE','#16A34A','#6B7280'];
 var charts={}, gran='monthly';
 
 /* ---------- Commas (sales) — Jan 1 – Jul 28, 2026 ---------- */
@@ -164,8 +164,8 @@ function drawHeroChart(){
   if(!window.Chart)return;var cv=document.getElementById('chHero');if(!cv)return;
   try{var ex=Chart.getChart(cv);if(ex)ex.destroy();}catch(e){}
   var hd=(PERIODS[curPeriod]||PERIODS['30D']).chart;
-  charts.hero=new Chart(cv.getContext('2d'),{type:'line',data:{labels:hd.labels,datasets:[{data:hd.vals,borderColor:C.green,backgroundColor:'rgba(46,125,84,.10)',fill:true,tension:.32,pointRadius:0,borderWidth:2.5}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return money0(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}}}}});
+  charts.hero=new Chart(cv.getContext('2d'),{type:'line',data:{labels:hd.labels,datasets:[{data:hd.vals,borderColor:C.green,backgroundColor:'rgba(69,179,105,.10)',fill:true,tension:.32,pointRadius:0,borderWidth:2.5}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return money0(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}}}}});
 }
 function patchDash(){
   // idempotent + cheap — run every tick so the badge/alert stay hidden even when the app re-renders
@@ -198,7 +198,7 @@ function hookPeriods(){
 var css=''+
 '#view-rev{padding:24px 30px 60px}'+
 '#view-rev .rv-sub{color:var(--muted);font-size:12.5px;margin:2px 0 16px;max-width:1000px;line-height:1.6}'+
-'#view-rev .rv-band{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6f6857;margin:22px 0 12px;display:flex;align-items:center;gap:9px}'+
+'#view-rev .rv-band{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6B7280;margin:22px 0 12px;display:flex;align-items:center;gap:9px}'+
 '#view-rev .rv-band .ic{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px}'+
 /* .rv-kpi/.rv-card/.rv-head/.rv-wrap/.rv-tabs are left unscoped (no
    "#view-rev " prefix) on purpose -- the Sales-trend card and the income
@@ -225,12 +225,12 @@ var css=''+
    renders as a Dashboard card (#dashUpgradeProgress, see index.html
    gs-id="dash-upgrade") -- same reasoning as the .rv-kpi/.rv-card block
    above. */
-'.rv-mrow{display:grid;grid-template-columns:1.1fr 1fr 74px;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid #f0ece3}.rv-mrow:last-child{border-bottom:none}'+
+'.rv-mrow{display:grid;grid-template-columns:1.1fr 1fr 74px;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}.rv-mrow:last-child{border-bottom:none}'+
 '.rv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle}'+
 '.rv-mn{font-weight:700;font-size:13px}.rv-ma{font-variant-numeric:tabular-nums;font-weight:700}'+
-'.rv-prog{height:8px;background:#efe9df;border-radius:6px;overflow:hidden}.rv-prog>i{display:block;height:100%;border-radius:6px}'+
-'#view-rev .rv-disp{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid #f0ece3}#view-rev .rv-disp:last-child{border-bottom:none}'+
-'#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:#8a6516;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
+'.rv-prog{height:8px;background:var(--tile-bg);border-radius:6px;overflow:hidden}.rv-prog>i{display:block;height:100%;border-radius:6px}'+
+'#view-rev .rv-disp{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line)}#view-rev .rv-disp:last-child{border-bottom:none}'+
+'#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:#C28800;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
 '#view-rev .rv-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}'+
 // sizing for the two cards when they live inside a GridStack item on the
 // Dashboard instead of the free-flowing Revenue page
@@ -241,7 +241,7 @@ var css=''+
 '.rv-trend-stat .tv{font-size:clamp(15px,2.2cqw,20px);font-weight:800;color:var(--ink);line-height:1.15}'+
 '.rv-trend-stat .tl{font-size:11.5px;color:var(--muted);margin-top:3px}'+
 '.rv-trend-stat.tile-a{background:var(--pink-soft);border:1px solid var(--pink-soft);border-left:3px solid var(--pink)}'+
-'.rv-trend-stat.tile-b{background:var(--gold-soft);border-left:3px solid var(--gold)}.rv-trend-stat.tile-b .tl{color:#8a6a1f}'+
+'.rv-trend-stat.tile-b{background:var(--gold-soft);border-left:3px solid var(--gold)}.rv-trend-stat.tile-b .tl{color:#C28800}'+
 '.grid-stack-item-content>.rv-card>.rv-trend-body>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important;min-width:0}'+
 // Same fix, direct-child case: Payment methods / Customer Growth /
 // New customers don't have the .rv-trend-body wrapper the Sales trend
@@ -257,7 +257,7 @@ var css=''+
 '.adm-chead{display:flex;align-items:flex-start;gap:12px;padding-bottom:16px;margin-bottom:14px;border-bottom:1px solid var(--line);flex:0 0 auto}'+
 '.adm-cicon{width:44px;height:44px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb, var(--ic,#6b7280) 14%, white);color:var(--ic,#6b7280)}'+
 '.adm-ctext{flex:1;min-width:0}.adm-ctext h3{margin:0;font-size:14.5px;font-weight:700;color:var(--ink)}.adm-ctext .cap{margin:2px 0 0}'+
-'.adm-select{border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--muted);background:#f8f9fc;cursor:pointer;flex:0 0 auto}'+
+'.adm-select{border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--muted);background:var(--bg);cursor:pointer;flex:0 0 auto}'+
 '.adm-chead.noline{border-bottom:none;padding-bottom:4px;margin-bottom:4px}'+
 '.adm-legend{list-style:none;display:flex;justify-content:center;gap:16px;padding:0;margin:12px 0 0;flex-wrap:wrap;flex:0 0 auto}'+
 '.adm-legend li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}'+
@@ -276,12 +276,12 @@ var css=''+
 '.adm-table th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:0 10px 8px;border-bottom:1px solid var(--line)}'+
 '.adm-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink)}'+
 '.adm-table tr:last-child td{border-bottom:none}'+
-'.adm-table tr:hover td{background:#f8f9fc}'+
+'.adm-table tr:hover td{background:var(--bg)}'+
 '.adm-row1{display:flex;align-items:center;gap:8px}'+
 '.adm-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}'+
-'.adm-pill.k-sale{background:var(--green-soft);color:#0e6b3d}'+
-'.adm-pill.k-client{background:var(--pink-soft);color:#3730a3}'+
-'.adm-pill.k-dispute{background:var(--red-soft);color:#8a2a24}'+
+'.adm-pill.k-sale{background:var(--green-soft);color:#006038}'+
+'.adm-pill.k-client{background:var(--pink-soft);color:#302B8C}'+
+'.adm-pill.k-dispute{background:var(--red-soft);color:#801D18}'+
 '.grid-stack-item-content>.rv-kpis{height:100%}'+
 // the Lifetime collected / Avg payment / LTV / New clients KPI rail, moved
 // here from the Dashboard -- .kpi/.spark/.miniring are all global classes
@@ -405,7 +405,7 @@ function drawUpgradeChart(){
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillStyle='#9ca3af';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText('Total members',cx,cy-11);
-      ctx.fillStyle='#211d18';ctx.font='700 22px -apple-system,Segoe UI,Inter,sans-serif';
+      ctx.fillStyle='#1F2937';ctx.font='700 22px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText(total.toLocaleString(),cx,cy+12);
       ctx.restore();
     }},
@@ -434,8 +434,8 @@ function methodRows(){
 /* ---------- charts ---------- */
 function killChart(k){if(charts[k]){charts[k].destroy();charts[k]=null;}}
 function trendData(withMf){
-  if(gran==='daily')return {labels:CO_DAILY.labels,vals:CO_DAILY.rev,color:C.teal,fill:'rgba(47,143,138,.12)'};
-  if(gran==='weekly')return {labels:CO_WEEKLY.labels,vals:CO_WEEKLY.rev,color:C.purple,fill:'rgba(107,91,208,.12)'};
+  if(gran==='daily')return {labels:CO_DAILY.labels,vals:CO_DAILY.rev,color:C.teal,fill:'rgba(0,184,242,.12)'};
+  if(gran==='weekly')return {labels:CO_WEEKLY.labels,vals:CO_WEEKLY.rev,color:C.purple,fill:'rgba(130,82,233,.12)'};
   // Monthly is the one grain where MFSN commissions are actually tracked
   // (they're only ever reported per calendar month, never daily/weekly).
   // withMf is only passed true for the Dashboard's copy of this chart --
@@ -444,11 +444,11 @@ function trendData(withMf){
   // heading would misrepresent the section it's in. Reads from the same
   // INCOME_BY_MONTH/INCOME_YMS the Total income KPI card's range math
   // already uses, so the two cards can never disagree.
-  if(!withMf)return {labels:CO_MONTHLY.labels,vals:CO_MONTHLY.rev,color:C.blue,fill:'rgba(53,99,168,.12)'};
+  if(!withMf)return {labels:CO_MONTHLY.labels,vals:CO_MONTHLY.rev,color:C.blue,fill:'rgba(59,130,246,.12)'};
   var labels=INCOME_YMS.map(function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]; });
   var coVals=INCOME_YMS.map(function(ym){ return INCOME_BY_MONTH[ym].co||0; });
   var mfVals=INCOME_YMS.map(function(ym){ return INCOME_BY_MONTH[ym].mf||0; });
-  return {labels:labels,vals:coVals,color:C.blue,fill:'rgba(53,99,168,.12)',mfVals:mfVals,mfColor:C.gold,mfFill:'rgba(245,158,11,.10)'};
+  return {labels:labels,vals:coVals,color:C.blue,fill:'rgba(59,130,246,.12)',mfVals:mfVals,mfColor:C.gold,mfFill:'rgba(255,159,41,.10)'};
 }
 // targetId lets the same Sales-trend chart draw into either the Revenue
 // page's own canvas (#rvTrend) or the copy that now also lives on the
@@ -474,7 +474,7 @@ function drawTrend(targetId){
   // grain actually has an MFSN series to go with it.
   var mfLegend=document.getElementById('dashTrendLegendMf'); if(mfLegend) mfLegend.style.display=hasMf?'':'none';
   charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:datasets},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10.5},color:'#9ca3af'},grid:{color:'#eef0f5'}},x:{grid:{display:false},ticks:{font:{size:10.5},color:'#9ca3af',maxTicksLimit:12}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10.5},color:'#9ca3af'},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10.5},color:'#9ca3af',maxTicksLimit:12}}}}});
 }
 // redraws whichever of the two Sales-trend canvases currently exist in the
 // document -- the Revenue page's isn't in the DOM unless that view has
@@ -511,7 +511,7 @@ function drawMethods(targetId){
     // just the Admina chart type/layout for the Dashboard's copy.
     charts[targetId]=new Chart(el.getContext('2d'),{type:'polarArea',
       data:{labels:METHODS.map(function(m){return m.name+' '+m.pct+'%';}),datasets:[{data:METHODS.map(function(m){return m.amt;}),backgroundColor:METHODS.map(function(m){return m.color+'cc';}),borderWidth:1,borderColor:'#fff'}]},
-      options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false},grid:{color:'#efe9df'}}},
+      options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false},grid:{color:'#F3F4F6'}}},
         plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10.5},padding:9}},tooltip:{callbacks:{label:function(c){var m=METHODS[c.dataIndex];return m.name+': '+money0(m.amt)+' ('+m.pct+'%)';}}}}}});
     return;
   }
@@ -527,18 +527,18 @@ function drawCust(targetId){
     // just the Admina chart style for the Dashboard's copy.
     var ctx=el.getContext('2d');
     var grad=ctx.createLinearGradient(0,0,0,el.parentElement.clientHeight||230);
-    grad.addColorStop(0,'rgba(53,99,168,.32)'); grad.addColorStop(1,'rgba(53,99,168,.02)');
+    grad.addColorStop(0,'rgba(59,130,246,.32)'); grad.addColorStop(1,'rgba(59,130,246,.02)');
     charts[targetId]=new Chart(ctx,{type:'line',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,borderColor:C.blue,backgroundColor:grad,fill:true,tension:.35,pointRadius:3,pointBackgroundColor:C.blue,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5}]},
-     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString()+' new customers';}}}},scales:{y:{ticks:{font:{size:10},callback:function(v){return v>=1000?(v/1000)+'k':v;}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString()+' new customers';}}}},scales:{y:{ticks:{font:{size:10},callback:function(v){return v>=1000?(v/1000)+'k':v;}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
     return;
   }
   charts[targetId]=new Chart(el.getContext('2d'),{type:'bar',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 function drawMf(){
   if(!window.Chart)return;var el=document.getElementById('rvMf');if(!el)return;killChart('mf');
   charts.mf=new Chart(el.getContext('2d'),{type:'bar',data:{labels:MF_MONTHLY.labels,datasets:[{data:MF_MONTHLY.vals,backgroundColor:MF_MONTHLY.labels.map(function(_,i){return PAL[i%PAL.length];}),borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 // small trend chart in the corner of each Dashboard income KPI tile (see
 // index.html gs-id="rev-kpi-*", .rvkspark canvases). Built from the same
@@ -554,7 +554,7 @@ function sparkTooltipEl(){
   if(!el){
     el=document.createElement('div');
     el.id='rvkTooltip';
-    el.style.cssText='position:fixed;pointer-events:none;z-index:9999;background:#20222b;color:#fff;'+
+    el.style.cssText='position:fixed;pointer-events:none;z-index:9999;background:#1F2937;color:#fff;'+
       'font-size:11.5px;line-height:1.45;padding:7px 11px;border-radius:9px;box-shadow:0 8px 22px rgba(0,0,0,.28);'+
       'opacity:0;transition:opacity .08s ease;white-space:nowrap;transform:translate(-50%,-100%)';
     document.body.appendChild(el);
@@ -604,7 +604,7 @@ function drawPeriods(){
   var vals=[CO.week,CO.month,CO.sixMo,CO.ytd];
   var cols=[C.purple,C.green,C.blue,C.gold];
   charts.p=new Chart(el.getContext('2d'),{type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:cols,borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#efe9df'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
 /* ---------- init ---------- */
