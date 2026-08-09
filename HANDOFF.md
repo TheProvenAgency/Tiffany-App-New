@@ -29,8 +29,15 @@ dashboard, plus a separate **Deal Production** work tracker for employees.
   `node --test tests/*.test.js`. Currently **212 passing / 3 failing** (see §4).
 - Deployment: Render free tier, auto-deploy on push to `main`. No
   `render.yaml`/Dockerfile — build/start/env configured directly in Render's
-  dashboard. Live URL (per repo docs, unverified as still current):
-  `https://msfs-dashboard.onrender.com`.
+  dashboard. Live URL (confirmed from real deploy logs, 2026-08):
+  `https://tiffany-app-new.onrender.com`. **No persistent disk is attached** —
+  `DATA_DIR` is unset, so JSON files live on the container's ephemeral
+  filesystem and are wiped on every restart/spin-down (free tier sleeps
+  after ~15 min idle). This is why Postgres is primary for Deal Production
+  (`lib/production.js`) and app config/secrets (`store.setConfigPrimary`,
+  restored on boot via `store.hydrateConfigFromPostgres`) — anything still
+  JSON-primary-only (notes, tasks, tickets, etc., see `lib/store.js`) does
+  NOT currently survive a restart on this host.
 - Git remote: `https://github.com/TheProvenAgency/Tiffany-App-New.git`.
 
 **How pieces connect:** Express serves `public/` as static files and exposes

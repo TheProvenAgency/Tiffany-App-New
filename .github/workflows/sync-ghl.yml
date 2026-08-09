@@ -14,7 +14,7 @@ name: Sync GHL to Deal Production
 # would.
 #
 # Requires two repo secrets (Settings -> Secrets and variables -> Actions):
-#   RENDER_APP_URL  -- e.g. https://msfs-dashboard.onrender.com (no trailing slash)
+#   RENDER_APP_URL  -- e.g. https://tiffany-app-new.onrender.com (no trailing slash)
 #   CRON_SECRET     -- must match the CRON_SECRET env var set on Render
 
 on:

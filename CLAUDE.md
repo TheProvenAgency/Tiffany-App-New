@@ -230,10 +230,16 @@ there).
 
 Render (free tier), auto-deploy on push to `main`. No `render.yaml`/Dockerfile in the
 repo — build/start commands and env vars are configured in the Render dashboard:
-Runtime **Node**, Build `npm install`, Start `npm start`, plus a 1GB persistent disk
-mounted at `/data` with `DATA_DIR=/data`. Railway/Fly.io work the same way (unverified —
-README only documents Render). Live URL: https://msfs-dashboard.onrender.com (per
-`docs/HANDOFF.md`, unverified as current).
+Runtime **Node**, Build `npm install`, Start `npm start`. **No persistent disk is
+attached** (confirmed 2026-08) — `DATA_DIR` is unset, so JSON files live on the
+container's ephemeral filesystem and are wiped on every restart/spin-down (free tier
+sleeps after ~15 min idle). This is exactly why Deal Production (`lib/production.js`)
+and app config/secrets (`store.setConfigPrimary`, restored via
+`store.hydrateConfigFromPostgres` on boot) are Postgres-primary — anything still
+JSON-primary-only in `lib/store.js` (notes, tasks, tickets, dashboard layouts, etc.)
+does NOT currently survive a restart on this host. Railway/Fly.io work the same way
+(unverified — README only documents Render). Live URL (confirmed from real deploy
+logs): https://tiffany-app-new.onrender.com.
 
 ## Conventions (from docs/HANDOFF.md)
 

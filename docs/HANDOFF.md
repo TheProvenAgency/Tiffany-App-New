@@ -1,7 +1,9 @@
 # Handoff — MSFS Dashboard
 
 Status as of this session. Everything below is committed to `main` and
-auto-deploys to https://msfs-dashboard.onrender.com. **107 tests, all passing**
+auto-deploys to https://tiffany-app-new.onrender.com (confirmed from real
+deploy logs, 2026-08 -- no persistent disk attached on this host; see the
+Postgres-primary tiers in CLAUDE.md). **107 tests, all passing**
 (`npm test`). Working tree clean, nothing unpushed.
 
 ## What this app is
