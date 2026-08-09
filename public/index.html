@@ -15,31 +15,28 @@
 <script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <style>
 :root{
-  /* Admina reference's real "Green" color-schema swatch (its theme
-     picker ships Blue/Red/Green/Yellow/Cyan skins -- #16a34a is the
-     literal hex behind the Green option), not a guess. --bg gets a very
-     light green tint instead of the old cool blue-gray so the canvas
-     itself reads green too, per Tiffany's ask, since Admina's own flat
-     #F5F6FA has no color of its own to copy -- the "gradient light
-     green" she's seeing is this card-on-canvas contrast plus the green
-     theme color everywhere, reproduced below as an actual subtle
-     gradient on body. */
-  --bg:#eef7f1; --card:#ffffff; --ink:#20222b; --muted:#8b93a3; --line:#eaedf3;
-  --sidebar:#ffffff; --sidebar-ink:#4b5563; --sidebar-dim:#9198a5; --sidebar-line:#eef0f5;
-  /* money green -- richer/more saturated than the old muted forest green so
-     $ figures actually pop, per Tiffany's ask. Everything that already read
-     var(--green) (badges, up-arrows, chart lines) gets the upgrade for free. */
-  --green:#0e9e56; --green-soft:#dff7ea; --red:#b3372f; --red-soft:#f6e5e3;
-  --blue:#3563a8; --blue-soft:#e6ecf6; --gray:#b9b3a8; --gold:#b98a2f; --gold-soft:#f5ecd8;
+  /* Admina full re-skin (indigo brand). Every value below is read from
+     public/admina-assets/css/style.css -- neutrals (neutral-50..900),
+     semantic main/surface pairs (success/info/warning/danger), and the
+     primary-600 #4F46E5 brand. Surfaces are Admina's flat #F5F6FA canvas
+     on white cards; no tinted/gradient background anymore. */
+  --bg:#F5F6FA; --card:#ffffff; --ink:#111827; --muted:#4B5563; --line:#d1d5db80;
+  --sidebar:#ffffff; --sidebar-ink:#4B5563; --sidebar-dim:#9CA3AF; --sidebar-line:#ececf2;
+  /* Semantic colors: Admina's success/danger/info/warning main+surface
+     pairs. --green stays a GREEN (success #45B369) deliberately -- it is
+     used for money figures, up-deltas, ok-badges and live pills, i.e.
+     meaning-bearing green, not brand chrome. */
+  --green:#45B369; --green-soft:#DAF0E1; --red:#EF4A00; --red-soft:#FCDAE2;
+  --blue:#144BD6; --blue-soft:#E7EEFC; --gray:#9CA3AF; --gold:#FF9F29; --gold-soft:#FFF9E2;
   /* Primary brand accent (sidebar active nav, avatar gradient, default
-     ring color, edit-mode outline) switched from the old indigo/blue
-     (#4f46e5) to Admina's Green skin (#16a34a) per Tiffany's explicit
-     "not the blue one" ask -- variable names kept as --pink/--rose so
-     every existing var(--pink) reference below updates for free instead
-     of needing a search-and-replace across the file. The login screen's
-     own hot-pink CTA lives in login.html, a separate file, untouched. */
-  --pink:#16a34a; --pink-soft:#e3f6ea; --rose:#22b35c; --blush:#a8e6bd; --brand-ink:#0c3d20;
-  --tile-bg:#f2f4f8; --tile-bg-2:#f8f9fc; --filters-bg:#eef0f5; --filters-well:#e3e7ee;
+     ring color, edit-mode outline): Admina's primary-600 indigo #4F46E5.
+     Variable names kept as --pink/--rose (a historical mislabel) so every
+     existing var(--pink) reference updates for free. --rose is the avatar
+     gradient's second stop (Admina's --indigo accent #7F27FF); --blush /
+     --brand-ink are currently unreferenced, mapped to primary-100 /
+     primary-950 for consistency. */
+  --pink:#4F46E5; --pink-soft:rgba(79,70,229,0.12); --rose:#7F27FF; --blush:#BFDCFF; --brand-ink:#302B8C;
+  --tile-bg:#F3F4F6; --tile-bg-2:#F5F6FA; --filters-bg:#F3F4F6; --filters-well:#DFE0E2;
 }
 /* Dark mode -- toggled via the header sun/moon button (see themeToggleBtn),
    persisted in localStorage so it survives a reload without needing any
@@ -53,16 +50,21 @@
    not silently glossed over: they still render fine on dark cards (muted
    gray text/gridlines read on either background) but aren't "themed". */
 html[data-theme="dark"]{
-  --bg:#141a17; --card:#1d2621; --ink:#e9efe9; --muted:#8fa398; --line:#2b3630;
-  --sidebar:#1a221d; --sidebar-ink:#c3cfc7; --sidebar-dim:#78897f; --sidebar-line:#2b3630;
-  --green-soft:#123322; --red-soft:#3a2422; --blue-soft:#1c2733; --gold-soft:#332a16;
-  --pink-soft:#12331f;
-  --tile-bg:#232e28; --tile-bg-2:#212b25; --filters-bg:#1c2620; --filters-well:#24312a;
+  /* Admina's own dark tokens ([data-theme=dark] in admina-assets/css/
+     style.css): page bg dark-1 #1B2431, card/sidebar bg dark-2 #273142,
+     wells dark-3 #323D4E, primary text --base #fff, secondary text
+     #D1D5DB, dim #6B7280, borders #d1d5db33, and Admina's own dark
+     surface tints for the semantic softs (their dark *-50/*-100 values,
+     faint white-alpha washes). */
+  --bg:#1B2431; --card:#273142; --ink:#ffffff; --muted:#9CA3AF; --line:#d1d5db33;
+  --sidebar:#273142; --sidebar-ink:#D1D5DB; --sidebar-dim:#6B7280; --sidebar-line:#d1d5db33;
+  --green-soft:#DCFCE70f; --red-soft:rgba(239,71,112,0.149); --blue-soft:#EFF6FF0f; --gold-soft:#FEFCE80f;
+  --pink-soft:#e4f1ff0f;
+  --tile-bg:#323D4E; --tile-bg-2:#323D4E; --filters-bg:#273142; --filters-well:#323D4E;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);background-image:linear-gradient(180deg,#e6f5ea 0%,#eef7f1 22%,#f4f8f5 55%,#f6f8f7 100%);background-attachment:fixed;color:var(--ink);font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;transition:background-color .2s ease,color .2s ease}
-html[data-theme="dark"] body{background-image:linear-gradient(180deg,#182620 0%,#151d19 30%,#131916 100%)}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;transition:background-color .2s ease,color .2s ease}
 button{font-family:inherit}
 /* ============ sidebar ============ */
 /* Single always-visible panel -- every group's pages sit right on the page,
