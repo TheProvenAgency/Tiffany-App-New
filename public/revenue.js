@@ -165,7 +165,7 @@ function drawHeroChart(){
   try{var ex=Chart.getChart(cv);if(ex)ex.destroy();}catch(e){}
   var hd=(PERIODS[curPeriod]||PERIODS['30D']).chart;
   charts.hero=new Chart(cv.getContext('2d'),{type:'line',data:{labels:hd.labels,datasets:[{data:hd.vals,borderColor:C.green,backgroundColor:'rgba(69,179,105,.10)',fill:true,tension:.32,pointRadius:0,borderWidth:2.5}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return money0(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return money0(v);},font:{size:10}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}}}}});
 }
 function patchDash(){
   // idempotent + cheap — run every tick so the badge/alert stay hidden even when the app re-renders
@@ -198,7 +198,7 @@ function hookPeriods(){
 var css=''+
 '#view-rev{padding:24px 30px 60px}'+
 '#view-rev .rv-sub{color:var(--muted);font-size:12.5px;margin:2px 0 16px;max-width:1000px;line-height:1.6}'+
-'#view-rev .rv-band{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6B7280;margin:22px 0 12px;display:flex;align-items:center;gap:9px}'+
+'#view-rev .rv-band{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:22px 0 12px;display:flex;align-items:center;gap:9px}'+
 '#view-rev .rv-band .ic{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px}'+
 /* .rv-kpi/.rv-card/.rv-head/.rv-wrap/.rv-tabs are left unscoped (no
    "#view-rev " prefix) on purpose -- the Sales-trend card and the income
@@ -207,8 +207,8 @@ var css=''+
    apply outside #view-rev too. */
 '.rv-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}'+
 '.rv-kpi{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;border-top:3px solid var(--line)}'+
-'.rv-kpi .l{color:#374151;font-weight:500;padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}'+
-'.rv-kpi .v{font-size:28px;font-weight:600;margin-top:6px;letter-spacing:-.5px;color:#111827}'+
+'.rv-kpi .l{color:var(--muted);font-weight:500;padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}'+
+'.rv-kpi .v{font-size:28px;font-weight:600;margin-top:6px;letter-spacing:-.5px;color:var(--ink)}'+
 '.rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
 '.rv-kpi.hero{background:var(--card);border-top-color:var(--green)}.rv-kpi.hero .v{color:var(--ink);font-size:25px}.rv-kpi.hero .s{color:var(--muted)}'+
 '#view-rev .rv-grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}'+
@@ -219,7 +219,7 @@ var css=''+
 '.rv-wrap{position:relative;height:280px}.rv-wrap.sm{height:230px}'+
 '.rv-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}'+
 '.rv-tabs button{border:none;background:var(--card);padding:6px 15px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}'+
-'.rv-tabs button:last-child{border-right:none}.rv-tabs button.on{background:var(--ink);color:#fff}'+
+'.rv-tabs button:last-child{border-right:none}.rv-tabs button.on{background:var(--inverse-bg);color:var(--inverse-ink)}'+
 /* .rv-mrow/.rv-dot/.rv-mn/.rv-ma/.rv-prog un-scoped from "#view-rev "
    (used to be Revenue-page-only) now that Member upgrade progress also
    renders as a Dashboard card (#dashUpgradeProgress, see index.html
@@ -230,7 +230,7 @@ var css=''+
 '.rv-mn{font-weight:700;font-size:13px}.rv-ma{font-variant-numeric:tabular-nums;font-weight:700}'+
 '.rv-prog{height:8px;background:var(--tile-bg);border-radius:6px;overflow:hidden}.rv-prog>i{display:block;height:100%;border-radius:6px}'+
 '#view-rev .rv-disp{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line)}#view-rev .rv-disp:last-child{border-bottom:none}'+
-'#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:#C28800;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
+'#view-rev .rv-pill{display:inline-block;background:var(--gold-soft);color:var(--gold-ink);border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700}'+
 '#view-rev .rv-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}'+
 // sizing for the two cards when they live inside a GridStack item on the
 // Dashboard instead of the free-flowing Revenue page
@@ -241,7 +241,7 @@ var css=''+
 '.rv-trend-stat .tv{font-size:clamp(15px,2.2cqw,20px);font-weight:800;color:var(--ink);line-height:1.15}'+
 '.rv-trend-stat .tl{font-size:11.5px;color:var(--muted);margin-top:3px}'+
 '.rv-trend-stat.tile-a{background:var(--pink-soft);border:1px solid var(--pink-soft);border-left:3px solid var(--pink)}'+
-'.rv-trend-stat.tile-b{background:var(--gold-soft);border-left:3px solid var(--gold)}.rv-trend-stat.tile-b .tl{color:#C28800}'+
+'.rv-trend-stat.tile-b{background:var(--gold-soft);border-left:3px solid var(--gold)}.rv-trend-stat.tile-b .tl{color:var(--gold-ink)}'+
 '.grid-stack-item-content>.rv-card>.rv-trend-body>.rv-wrap{flex:1 1 auto;min-height:0;height:auto!important;min-width:0}'+
 // Same fix, direct-child case: Payment methods / Customer Growth /
 // New customers don't have the .rv-trend-body wrapper the Sales trend
@@ -255,14 +255,14 @@ var css=''+
 // methods / Customer Growth / Recent Orders cards below) -- never the
 // part that should shrink/scroll, the chart or table below it should.
 '.adm-chead{display:flex;align-items:flex-start;gap:12px;padding-bottom:16px;margin-bottom:14px;border-bottom:1px solid var(--line);flex:0 0 auto}'+
-'.adm-cicon{width:44px;height:44px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb, var(--ic,#6b7280) 14%, white);color:var(--ic,#6b7280)}'+
+'.adm-cicon{width:44px;height:44px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb, var(--ic,#6b7280) 14%, var(--card));color:var(--ic,#6b7280)}'+
 '.adm-ctext{flex:1;min-width:0}.adm-ctext h3{margin:0;font-size:14.5px;font-weight:700;color:var(--ink)}.adm-ctext .cap{margin:2px 0 0}'+
 '.adm-select{border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--muted);background:var(--bg);cursor:pointer;flex:0 0 auto}'+
 '.adm-chead.noline{border-bottom:none;padding-bottom:4px;margin-bottom:4px}'+
 '.adm-legend{list-style:none;display:flex;justify-content:center;gap:16px;padding:0;margin:12px 0 0;flex-wrap:wrap;flex:0 0 auto}'+
 '.adm-legend li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}'+
 '.adm-legend .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;display:inline-block}'+
-'.adm-avatar{width:28px;height:28px;border-radius:50%;background:color-mix(in srgb, var(--ic,#6b7280) 18%, white);color:var(--ic,#6b7280);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:0 0 auto}'+
+'.adm-avatar{width:28px;height:28px;border-radius:50%;background:color-mix(in srgb, var(--ic,#6b7280) 18%, var(--card));color:var(--ic,#6b7280);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:0 0 auto}'+
 // Admina reference (Returning Clients card): icon-circle header (reuses
 // .adm-chead.noline), a big retention % with a colored delta line right
 // under it, then a small gradient area sparkline filling the rest of the
@@ -279,9 +279,9 @@ var css=''+
 '.adm-table tr:hover td{background:var(--bg)}'+
 '.adm-row1{display:flex;align-items:center;gap:8px}'+
 '.adm-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}'+
-'.adm-pill.k-sale{background:var(--green-soft);color:#006038}'+
-'.adm-pill.k-client{background:var(--pink-soft);color:#302B8C}'+
-'.adm-pill.k-dispute{background:var(--red-soft);color:#801D18}'+
+'.adm-pill.k-sale{background:var(--green-soft);color:var(--green-ink)}'+
+'.adm-pill.k-client{background:var(--pink-soft);color:var(--brand-tint-ink)}'+
+'.adm-pill.k-dispute{background:var(--red-soft);color:var(--red-ink)}'+
 '.grid-stack-item-content>.rv-kpis{height:100%}'+
 // the Lifetime collected / Avg payment / LTV / New clients KPI rail, moved
 // here from the Dashboard -- .kpi/.spark/.miniring are all global classes
@@ -405,7 +405,7 @@ function drawUpgradeChart(){
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillStyle='#9ca3af';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText('Total members',cx,cy-11);
-      ctx.fillStyle='#1F2937';ctx.font='700 22px -apple-system,Segoe UI,Inter,sans-serif';
+      ctx.fillStyle=document.documentElement.getAttribute('data-theme')==='dark'?'#F5F6FA':'#1F2937';ctx.font='700 22px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText(total.toLocaleString(),cx,cy+12);
       ctx.restore();
     }},
@@ -474,7 +474,7 @@ function drawTrend(targetId){
   // grain actually has an MFSN series to go with it.
   var mfLegend=document.getElementById('dashTrendLegendMf'); if(mfLegend) mfLegend.style.display=hasMf?'':'none';
   charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:datasets},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10.5},color:'#9ca3af'},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10.5},color:'#9ca3af',maxTicksLimit:12}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10.5},color:'#9ca3af'},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10.5},color:'#9ca3af',maxTicksLimit:12}}}}});
 }
 // redraws whichever of the two Sales-trend canvases currently exist in the
 // document -- the Revenue page's isn't in the DOM unless that view has
@@ -511,7 +511,7 @@ function drawMethods(targetId){
     // just the Admina chart type/layout for the Dashboard's copy.
     charts[targetId]=new Chart(el.getContext('2d'),{type:'polarArea',
       data:{labels:METHODS.map(function(m){return m.name+' '+m.pct+'%';}),datasets:[{data:METHODS.map(function(m){return m.amt;}),backgroundColor:METHODS.map(function(m){return m.color+'cc';}),borderWidth:1,borderColor:'#fff'}]},
-      options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false},grid:{color:'#F3F4F6'}}},
+      options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false},grid:{color:'rgba(156,163,175,.2)'}}},
         plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10.5},padding:9}},tooltip:{callbacks:{label:function(c){var m=METHODS[c.dataIndex];return m.name+': '+money0(m.amt)+' ('+m.pct+'%)';}}}}}});
     return;
   }
@@ -529,16 +529,16 @@ function drawCust(targetId){
     var grad=ctx.createLinearGradient(0,0,0,el.parentElement.clientHeight||230);
     grad.addColorStop(0,'rgba(59,130,246,.32)'); grad.addColorStop(1,'rgba(59,130,246,.02)');
     charts[targetId]=new Chart(ctx,{type:'line',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,borderColor:C.blue,backgroundColor:grad,fill:true,tension:.35,pointRadius:3,pointBackgroundColor:C.blue,pointBorderColor:'#fff',pointBorderWidth:1.5,borderWidth:2.5}]},
-     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString()+' new customers';}}}},scales:{y:{ticks:{font:{size:10},callback:function(v){return v>=1000?(v/1000)+'k':v;}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString()+' new customers';}}}},scales:{y:{ticks:{font:{size:10},callback:function(v){return v>=1000?(v/1000)+'k':v;}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
     return;
   }
   charts[targetId]=new Chart(el.getContext('2d'),{type:'bar',data:{labels:CO_MONTHLY.labels,datasets:[{data:CO_MONTHLY.cust,backgroundColor:PAL,borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' new customers';}}}},scales:{y:{ticks:{font:{size:10}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 function drawMf(){
   if(!window.Chart)return;var el=document.getElementById('rvMf');if(!el)return;killChart('mf');
   charts.mf=new Chart(el.getContext('2d'),{type:'bar',data:{labels:MF_MONTHLY.labels,datasets:[{data:MF_MONTHLY.vals,backgroundColor:MF_MONTHLY.labels.map(function(_,i){return PAL[i%PAL.length];}),borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 // small trend chart in the corner of each Dashboard income KPI tile (see
 // index.html gs-id="rev-kpi-*", .rvkspark canvases). Built from the same
@@ -604,7 +604,7 @@ function drawPeriods(){
   var vals=[CO.week,CO.month,CO.sixMo,CO.ytd];
   var cols=[C.purple,C.green,C.blue,C.gold];
   charts.p=new Chart(el.getContext('2d'),{type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:cols,borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
 /* ---------- init ---------- */

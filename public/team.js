@@ -25,13 +25,13 @@ var css=''+
 '#view-team .tm-nm{font-weight:700;font-size:12.5px}'+
 '#view-team .tm-pkg{color:var(--muted);font-size:11px;margin-top:1px}'+
 '#view-team .tm-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;flex:none}'+
-'#view-team .tag-blue{background:var(--blue-soft);color:#06307C}'+
-'#view-team .tag-gold{background:var(--gold-soft);color:#C28800}'+
-'#view-team .tag-red{background:var(--red-soft);color:#801D18}'+
-'#view-team .tag-green{background:var(--green-soft);color:#006038}'+
+'#view-team .tag-blue{background:var(--blue-soft);color:var(--blue-ink)}'+
+'#view-team .tag-gold{background:var(--gold-soft);color:var(--gold-ink)}'+
+'#view-team .tag-red{background:var(--red-soft);color:var(--red-ink)}'+
+'#view-team .tag-green{background:var(--green-soft);color:var(--green-ink)}'+
 '#view-team .tm-empty{color:var(--muted);font-size:12px;padding:10px 0}'+
 '#view-team .tm-more{color:var(--muted);font-size:11px;padding-top:8px;text-align:center}'+
-'#view-team .tm-note{background:var(--gold-soft);color:#C28800;border-radius:9px;padding:9px 12px;font-size:11.5px;margin-top:14px}';
+'#view-team .tm-note{background:var(--gold-soft);color:var(--gold-ink);border-radius:9px;padding:9px 12px;font-size:11.5px;margin-top:14px}';
 
 /* ---------- helpers (duplicated from production.js on purpose -- each
    module in this app owns its own small pure helpers rather than sharing a

@@ -18,11 +18,11 @@ var css=''+
 '#view-messages .msg-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}'+
 '#view-messages .msg-chip{cursor:pointer;border:1px solid var(--line);background:var(--bg);border-radius:20px;padding:5px 11px;font-size:11px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:5px}'+
 '#view-messages .msg-chip .dot{width:7px;height:7px;border-radius:50%}'+
-'#view-messages .msg-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}'+
+'#view-messages .msg-chip.on{background:var(--inverse-bg);color:var(--inverse-ink);border-color:var(--inverse-bg)}'+
 '#view-messages .msg-rows{overflow-y:auto;flex:1}'+
 '#view-messages .msg-row{display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start}'+
 '#view-messages .msg-row:hover{background:var(--bg)}#view-messages .msg-row.on{background:var(--blue-soft)}'+
-'#view-messages .msg-avatar{width:34px;height:34px;border-radius:50%;background:var(--card2,#F3F4F6);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex:none;position:relative}'+
+'#view-messages .msg-avatar{width:34px;height:34px;border-radius:50%;background:var(--card2,var(--tile-bg));color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex:none;position:relative}'+
 '#view-messages .msg-avatar .chandot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;border:2px solid var(--card)}'+
 '#view-messages .msg-rowmain{min-width:0;flex:1}'+
 '#view-messages .msg-rowtop{display:flex;justify-content:space-between;gap:8px}'+
@@ -42,13 +42,13 @@ var css=''+
 '#view-messages .msg-bubblewrap.out{align-self:flex-end;align-items:flex-end}'+
 '#view-messages .msg-bubblewrap.in{align-self:flex-start;align-items:flex-start}'+
 '#view-messages .msg-bubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word}'+
-'#view-messages .msg-bubblewrap.out .msg-bubble{background:var(--ink);color:#fff;border-bottom-right-radius:4px}'+
+'#view-messages .msg-bubblewrap.out .msg-bubble{background:var(--inverse-bg);color:var(--inverse-ink);border-bottom-right-radius:4px}'+
 '#view-messages .msg-bubblewrap.in .msg-bubble{background:var(--tile-bg);color:var(--ink);border-bottom-left-radius:4px}'+
 '#view-messages .msg-bmeta{font-size:10px;color:var(--muted);margin-top:3px;padding:0 3px}'+
 '#view-messages .msg-noselect{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}'+
 '#view-messages .msg-composer{display:none;gap:8px;padding:12px 18px;border-top:1px solid var(--line);align-items:flex-end}'+
 '#view-messages .msg-composer textarea{flex:1;resize:none;max-height:120px;min-height:38px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;line-height:1.4;background:var(--bg);color:var(--ink)}'+
-'#view-messages .msg-composer button{background:var(--ink);color:#fff;border:none;border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}'+
+'#view-messages .msg-composer button{background:var(--inverse-bg);color:var(--inverse-ink);border:none;border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}'+
 '#view-messages .msg-composer button:disabled{opacity:.5;cursor:default}'+
 '@media(max-width:900px){#view-messages .msg-body{grid-template-columns:1fr}#view-messages .msg-thread{display:none}#view-messages.msg-thread-open .msg-thread{display:flex}#view-messages.msg-thread-open .msg-list-wrap{display:none}#view-messages .msg-back{display:inline-block!important}}'+
 '#view-messages .msg-back{display:none;background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink);margin-right:4px}';

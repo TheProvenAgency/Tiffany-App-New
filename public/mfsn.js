@@ -36,13 +36,13 @@ var css=''+
 '#view-mfsn .mf-sub{color:var(--muted);font-size:12.5px;margin:2px 0 14px;max-width:1000px;line-height:1.6}'+
 '#view-mfsn .mf-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:16px;flex-wrap:wrap}'+
 '#view-mfsn .mf-tabs button{border:none;background:var(--card);padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}'+
-'#view-mfsn .mf-tabs button:last-child{border-right:none}#view-mfsn .mf-tabs button.on{background:var(--ink);color:#fff}'+
+'#view-mfsn .mf-tabs button:last-child{border-right:none}#view-mfsn .mf-tabs button.on{background:var(--inverse-bg);color:var(--inverse-ink)}'+
 '#view-mfsn .mf-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}'+
 '#view-mfsn .mf-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 15px;border-top:3px solid var(--line)}'+
 '#view-mfsn .mf-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '#view-mfsn .mf-kpi .v{font-size:22px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
 '#view-mfsn .mf-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
-'#view-mfsn .mf-kpi.hero{background:var(--ink);border-top-color:#45B369}#view-mfsn .mf-kpi.hero .l{color:#D1D5DB}#view-mfsn .mf-kpi.hero .v{color:#fff}#view-mfsn .mf-kpi.hero .s{color:#9CA3AF}'+
+'#view-mfsn .mf-kpi.hero{background:var(--inverse-bg);border-top-color:#45B369}#view-mfsn .mf-kpi.hero .l{color:var(--inverse-muted)}#view-mfsn .mf-kpi.hero .v{color:var(--inverse-ink)}#view-mfsn .mf-kpi.hero .s{color:var(--inverse-muted)}'+
 '#view-mfsn .mf-grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-bottom:16px}'+
 '#view-mfsn .mf-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
 '#view-mfsn .mf-card h3{margin:0 0 3px;font-size:14px}#view-mfsn .mf-card .cap{color:var(--muted);font-size:12px;margin:0 0 12px}'+
@@ -137,7 +137,7 @@ function killChart(k){if(charts[k]){charts[k].destroy();charts[k]=null;}}
 function drawComm(){
   if(!window.Chart)return;var el=document.getElementById('mfComm');if(!el)return;killChart('cm');
   charts.cm=new Chart(el.getContext('2d'),{type:'bar',data:{labels:COMM_TREND.labels,datasets:[{data:COMM_TREND.vals,backgroundColor:COMM_TREND.labels.map(function(_,i){return PAL[i%PAL.length];}),borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 function drawMig(){
   if(!window.Chart)return;var el=document.getElementById('mfMig');if(!el)return;killChart('mg');

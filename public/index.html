@@ -37,6 +37,16 @@
      primary-950 for consistency. */
   --pink:#4F46E5; --pink-soft:rgba(79,70,229,0.12); --rose:#7F27FF; --blush:#BFDCFF; --brand-ink:#302B8C;
   --tile-bg:#F3F4F6; --tile-bg-2:#F5F6FA; --filters-bg:#F3F4F6; --filters-well:#DFE0E2;
+  /* Adaptive pairings added by the dark-contrast audit. *-ink = text that
+     sits on the matching -soft tint: dark "pressed" Admina tokens in light
+     mode, the light 300/400-ramp tokens in dark mode (where the tints
+     become faint washes on a dark card). --inverse-* = the "filled dark
+     chip" pattern (active tabs/chips, hero KPI, composer buttons): a dark
+     fill with white text in light mode must flip to a light fill with
+     dark text in dark mode -- background:var(--ink) used to turn white-
+     on-white there. */
+  --green-ink:var(--green-ink); --blue-ink:var(--blue-ink); --gold-ink:var(--gold-ink); --red-ink:var(--red-ink); --brand-tint-ink:#302B8C;
+  --inverse-bg:#111827; --inverse-ink:#ffffff; --inverse-muted:#D1D5DB;
 }
 /* Dark mode -- toggled via the header sun/moon button (see themeToggleBtn),
    persisted in localStorage so it survives a reload without needing any
@@ -61,6 +71,10 @@ html[data-theme="dark"]{
   --green-soft:#DCFCE70f; --red-soft:rgba(239,71,112,0.149); --blue-soft:#EFF6FF0f; --gold-soft:#FEFCE80f;
   --pink-soft:#e4f1ff0f;
   --tile-bg:#323D4E; --tile-bg-2:#323D4E; --filters-bg:#273142; --filters-well:#323D4E;
+  /* dark values: Admina success-400 / info-300 / warning-300 / danger-300 /
+     primary-200 -- light ramp tokens readable on the faint dark washes. */
+  --green-ink:#4ADE80; --blue-ink:#93C5FD; --gold-ink:#FDE047; --red-ink:#FCA5A5; --brand-tint-ink:#95C7FF;
+  --inverse-bg:#F5F6FA; --inverse-ink:#111827; --inverse-muted:#6B7280;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -83,7 +97,7 @@ aside{display:flex;height:100vh;position:fixed;top:0;left:0;z-index:50}
 /* Floating tab that opens/closes the whole sidebar -- lives outside the
    aside so it's still reachable even when the panel is fully collapsed. */
 .navCollapseToggle{position:fixed;top:14px;left:282px;z-index:70;width:40px;height:40px;border:1px solid rgba(0,0,0,.06);border-radius:12px;
-  background:#fff;color:#374151;display:flex;align-items:center;justify-content:center;
+  background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center;
   cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.16);transition:left .16s ease,box-shadow .12s ease,transform .12s ease}
 .navCollapseToggle svg{width:19px;height:19px}
 .navCollapseToggle:hover{box-shadow:0 6px 18px rgba(0,0,0,.22);transform:translateY(-1px)}
@@ -261,8 +275,8 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .kpi .delta.up{color:var(--green)} .kpi .delta.down{color:var(--red)} .kpi .delta.flat{color:var(--gold)}
 .kpi .spark{display:block;width:76px!important;max-width:76px;height:40px!important;max-height:40px;flex:0 0 auto}
 .kpi .miniring{width:44px;height:44px;border-radius:50%;padding:5px;flex:0 0 auto;
-  background:conic-gradient(var(--ring-c,var(--green)) calc(var(--pct,0)*1%),#F3F4F6 0)}
-.kpi .miniring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+  background:conic-gradient(var(--ring-c,var(--green)) calc(var(--pct,0)*1%),var(--tile-bg) 0)}
+.kpi .miniring .hole{width:100%;height:100%;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center}
 .kpi .miniring .hole b{font-size:10.5px;font-weight:800;color:var(--ink)}
 /* money-dashboard reference: every KPI card lives in the same green family
    (green is money) instead of the old pink/purple/blue rainbow -- each card
@@ -279,8 +293,8 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 /* progress ring -- a lightweight donut gauge (conic-gradient, no chart
    library needed) for the handful of "% of something" figures. */
 .ring{width:clamp(56px,20cqw,92px);height:clamp(56px,20cqw,92px);border-radius:50%;padding:clamp(5px,1.6cqw,8px);flex:0 0 auto;
-  background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),#F3F4F6 0)}
-.ring .hole{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  background:conic-gradient(var(--ring-c,var(--pink)) calc(var(--pct,0)*1%),var(--tile-bg) 0)}
+.ring .hole{width:100%;height:100%;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ring .hole b{font-size:clamp(11px,4.5cqw,17px);font-weight:800;color:var(--ink)}
 .ring .hole span{font-size:clamp(6.5px,2.2cqw,8.5px);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
 /* Client base card: the "% active" ring used to sit big and front-and-
@@ -347,7 +361,7 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
    separates the label row from the big figure, and a plain "more" affordance
    (unicode vertical-dots, no menu behind it yet) sits top-right on every
    tile -- hero included, not just the donut ones. */
-.rv-kpi .l{color:#374151;font-weight:500;padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+.rv-kpi .l{color:var(--muted);font-weight:500;padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}
 .rv-kpi::after{content:'\22EE';position:absolute;top:12px;right:14px;color:var(--muted);font-size:15px;line-height:1;opacity:.55}
 
 .rv-kpi .rvkspark{position:absolute;right:12px;bottom:12px;width:40%;max-width:120px;height:40%;max-height:58px;opacity:.95;cursor:crosshair}
@@ -364,7 +378,7 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .rv-kpi .rvktrend.up{color:#45B369}
 .rv-kpi .rvktrend.down{color:#EF4A00}
 .rv-kpi .rvktrend.caution{color:#D69705}
-.rv-kpi .rvktrend.neutral{color:#4f46e5}
+.rv-kpi .rvktrend.neutral{color:var(--brand-tint-ink)}
 /* Chart.js (responsive:true, maintainAspectRatio:false) sizes a canvas to
    fill its DIRECT parent's box -- when the canvas sat straight inside the
    whole tile, Chart.js resized it to nearly the tile's full width/height
@@ -461,7 +475,7 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .badge-ok{background:var(--green-soft);color:var(--green)}
 .badge-warn{background:var(--gold-soft);color:var(--gold)}
 h3.cardtitle{margin:0;font-size:14.5px;display:flex;align-items:center;gap:8px}
-.cardtitle .cico{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:color-mix(in srgb, var(--ic,#6b7280) 16%, white);color:var(--ic,#6b7280)}
+.cardtitle .cico{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:color-mix(in srgb, var(--ic,#6b7280) 16%, var(--card));color:var(--ic,#6b7280)}
 .cardtitle .cico svg{width:15px;height:15px}
 .cardtitle .cico i{font-size:15px;line-height:1}
 .rv-kpi-donut{border-top-color:var(--line)!important}
@@ -523,7 +537,7 @@ h3.cardtitle .sub{display:block}
 .att .ico svg{width:14px;height:14px}
 .att b{font-size:clamp(11px,3.2cqw,13px);display:block}
 .att span{font-size:11.5px;color:var(--muted)}
-.att .act{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.att .act{margin-left:auto;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .att .act.dark{background:#111827;color:#fff;border-color:#111827}
 /* feed */
 .feeditem{display:flex;gap:10px;align-items:center;padding:clamp(5px,1.6cqh,8px) 0;border-bottom:1px solid var(--line);font-size:clamp(10.5px,3cqw,12.5px)}
@@ -550,10 +564,10 @@ tr:hover td{background:var(--bg)}
 .pill.unknown{background:var(--tile-bg);color:var(--muted)}
 .pill.warn{background:var(--gold-soft);color:var(--gold)}
 .tbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.tbar input,.tbar select{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--ink)}
+.tbar input,.tbar select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--ink)}
 .tbar input{flex:1;min-width:180px}
 .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--muted);font-size:12.5px}
-.pager button{background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink)}
+.pager button{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink)}
 section.view{display:none} section.view.on{display:block;animation:viewFade .25s ease}
 /* View-swap fade -- Admina's real tab/panel entry animation (tsFade in
    admina-assets/css/style.css: opacity 0->1 over 0.25s ease with a 6px
@@ -566,27 +580,27 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
    anyway). */
 @keyframes viewFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* drawer */
-.drawer{position:fixed;top:0;right:-580px;width:560px;max-width:95vw;height:100vh;background:#fff;border-left:1px solid var(--line);
+.drawer{position:fixed;top:0;right:-580px;width:560px;max-width:95vw;height:100vh;background:var(--card);border-left:1px solid var(--line);
   z-index:120;transition:right .25s;overflow-y:auto;box-shadow:-18px 0 50px rgba(0,0,0,.15)}
 .drawer.open{right:0}
-.drawer .dhead{padding:22px 24px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
+.drawer .dhead{padding:22px 24px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:2}
 .drawer .dbody{padding:18px 24px 40px}
 .drawer h2{margin:0;font-size:19px}
 .drawer .dmeta{color:var(--muted);font-size:12.5px;margin-top:5px;line-height:1.7}
-.drawer .close{position:absolute;top:16px;right:18px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
+.drawer .close{position:absolute;top:16px;right:18px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
 .dsec{margin-top:20px}
 .dsec h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
 /* Process section (drawer) -- Deal Production's stage/bureau/next-step
    info shown alongside a GHL contact record, or standalone when a card has
    no GHL match (see openProductionOnlyClient). No dollar figures here. */
-.proc-stage-select{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;background:var(--tile-bg);color:#6B7280;border:1px solid var(--line);cursor:pointer}
-.proc-next{background:var(--gold-soft);color:#C28800;border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;margin-top:10px}
+.proc-stage-select{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;background:var(--tile-bg);color:var(--muted);border:1px solid var(--line);cursor:pointer}
+.proc-next{background:var(--gold-soft);color:var(--gold-ink);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;margin-top:10px}
 .proc-bureaus{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .proc-mini{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
-.proc-mini.done{background:var(--green-soft);color:#006038}
-.proc-mini.ready{background:var(--blue-soft);color:#06307C}
-.proc-mini.login{background:var(--red-soft);color:#801D18}
-.proc-mini.none{background:var(--tile-bg);color:#9CA3AF}
+.proc-mini.done{background:var(--green-soft);color:var(--green-ink)}
+.proc-mini.ready{background:var(--blue-soft);color:var(--blue-ink)}
+.proc-mini.login{background:var(--red-soft);color:var(--red-ink)}
+.proc-mini.none{background:var(--tile-bg);color:var(--muted)}
 .proc-docs{color:var(--muted);font-size:11.5px;margin-top:8px}
 /* stat tiles float flat on the card (Admina restraint) -- the nested
    gray wells (--tile-bg / tone-* washes, which had all converged on the
@@ -601,34 +615,35 @@ section.view{display:none} section.view.on{display:block;animation:viewFade .25s
 .evrow .mut{color:var(--muted)}
 .noterow{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;font-size:13px}
 .noterow .mut{color:var(--muted);font-size:11px;margin-top:4px}
-.dsec textarea{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;min-height:58px;resize:vertical}
-.dsec input[type=text],.dsec input[type=date],.dsec select{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--ink)}
+.dsec textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;min-height:58px;resize:vertical}
+.dsec input[type=text],.dsec input[type=date],.dsec select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--ink)}
 .taskform{margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
 .taskform .row{display:flex;gap:8px;margin-top:8px}
 .taskform .row>*{flex:1;min-width:0}
 .tasknotesform{background:var(--bg);border:1px solid var(--line);border-top:none;border-radius:0 0 12px 12px;margin:-9px 0 8px;padding:14px}
-.notebox{width:100%;box-sizing:border-box;background:#fff;border:1px solid var(--line);border-radius:10px;
+.notebox{width:100%;box-sizing:border-box;background:var(--card);border:1px solid var(--line);border-radius:10px;
   padding:12px 14px;font-size:14px;font-family:inherit;line-height:1.4;min-height:96px;resize:vertical}
 .notebox:focus{outline:none;border-color:var(--pink)}
 .mentionwrap{position:relative}
-.mentionbox{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:160px;overflow-y:auto}
+.mentionbox{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:2px;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:160px;overflow-y:auto}
 .mentionbox .mopt{padding:8px 12px;font-size:13px;cursor:pointer}
 .mentionbox .mopt:hover,.mentionbox .mopt.sel{background:var(--gold-soft)}
 .dactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .btn{padding:9px 16px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}
 .btn.primary{background:var(--pink);color:#fff}
-.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
 .testres{font-size:12.5px;min-height:16px}
 .testres.ok{color:var(--green)}.testres.bad{color:var(--red)}
 /* tasks / react */
-.taskrow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px}
+.taskrow{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px}
 .taskrow.done{opacity:.5}
 .taskrow input[type=checkbox]{width:16px;height:16px;accent-color:var(--pink)}
 .taskrow .tt{flex:1}
 .taskrow .due{font-size:11.5px;color:var(--gold)} .taskrow .due.over{color:var(--red);font-weight:700}
 .taskrow .cl{font-size:11.5px;color:var(--muted)} .taskrow .del{background:none;border:none;color:var(--muted);cursor:pointer}
 .addtask{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-.addtask input,.addtask select{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:13px;color-scheme:light}
+.addtask input,.addtask select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--ink);color-scheme:light}
+html[data-theme="dark"] .addtask input,html[data-theme="dark"] .addtask select{color-scheme:dark}
 .addtask input[type=text]{flex:1;min-width:220px}
 .addtask select{min-width:150px}
 .statchips{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
@@ -676,11 +691,11 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 /* settings modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;overflow:auto;padding:40px 16px}
 .overlay.show{display:flex}
-.modal{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:28px 30px}
+.modal{background:var(--card);border-radius:16px;max-width:640px;width:100%;padding:28px 30px}
 .modal h2{margin:0 0 4px;font-size:18px}
 .modal p.hint{color:var(--muted);font-size:12.5px;margin:2px 0 14px;line-height:1.5}
 .modal label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 5px}
-.modal input{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px}
+.modal input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px}
 .modal .row{display:flex;gap:12px}.modal .row>div{flex:1}
 .hookurl{background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-family:monospace;font-size:11.5px;color:var(--muted);margin-top:6px;word-break:break-all}
 @media(max-width:1150px){.hero{grid-template-columns:1fr}.rail{border-left:none;padding-left:0;flex-direction:row}.tiles{grid-template-columns:repeat(2,1fr)}}
@@ -814,8 +829,8 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
          hidden so a normal Admin load renders identically to before this
          existed; role.js reveals exactly one of the two once it knows the
          account's real role and whether a preview is already active. -->
-    <span class="livepill" id="previewBanner" style="display:none;background:var(--gold-soft,#FFF9E2);color:#C28800;margin-right:8px;cursor:default">
-      Viewing as Employee <a href="#" id="exitPreviewBtn" style="margin-left:8px;color:#C28800;font-weight:800;text-decoration:underline">Exit preview</a>
+    <span class="livepill" id="previewBanner" style="display:none;background:var(--gold-soft,#FFF9E2);color:var(--gold-ink);margin-right:8px;cursor:default">
+      Viewing as Employee <a href="#" id="exitPreviewBtn" style="margin-left:8px;color:var(--gold-ink);font-weight:800;text-decoration:underline">Exit preview</a>
     </span>
     <button class="btn ghost" id="viewAsEmployeeBtn" style="display:none;margin-right:8px">View as Employee</button>
     <input class="search" id="globalSearch" placeholder="Search clients, payments…">
@@ -1419,7 +1434,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     <label>Subject</label>
     <input id="t_subject" placeholder="What's this about?">
     <label style="margin-top:14px">Details</label>
-    <textarea id="t_message" rows="5" placeholder="Tell us what's going on…" style="width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
+    <textarea id="t_message" rows="5" placeholder="Tell us what's going on…" style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
     <div class="dactions" style="margin-top:20px">
       <button class="btn primary" onclick="submitSupportTicket()">Submit</button>
       <button class="btn ghost" onclick="closeSupportTicket()">Close</button>
@@ -1498,7 +1513,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     <div class="dmeta" id="th_meta" style="color:var(--muted);font-size:12.5px;margin:4px 0 14px"></div>
     <div id="th_notes" style="max-height:360px;overflow-y:auto;margin-bottom:14px"></div>
     <label>Reply</label>
-    <textarea id="th_reply" rows="3" placeholder="Add a reply…" style="width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
+    <textarea id="th_reply" rows="3" placeholder="Add a reply…" style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
     <div class="dactions" style="margin-top:14px">
       <button class="btn primary" onclick="sendTicketReply()">Send</button>
       <button class="btn ghost" onclick="closeTicketThread()">Close</button>
@@ -1539,7 +1554,7 @@ function setPreset(p){preset=p;[from,to]=presetRange(p);granularity=pickGran(fro
 function applyCustom(){preset='';from=$('fromD').value||null;to=$('toD').value||null;granularity=pickGran(from,to);renderFilters();loadDashboard();}
 
 /* ================= charts ================= */
-Chart.defaults.color='#9CA3AF';Chart.defaults.borderColor='#F3F4F6';
+Chart.defaults.color='#9CA3AF';Chart.defaults.borderColor='rgba(156,163,175,.2)';
 Chart.defaults.font.family="-apple-system,'Segoe UI',Inter,sans-serif";
 const charts={};
 /* Chart.js throws "Canvas is already in use" if a chart is still attached
@@ -1761,7 +1776,7 @@ async function loadDashboard(){
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillStyle='#9CA3AF';ctx.font='11px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText('Total revenue',cx,ty-11);
-      ctx.fillStyle='#1F2937';ctx.font='700 20px -apple-system,Segoe UI,Inter,sans-serif';
+      ctx.fillStyle=document.documentElement.getAttribute('data-theme')==='dark'?'#F5F6FA':'#1F2937';ctx.font='700 20px -apple-system,Segoe UI,Inter,sans-serif';
       ctx.fillText(fmt$(dealsTotal),cx,ty+9);
       ctx.restore();
     }},
@@ -2052,7 +2067,7 @@ async function loadPipeline(){
       <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="font-size:13px">${col.name}</b><span style="color:var(--muted);font-size:12px">${col.count}</span></div>
       <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:10px">${col.revenue?fmt$(col.revenue):'—'}</div>
       <div style="overflow-y:auto;max-height:min(560px,calc(100vh - 340px));padding-right:2px">
-      ${col.clients.map(c=>`<div onclick="${c.kind==='production'?`openProductionOnlyClient('${c.id}')`:`openClient('${c.id}')`}" style="cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px">
+      ${col.clients.map(c=>`<div onclick="${c.kind==='production'?`openProductionOnlyClient('${c.id}')`:`openClient('${c.id}')`}" style="cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px">
         <div style="font-weight:600;font-size:12.5px">${c.name}</div>
         <div style="color:var(--muted);font-size:11px;margin-top:2px">${c.deal||''}${c.totalSpent?' · '+fmt$(c.totalSpent):''}</div></div>`).join('')}
       </div>

@@ -121,16 +121,16 @@ function acctType(a){return a.source==='plaid'?'Synced':'Manual';}
 /* ---------- styles ---------- */
 var css=''+
 '#view-personal .lm-sub{color:var(--muted);font-size:12.5px;margin:2px 0 14px;max-width:1000px;line-height:1.6}'+
-'#view-personal .lm-badge{display:inline-block;background:var(--gold-soft);color:#C28800;border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;margin-left:6px;vertical-align:middle}'+
+'#view-personal .lm-badge{display:inline-block;background:var(--gold-soft);color:var(--gold-ink);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;margin-left:6px;vertical-align:middle}'+
 '#view-personal .lm-tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:16px;flex-wrap:wrap}'+
 '#view-personal .lm-tabs button{border:none;background:var(--card);padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}'+
-'#view-personal .lm-tabs button:last-child{border-right:none}#view-personal .lm-tabs button.on{background:var(--ink);color:#fff}'+
+'#view-personal .lm-tabs button:last-child{border-right:none}#view-personal .lm-tabs button.on{background:var(--inverse-bg);color:var(--inverse-ink)}'+
 '#view-personal .lm-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}'+
 '#view-personal .lm-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 15px}'+
 '#view-personal .lm-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '#view-personal .lm-kpi .v{font-size:22px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
 '#view-personal .lm-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
-'#view-personal .lm-kpi.good .v{color:var(--green)}#view-personal .lm-kpi.bad .v{color:var(--red)}#view-personal .lm-kpi.hero{background:var(--ink)}#view-personal .lm-kpi.hero .l{color:#D1D5DB}#view-personal .lm-kpi.hero .v{color:#fff}#view-personal .lm-kpi.hero .s{color:#9CA3AF}'+
+'#view-personal .lm-kpi.good .v{color:var(--green)}#view-personal .lm-kpi.bad .v{color:var(--red)}#view-personal .lm-kpi.hero{background:var(--inverse-bg)}#view-personal .lm-kpi.hero .l{color:var(--inverse-muted)}#view-personal .lm-kpi.hero .v{color:var(--inverse-ink)}#view-personal .lm-kpi.hero .s{color:var(--inverse-muted)}'+
 '#view-personal .lm-grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-bottom:16px}'+
 '#view-personal .lm-grid11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}'+
 '#view-personal .lm-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
@@ -144,22 +144,22 @@ var css=''+
 '#view-personal .lm-table tbody tr:hover{background:var(--bg)}'+
 '#view-personal .lm-amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}#view-personal .lm-in{color:var(--green)}#view-personal .lm-out{color:var(--ink)}'+
 '#view-personal .lm-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}'+
-'#view-personal .lm-cleared{background:var(--green-soft);color:#006038}#view-personal .lm-uncleared{background:var(--gold-soft);color:#C28800}#view-personal .lm-pending{background:var(--tile-bg);color:#6B7280}'+
-'#view-personal .lm-tag{display:inline-block;background:var(--blue-soft);color:#06307C;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:600;margin-right:4px}'+
+'#view-personal .lm-cleared{background:var(--green-soft);color:var(--green-ink)}#view-personal .lm-uncleared{background:var(--gold-soft);color:var(--gold-ink)}#view-personal .lm-pending{background:var(--tile-bg);color:var(--muted)}'+
+'#view-personal .lm-tag{display:inline-block;background:var(--blue-soft);color:var(--blue-ink);border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:600;margin-right:4px}'+
 '#view-personal .lm-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}'+
-'#view-personal .lm-chip{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:20px;padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--ink)}#view-personal .lm-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}'+
+'#view-personal .lm-chip{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:20px;padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--ink)}#view-personal .lm-chip.on{background:var(--inverse-bg);color:var(--inverse-ink);border-color:var(--inverse-bg)}'+
 '#view-personal .lm-bar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}#view-personal .lm-bar input{flex:1;max-width:320px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:var(--card);color:var(--ink)}'+
 '#view-personal .lm-acct{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--line)}#view-personal .lm-acct:last-child{border-bottom:none}'+
 '#view-personal .lm-acct .nm{font-weight:700;font-size:13px}#view-personal .lm-acct .mt{font-size:11px;color:var(--muted);margin-top:2px}'+
 '#view-personal .lm-acct .bal{font-weight:800;font-variant-numeric:tabular-nums;font-size:14px}'+
-'#view-personal .lm-src{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}#view-personal .lm-synced{background:var(--blue-soft);color:#06307C}#view-personal .lm-manual{background:var(--tile-bg);color:#6B7280}'+
-'#view-personal .lm-grouphead{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px;padding:0 2px}#view-personal .lm-grouphead .gt{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#6B7280}#view-personal .lm-grouphead .gv{font-weight:800;font-variant-numeric:tabular-nums}'+
+'#view-personal .lm-src{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}#view-personal .lm-synced{background:var(--blue-soft);color:var(--blue-ink)}#view-personal .lm-manual{background:var(--tile-bg);color:var(--muted)}'+
+'#view-personal .lm-grouphead{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px;padding:0 2px}#view-personal .lm-grouphead .gt{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}#view-personal .lm-grouphead .gv{font-weight:800;font-variant-numeric:tabular-nums}'+
 '#view-personal .lm-brow{display:grid;grid-template-columns:1.4fr 1fr 90px;gap:12px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line)}#view-personal .lm-brow:last-child{border-bottom:none}'+
 '#view-personal .lm-brow .bn{font-weight:700;font-size:13px}#view-personal .lm-brow .bs{font-size:11px;color:var(--muted);margin-top:2px}'+
 '#view-personal .lm-prog{height:8px;background:var(--tile-bg);border-radius:6px;overflow:hidden}#view-personal .lm-prog>i{display:block;height:100%;border-radius:6px}'+
 '#view-personal .lm-brem{text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}'+
 '#view-personal .lm-foot{font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.6}'+
-'#view-personal .lm-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#6B7280;margin:4px 0 10px}';
+'#view-personal .lm-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:4px 0 10px}';
 
 var sectionHTML=''+
 '<div class="lm-sub"><b>Personal Finances.</b> Net worth, accounts, transactions, budgets and recurring bills — the full picture from Lunch Money in one place. <span class="lm-badge">Sample data — connect a Lunch Money API key to go live</span></div>'+
@@ -330,7 +330,7 @@ function drawNwChart(){
   if(!window.Chart)return;var el=document.getElementById('lmNwChart');if(!el)return;killChart('nw');
   var vals=NW_TREND.values.slice();vals[vals.length-1]=Math.round(netWorth());
   charts.nw=new Chart(el.getContext('2d'),{type:'line',data:{labels:NW_TREND.labels,datasets:[{data:vals,borderColor:C.green,backgroundColor:'rgba(69,179,105,.10)',fill:true,tension:.35,pointRadius:0,borderWidth:2.5}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 function drawCatChart(){
   if(!window.Chart)return;var el=document.getElementById('lmCatChart');if(!el)return;killChart('cat');
@@ -345,7 +345,7 @@ function drawIeChart(){
   charts.ie=new Chart(el.getContext('2d'),{type:'bar',data:{labels:IE_TREND.labels,datasets:[
     {label:'Income',data:incSeries,backgroundColor:C.green,borderRadius:4},
     {label:'Expenses',data:IE_TREND.expenses,backgroundColor:C.red,borderRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:11,font:{size:11}}},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'#F3F4F6'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:11,font:{size:11}}},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10}},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
 /* ---------- view switching ---------- */
