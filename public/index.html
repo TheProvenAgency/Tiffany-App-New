@@ -110,6 +110,7 @@ body:has(#sidebar.collapsed) .navCollapseToggle{left:86px}
 .navrail .railbtn{width:44px;height:44px;border-radius:14px;border:none;background:none;color:var(--sidebar-dim);
   font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s ease,color .2s ease;flex-shrink:0}
 .navrail .railbtn:hover{background:#f4f5fa;color:var(--sidebar-ink)}
+html[data-theme="dark"] .navrail .railbtn:hover{background:var(--sidebar-line)}
 .navrail .railbtn.on{background:var(--pink);color:#fff}
 /* Account gear pinned to the rail's bottom, exactly Admina's pattern
    (their .twin-rail__bottom block sits after a flex-grow nav list; here
@@ -126,7 +127,7 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
 .brand .word{display:flex;flex-direction:column;line-height:1.15;min-width:0}
 .brand .word b{font-size:13.5px;font-weight:700;color:#20222b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand .word span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-dim);font-weight:600;margin-top:1px}
-.sec{font-size:11px;letter-spacing:.16em;color:var(--sidebar-dim);text-transform:uppercase;padding:18px 18px 6px;font-weight:600}
+.sec{font-size:11px;letter-spacing:.16em;color:var(--sidebar-dim);text-transform:uppercase;padding:18px 16px 6px;font-weight:600}
 /* Every group and every heading stays visible all the time now -- no .on
    gating. (role.js still explicitly hides individual headings/buttons for
    the employee role by setting inline display:none, which overrides this.) */
@@ -137,9 +138,16 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
    color per section -- matches how the real Admina sidebar only ever
    highlights the active item in its single accent green. Inactive rows
    stay flat neutral gray (icon included) until hovered/active. */
-.nav button{display:flex;align-items:center;gap:11px;width:calc(100% - 16px);margin:2px 8px;padding:10.5px 12px;border:none;
-  background:none;color:var(--sidebar-ink);font-size:14px;font-weight:500;border-radius:11px;cursor:pointer;text-align:left;position:relative;transition:background .12s ease,color .12s ease}
-.nav button:hover{background:var(--sidebar-line)}
+/* Panel nav rows = Admina's .twin-menu rows, measured from style.css:
+   padding 11px 14px, radius 10px, icon-label gap 12px, font 14px/500,
+   4px between rows (.twin-menu li + li), 16px side inset
+   (.twin-panel__body), hover #f4f5fa (--ts-hover; dark mode falls back
+   to the theme border var since Admina's twin sidebar ships light-only). */
+.nav button{display:flex;align-items:center;gap:12px;width:calc(100% - 32px);margin:0 16px;padding:11px 14px;border:none;
+  background:none;color:var(--sidebar-ink);font-size:14px;font-weight:500;border-radius:10px;cursor:pointer;text-align:left;position:relative;transition:background .2s ease,color .2s ease}
+.nav button+button{margin-top:4px}
+.nav button:hover{background:#f4f5fa}
+html[data-theme="dark"] .nav button:hover{background:var(--sidebar-line)}
 /* Active nav pill -- matches Admina's real active-nav treatment (their
    .twin-menu li.active a rule: background: color-mix(primary-600 12%,
    transparent), color: primary-600) instead of a solid fill. Always the
@@ -149,14 +157,14 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
    light green regardless of section. color-mix with transparent (not a
    hardcoded hex) also means this needs no separate dark-mode override
    -- it self-adjusts against whatever sidebar background is underneath. */
-.nav button.on{background:color-mix(in srgb, var(--pink) 14%, transparent);color:var(--pink);font-weight:600;box-shadow:none}
+.nav button.on{background:color-mix(in srgb, var(--pink) 12%, transparent);color:var(--pink);font-weight:600;box-shadow:none}
 .nav .badge{margin-left:auto;background:#c0392b;color:#fff;border-radius:10px;font-size:11.5px;font-weight:700;padding:2px 8px}
 .nav svg{width:15px;height:15px;opacity:.75}
 /* Icon rides plain (no chip box) inside the pill, like Admina's outline
    icons -- neutral gray by default regardless of section, flips to the
    same brand green once its row's pill is active. */
 .nav button .ico2{width:20px;height:20px;flex:0 0 auto;display:flex;align-items:center;
-  justify-content:center;font-size:15px;color:var(--sidebar-dim);background:none}
+  justify-content:center;font-size:18px;color:var(--sidebar-dim);background:none}
 .nav button.on .ico2{color:var(--pink)}
 .ico2 svg{width:16px;height:16px;display:block}
 .spacer{flex:1}
@@ -753,7 +761,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     <button class="railbtn" data-g="pr" onclick="setNavGroup('pr',true)" title="Production"><i class="ri-stack-line"></i></button>
     <button class="railbtn" data-g="fi" onclick="setNavGroup('fi',true)" title="Finance"><i class="ri-money-dollar-circle-line"></i></button>
     <button class="railbtn" data-g="ma" onclick="setNavGroup('ma',true)" title="Marketing"><i class="ri-sparkling-2-line"></i></button>
-    <button class="railbtn" data-g="ac" onclick="setNavGroup('ac',true)" title="Account"><i class="ri-settings-3-line"></i></button>
+    <button class="railbtn" data-g="ac" onclick="setNavGroup('ac',true)" title="Settings"><i class="ri-settings-3-line"></i></button>
   </nav>
   <div class="navpanel" id="navpanel">
   <div class="brand">
