@@ -114,6 +114,75 @@ function mfsnIncomeSeries() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Commas gross revenue per month, read from the Commas revenue chart itself
+// (Dashboard -> Revenue -> Y, which plots cumulative revenue per year).
+//
+// Why hardcoded rather than summed from payment events: the events we hold
+// are a point-in-time export whose dates do not survive the round trip. Summed
+// by month they produced $14,148 for January 2026; Commas itself reports
+// $74,255.19. The export is fine as a record of *which* sales happened and
+// what package each was, but it cannot be trusted to say *when*.
+//
+// The numbers below are Commas' own, to the cent, and they reconcile: the two
+// years sum to $874,877.30, which is exactly the lifetime figure the old
+// revenue.js carried as `CO.ytd`. (That mislabelling is what produced the
+// fake $543,648 January -- everything older than six months had been dumped
+// into the first bucket, which is why the Sales trend showed a cliff.)
+//
+// Months after COMMAS_HISTORY_THROUGH are NOT listed here on purpose: those
+// come from live payment events, so the current month keeps moving on its own
+// as the Fanbasis feed delivers sales. Each time Commas closes a month, add
+// the real figure here and advance COMMAS_HISTORY_THROUGH by one.
+const COMMAS_MONTHLY_REVENUE = {
+  '2025-04': 22908.03, '2025-05': 16055.77, '2025-06': 23561.16,
+  '2025-07': 26593.41, '2025-08': 19977.68, '2025-09': 116499.91,
+  '2025-10': 107822.16, '2025-11': 67530.70, '2025-12': 75450.80,
+  '2026-01': 74255.19, '2026-02': 86667.49, '2026-03': 61550.00,
+  '2026-04': 68195.00, '2026-05': 45135.00, '2026-06': 34175.00,
+  '2026-07': 28500.00
+};
+const COMMAS_HISTORY_THROUGH = '2026-07';
+
+// Live Commas revenue per month, straight off the payment feed. Only ever
+// consulted for months Commas has not closed yet.
+function commasLiveByMonth() {
+  const out = {};
+  for (const e of getPaymentEvents()) {
+    const at = e.at || e.receivedAt;
+    if (!at) continue;
+    const ym = String(at).slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(ym)) continue;
+    if (ym <= COMMAS_HISTORY_THROUGH) continue; // the table is authoritative
+    out[ym] = (out[ym] || 0) + (Number(e.amount) || 0);
+  }
+  return out;
+}
+
+// Commas revenue for an arbitrary window, prorated by day where the window
+// cuts a month in half. Same shape as mfsnIncomeForRange() above, and for the
+// same reason: a closed month is a single reported total, not a daily series,
+// so a partial month can only ever be apportioned.
+function commasIncomeForRange(from, to) {
+  const live = commasLiveByMonth();
+  const all = Object.assign({}, COMMAS_MONTHLY_REVENUE, live);
+  let total = 0;
+  for (const [ym, amount] of Object.entries(all)) {
+    const [y, m] = ym.split('-').map(Number);
+    const monthStart = new Date(Date.UTC(y, m - 1, 1));
+    const monthEnd = new Date(Date.UTC(y, m, 0));
+    const daysInMonth = monthEnd.getUTCDate();
+    const winStart = from ? new Date(from + 'T00:00:00Z') : monthStart;
+    const winEnd = to ? new Date(to + 'T00:00:00Z') : monthEnd;
+    const lo = winStart > monthStart ? winStart : monthStart;
+    const hi = winEnd < monthEnd ? winEnd : monthEnd;
+    if (hi < lo) continue;
+    const overlapDays = Math.round((hi - lo) / 86400000) + 1;
+    total += amount * (overlapDays / daysInMonth);
+  }
+  return Math.round(total);
+}
+
 // Real income per calendar month, both sources side by side. Commas is
 // summed straight off the payment events (the 5,133-row backfill plus
 // anything the Fanbasis webhook has added since), so it needs no hand
@@ -126,21 +195,16 @@ function mfsnIncomeSeries() {
 // the only version that can't silently go stale.
 function incomeByMonth() {
   const months = {};
+  const commas = Object.assign({}, COMMAS_MONTHLY_REVENUE, commasLiveByMonth());
   for (const [ym, amount] of Object.entries(MFSN_MONTHLY_INCOME)) {
-    months[ym] = { ym, commas: 0, mfsn: Math.round(amount * 100) / 100, total: 0 };
+    months[ym] = { ym, commas: 0, mfsn: Math.round(amount), total: 0 };
   }
-  for (const e of getPaymentEvents()) {
-    const at = e.at || e.receivedAt;
-    if (!at) continue;
-    const ym = String(at).slice(0, 7);
-    if (!/^\d{4}-\d{2}$/.test(ym)) continue;
+  for (const [ym, amount] of Object.entries(commas)) {
     if (!months[ym]) months[ym] = { ym, commas: 0, mfsn: 0, total: 0 };
-    months[ym].commas += Number(e.amount) || 0;
+    months[ym].commas = Math.round(amount);
   }
   return Object.keys(months).sort().map(ym => {
     const m = months[ym];
-    m.commas = Math.round(m.commas);
-    m.mfsn = Math.round(m.mfsn);
     m.total = m.commas + m.mfsn;
     return m;
   });
@@ -900,9 +964,15 @@ app.get('/api/dashboard', async (req, res) => {
     const FANBASIS_TRUSTED = payments.length >= 20; // backfill has landed
     let revenueSeries = seriesFrom(paysIn, granularity, p => p.amount || 0, p => p.at);
     let paymentsCount = paysIn.length;
-    let revenueTotal = paysIn.reduce((s, p) => s + (p.amount || 0), 0);
+    // Commas' own monthly totals, prorated across the window (see
+    // COMMAS_MONTHLY_REVENUE). The payment events are a point-in-time export
+    // whose dates don't survive the round trip -- summing them by date gave
+    // $14,148 for January 2026 against Commas' actual $74,255.19 -- so they
+    // are no longer trusted to say when a sale happened. The current month
+    // still comes off the live feed, so today's sales land the same day.
+    let revenueTotal = commasIncomeForRange(from, to);
     let revenueApprox = false;
-    let revenueSource = 'fanbasis';
+    let revenueSource = 'commas';
     // Approximate from GHL whenever the webhook backfill hasn't landed --
     // not only at exactly zero events. A handful of stray events (a $50
     // test sale) used to bypass this and present themselves as the whole
@@ -916,9 +986,12 @@ app.get('/api/dashboard', async (req, res) => {
       revenueSource = 'ghl-approx';
     }
     // Lifetime: sum of all Fanbasis sales once backfilled; GHL field sum until then.
-    const fanbasisLifetime = payments.reduce((s, p) => s + (p.amount || 0), 0);
+    // Lifetime is the reported monthly table plus whatever the live feed has
+    // added since -- i.e. exactly what Commas shows, $874,877.30 across the
+    // two years it has been in use.
+    const fanbasisLifetime = commasIncomeForRange(null, null);
     const ghlLifetime = clients.reduce((s, c) => s + (c.totalSpent || 0), 0);
-    const lifetimeRevenue = FANBASIS_TRUSTED ? fanbasisLifetime : ghlLifetime;
+    const lifetimeRevenue = fanbasisLifetime;
 
     const by = (list, keyFn) => {
       const m = {};
@@ -2444,4 +2517,7 @@ module.exports = app;
 module.exports.MFSN_MEMBERS = MFSN_MEMBERS;
 module.exports.mfsnIncomeSeries = mfsnIncomeSeries;
 module.exports.incomeByMonth = incomeByMonth;
+module.exports.commasIncomeForRange = commasIncomeForRange;
+module.exports.COMMAS_MONTHLY_REVENUE = COMMAS_MONTHLY_REVENUE;
+module.exports.COMMAS_HISTORY_THROUGH = COMMAS_HISTORY_THROUGH;
 module.exports.MFSN_MONTHLY_INCOME = MFSN_MONTHLY_INCOME;

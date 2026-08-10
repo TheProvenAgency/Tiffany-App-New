@@ -7,9 +7,11 @@ var charts={}, gran='monthly';
 
 /* ---------- Commas (sales) — Jan 1 – Jul 28, 2026 ---------- */
 var CO={ ytd:874877, ytdCustomers:3729, sixMo:331229, sixMoCustomers:1088, month:29100, monthCustomers:176, week:0, avgPerCustomer:234, avgTxn:122 };
+// CO_DAILY and CO_WEEKLY used to sit here: thirty and twelve invented
+// numbers standing in for a daily and weekly sales history that no source
+// actually reports. Both grains now read the live payment series off the
+// dashboard payload instead (see trendData).
 var CO_MONTHLY={ labels:['Jan','Feb','Mar','Apr','May','Jun','Jul'], rev:[543648,87000,72000,62000,48000,33129,29100], cust:[2641,286,214,169,131,88,176] };
-var CO_WEEKLY={ labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'], rev:[16800,15200,13600,11400,12800,11200,9800,8100,9600,8300,7500,0] };
-var CO_DAILY=(function(){var v=[1450,1720,1310,980,1540,1610,1290,1180,1420,1360,1510,1240,1090,1330,1480,1220,1150,1390,1270,940,760,420,180,0,0,0,0,0,0,0];var labels=[];for(var i=29;i>=0;i--){var d=new Date(2026,6,28);d.setDate(d.getDate()-i);labels.push((d.getMonth()+1)+'/'+d.getDate());}return {labels:labels,rev:v};})();
 var METHODS=[
   {name:'Card',      amt:431317, pct:49.3, color:C.blue},
   {name:'Apple Pay', amt:238649, pct:27.3, color:C.purple},
@@ -495,20 +497,46 @@ function methodRows(){
 /* ---------- charts ---------- */
 function killChart(k){if(charts[k]){charts[k].destroy();charts[k]=null;}}
 function trendData(withMf){
-  if(gran==='daily')return {labels:CO_DAILY.labels,vals:CO_DAILY.rev,color:C.teal,fill:'rgba(0,184,242,.12)'};
-  if(gran==='weekly')return {labels:CO_WEEKLY.labels,vals:CO_WEEKLY.rev,color:C.purple,fill:'rgba(130,82,233,.12)'};
-  // Monthly is the one grain where MFSN commissions are actually tracked
-  // (they're only ever reported per calendar month, never daily/weekly).
-  // withMf is only passed true for the Dashboard's copy of this chart --
-  // the Revenue page's own copy sits under a "Commas -- sales" section
-  // header, so it stays Commas-only there; adding an MFSN line under that
-  // heading would misrepresent the section it's in. Reads from the same
-  // INCOME_BY_MONTH/INCOME_YMS the Total income KPI card's range math
-  // already uses, so the two cards can never disagree.
-  if(!withMf)return {labels:CO_MONTHLY.labels,vals:CO_MONTHLY.rev,color:C.blue,fill:'rgba(59,130,246,.12)'};
-  var labels=INCOME_YMS.map(function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]; });
-  var coVals=INCOME_YMS.map(function(ym){ return INCOME_BY_MONTH[ym].co||0; });
-  var mfVals=INCOME_YMS.map(function(ym){ return INCOME_BY_MONTH[ym].mf||0; });
+  // Day- and week-level figures can only come from the live payment feed --
+  // Commas reports a closed month as a single total, never a daily series, so
+  // there is nothing real to plot at those grains beyond what the feed has
+  // delivered. The old code filled the gap with two invented arrays
+  // (CO_DAILY / CO_WEEKLY, thirty and twelve hardcoded numbers); those are
+  // gone. If the feed has nothing for the selected range we say so rather
+  // than drawing a shape.
+  var dash = window.__msfsDash;
+  if(gran==='daily'||gran==='weekly'){
+    var pts = (dash && dash.series && dash.series.revenue) ? dash.series.revenue : [];
+    if(!pts.length) return {labels:[],vals:[],color:C.teal,fill:'rgba(0,184,242,.12)',empty:true};
+    if(gran==='daily'){
+      return {labels:pts.map(function(p){ var d=p.label.split('-'); return d[1]+'/'+d[2]; }),
+              vals:pts.map(function(p){ return p.value; }),
+              color:C.teal, fill:'rgba(0,184,242,.12)'};
+    }
+    // Weekly: fold the same real daily buckets into seven-day groups.
+    var wl=[], wv=[];
+    for(var i=0;i<pts.length;i+=7){
+      var chunk=pts.slice(i,i+7);
+      var d0=chunk[0].label.split('-');
+      wl.push(d0[1]+'/'+d0[2]);
+      wv.push(chunk.reduce(function(a,p){ return a+p.value; },0));
+    }
+    return {labels:wl, vals:wv, color:C.purple, fill:'rgba(130,82,233,.12)'};
+  }
+
+  // Monthly is the grain both sources actually report. Trim the long tail of
+  // months before either platform was in use, and mark January so a span
+  // crossing years can't read as one twelve-month run.
+  var yms=INCOME_YMS.filter(function(ym){
+    return (INCOME_BY_MONTH[ym].co||0)>0 || (INCOME_BY_MONTH[ym].mf||0)>0;
+  });
+  var labels=yms.map(function(ym){
+    var mo=+ym.slice(5,7);
+    return mo===1 ? MONTH_ABBR[0]+" '"+ym.slice(2,4) : MONTH_ABBR[mo-1];
+  });
+  var coVals=yms.map(function(ym){ return INCOME_BY_MONTH[ym].co||0; });
+  var mfVals=yms.map(function(ym){ return INCOME_BY_MONTH[ym].mf||0; });
+  if(!withMf) return {labels:labels,vals:coVals,color:C.blue,fill:'rgba(59,130,246,.12)'};
   return {labels:labels,vals:coVals,color:C.blue,fill:'rgba(59,130,246,.12)',mfVals:mfVals,mfColor:C.gold,mfFill:'rgba(255,159,41,.10)'};
 }
 // targetId lets the same Sales-trend chart draw into either the Revenue
@@ -519,6 +547,13 @@ function drawTrend(targetId){
   targetId=targetId||'rvTrend';
   if(!window.Chart)return;var el=document.getElementById(targetId);if(!el)return;killChart(targetId);
   var d=trendData(targetId==='dashTrend');
+  if(d.empty){
+    var ctx0=el.getContext('2d');
+    ctx0.clearRect(0,0,el.width,el.height);
+    ctx0.font='12px Inter,system-ui,sans-serif'; ctx0.fillStyle='#9ca3af'; ctx0.textAlign='center';
+    ctx0.fillText('No day-level sales in this range yet', el.width/2, el.height/2);
+    return;
+  }
   var hasMf=Array.isArray(d.mfVals);
   // Admina reference: each point on the Commas line is colored by whether
   // that period was up or down vs the one before it (green/gold) rather
@@ -739,7 +774,10 @@ function initRV(){
     window.__rvLoadWrap=true;var _ld=window.loadDashboard;
     window.loadDashboard=function(){
       var p=_ld.apply(this,arguments);
-      if(p&&typeof p.then==='function') p.then(function(){updateTotalIncomeCard();updateTrendStats();}); else {updateTotalIncomeCard();updateTrendStats();}
+      // redrawAllTrends() too: the daily/weekly grains are drawn from the
+      // payload's own day series, so they have to follow the date picker.
+      var after=function(){updateTotalIncomeCard();updateTrendStats();redrawAllTrends();};
+      if(p&&typeof p.then==='function') p.then(after); else after();
       return p;
     };
   }

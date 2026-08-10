@@ -1640,7 +1640,11 @@ async function loadDashboard(){
   // app's most expensive request every time this page loaded. We already
   // have the payload -- hand it down. postMessage rather than reaching into
   // the frames so the card page stays self-contained.
-  lastDashboard=d; broadcastRangeToKpiFrames();
+  lastDashboard=d;
+  // revenue.js draws the Sales-trend chart and needs the same day-level
+  // series this payload already carries, rather than fetching it again.
+  window.__msfsDash=d;
+  broadcastRangeToKpiFrames();
   $('modePill').textContent=d.mode==='live'?'LIVE':'DEMO';
   // hero -- this card lives on the Revenue page now (moved off Dashboard),
   // so guard every reference: on Dashboard these elements are absent and
