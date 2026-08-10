@@ -80,3 +80,22 @@ test('a junk key is rejected rather than written into config', async () => {
     assert.equal(r.status, 400, `expected 400 for ${JSON.stringify(key.slice(0, 20))}`);
   }
 });
+
+test('rounds actually reach the queue from the real dispute source', async () => {
+  // The shape bug this guards: lib/disputes.buildQueue() returns the array,
+  // and it is /api/disputes/queue that wraps it in { queue }. Reading .queue
+  // off the return value yields undefined, so the rounds half of the Today
+  // list came back empty against real data while every unit test passed --
+  // because the unit tests fed buildQueue's output shape in by hand.
+  const disputes = require('../lib/disputes.js');
+  const out = disputes.buildQueue([
+    { id: 'x1', name: 'X', stage: 'Ready', days: 12, tu: { st: 'ready' } }
+  ]);
+  assert.ok(Array.isArray(out),
+    'buildQueue returns an array; server.js must not unwrap a .queue from it');
+
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const handler = src.split("app.get('/api/actions'")[1].split('\n});')[0];
+  assert.ok(!/buildQueue\([^)]*\)\s*\|\|\s*\{\}\)\.queue/.test(handler),
+    'the actions route should use buildQueue()\'s return value directly');
+});

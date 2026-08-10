@@ -2140,7 +2140,10 @@ app.get('/api/actions', async (req, res) => {
     let rounds = [];
     if (caps.includes('disputes') || caps.includes('admin')) {
       const prod = await readProd().catch(() => []);
-      rounds = (disputes.buildQueue(prod) || {}).queue || [];
+      // buildQueue() returns the array itself; it is /api/disputes/queue that
+      // wraps it in { queue }. Unwrapping a .queue here silently produced an
+      // empty round list against real data while every unit test passed.
+      rounds = disputes.buildQueue(prod) || [];
     }
 
     const cfg = store.getConfig() || {};
