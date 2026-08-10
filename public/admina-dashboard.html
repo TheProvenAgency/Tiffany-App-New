@@ -250,10 +250,16 @@ function draw(id, opts){
 function applyDashboard(d, range){
   if(!d || !d.kpis) return;
   var k = d.kpis;
-  var total = k.totalIncome != null ? k.totalIncome : k.revenueTotal;
-  setText('admTotalIncome', money0(total));
-  setText('admTotalIncomeSub',
-    'Commas ' + money0(k.revenueTotal) + ' + MFSN ' + money0(k.mfsnIncomeEst || 0));
+  // Income already came from /api/mfsn-summary, which is authoritative for it
+  // and arrives far sooner. Only fill in here if that somehow hasn't landed,
+  // so a slow dashboard can never blank out a figure already on screen.
+  var el = document.getElementById('admTotalIncome');
+  if (el && el.classList.contains('kpi-pending')) {
+    var total = k.totalIncome != null ? k.totalIncome : k.revenueTotal;
+    setText('admTotalIncome', money0(total));
+    setText('admTotalIncomeSub',
+      'Commas ' + money0(k.revenueTotal) + ' + MFSN ' + money0(k.mfsnIncomeEst || 0));
+  }
   var head = document.querySelector('[data-card="total-income"] .kpi-head span');
   if(head && range && range.label) head.textContent = 'Total income · ' + range.label;
 }
@@ -308,16 +314,34 @@ function applySummary(sum){
   if (wanted('upgraded'))  ratio('columnChart', m.upgraded,   m.enrolled,      dangerColor);
 }
 
-// Cheap, constants-only endpoint -- safe for all four frames to call.
-fetch('/api/mfsn-summary')
-  .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
-  .then(applySummary)
-  .catch(function(e){
-    // Swallowing this is what let the tiles sit on a placeholder looking like
-    // real data. Say so instead.
-    ['admEnrolled','admActives','admUpgraded'].forEach(function(id){ setText(id, 'n/a'); });
-    console.error('KPI tile: /api/mfsn-summary failed', e);
-  });
+// Cheap, constants-only endpoint -- safe for all four frames to call, and
+// fast enough to be the thing that puts the income figure on screen. The
+// parent's /api/dashboard payload arrives later and only refines the label.
+var pendingRange = null;
+function loadSummary(range){
+  var qs = new URLSearchParams();
+  if (range && range.from) qs.set('from', range.from);
+  if (range && range.to) qs.set('to', range.to);
+  return fetch('/api/mfsn-summary' + (qs.toString() ? '?' + qs : ''))
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
+    .then(function(sum){
+      applySummary(sum);
+      if (sum.income) {
+        setText('admTotalIncome', money0(sum.income.total));
+        setText('admTotalIncomeSub',
+          'Commas ' + money0(sum.income.commas) + ' + MFSN ' + money0(sum.income.mfsn));
+      }
+      var head = document.querySelector('[data-card="total-income"] .kpi-head span');
+      if (head && range && range.label) head.textContent = 'Total income \u00b7 ' + range.label;
+      return sum;
+    })
+    .catch(function(e){
+      ['admEnrolled','admActives','admUpgraded','admTotalIncome'].forEach(function(id){ setText(id, 'n/a'); });
+      console.error('KPI tile: /api/mfsn-summary failed', e);
+    });
+}
+loadSummary(null);
+
 
 /* ---------- where the income figure comes from ----------
    This frame used to fetch /api/dashboard itself. With four frames on the
@@ -329,7 +353,15 @@ fetch('/api/mfsn-summary')
    The parent has the payload already, so it pushes it down. */
 window.addEventListener('message', function(ev){
   if (ev.origin !== location.origin || !ev.data) return;
-  if (ev.data.type === 'msfs-kpi') applyDashboard(ev.data.dashboard, ev.data.range);
+  if (ev.data.type !== 'msfs-kpi') return;
+  // Re-ask the fast endpoint for the new window rather than waiting for the
+  // parent's next (slow) /api/dashboard round trip.
+  var r = ev.data.range;
+  if (r && (r.from !== (pendingRange||{}).from || r.to !== (pendingRange||{}).to)) {
+    pendingRange = r;
+    loadSummary(r);
+  }
+  applyDashboard(ev.data.dashboard, r);
 });
 if (window.parent !== window) {
   // The parent's broadcast usually lands before this frame is listening, so

@@ -96,8 +96,8 @@ test('the KPI tiles ask the parent for data instead of refetching', () => {
   const embedded = page.split('window.parent !== window')[1] || '';
   // A self-fetch is only legitimate on the standalone branch. Four embedded
   // frames each pulling /api/dashboard is what produced the 502s.
-  assert.ok(page.includes("ev.data.type === 'msfs-kpi'"),
-    'the tile should accept a pushed payload');
+  assert.ok(/ev\.data\.type\s*[!=]==\s*'msfs-kpi'/.test(page),
+    'the tile should handle the pushed payload message');
   const beforeStandalone = page.split('window.parent !== window')[0];
   assert.ok(!beforeStandalone.includes("fetch('/api/dashboard"),
     'an embedded tile must not fetch /api/dashboard itself');
@@ -115,4 +115,34 @@ test('index.html hands the payload down after it has one', () => {
   const castAt = load.indexOf('broadcastRangeToKpiFrames()');
   assert.ok(fetchAt > -1 && castAt > fetchAt,
     'the broadcast must happen after the payload lands');
+});
+
+test('income comes from the fast endpoint, not the slow one', () => {
+  // /api/dashboard is ~1.8s warm and ~17s on a cold Render container, and
+  // while it ran every income figure sat blank -- which reads as broken, and
+  // is what "the revenue isn't showing" has been describing. The money is
+  // derived from two monthly tables and the payment feed, none of which need
+  // the client roster or GoHighLevel, so it can be served in well under a
+  // second and must not be gated behind the roster.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const handler = src.match(/app\.get\('\/api\/mfsn-summary'[\s\S]*?\n\}\);/)[0];
+  assert.ok(handler.includes('commasIncomeForRange') && handler.includes('mfsnIncomeForRange'),
+    'the fast endpoint should answer income for a window');
+  for (const forbidden of ['readProd', 'ghl.', 'await', 'getClients']) {
+    assert.ok(!handler.includes(forbidden), `/api/mfsn-summary must not use ${forbidden}`);
+  }
+
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'admina-dashboard.html'), 'utf8');
+  assert.ok(page.includes('sum.income'),
+    'the tile should render income straight off the fast endpoint');
+  // And the slow payload must never blank out a figure already on screen.
+  assert.ok(/classList\.contains\('kpi-pending'\)/.test(page),
+    'applyDashboard should only fill income if the fast path has not already');
+});
+
+test('the fast endpoint respects the selected window', () => {
+  const server = require('../server.js');
+  const feb = server.commasIncomeForRange('2026-02-01', '2026-02-28');
+  const all = server.commasIncomeForRange(null, null);
+  assert.ok(feb < all, 'a one-month window must not return the lifetime figure');
 });

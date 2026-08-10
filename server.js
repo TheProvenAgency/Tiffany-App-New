@@ -2063,10 +2063,23 @@ app.post('/api/mfsn-old-status', (req, res) => {
 // a sort, no roster read, no GoHighLevel call -- the KPI tiles hit this on
 // every load and must not cost what /api/dashboard costs.
 app.get('/api/mfsn-summary', (req, res) => {
+  // Income for the requested window, computed from the two monthly tables and
+  // the payment feed -- no roster read, no GoHighLevel call. That matters:
+  // /api/dashboard needs ~1.8s warm and ~17s on a cold Render container
+  // (the free tier spins down after ~15 min idle), and while it ran, every
+  // income figure on the page sat blank. Blank reads as broken. This answers
+  // in well under a second, so the money shows up immediately and the slower
+  // client-roster cards fill in when they're ready.
+  const from = req.query.from || null;
+  const to = req.query.to || null;
+  const commas = commasIncomeForRange(from, to);
+  const mfsn = mfsnIncomeForRange(from, to);
   res.json({
     members: MFSN_MEMBERS,
     months: incomeByMonth(),
+    income: { commas, mfsn, total: commas + mfsn },
     lifetime: {
+      commas: commasIncomeForRange(null, null),
       mfsn: Math.round(Object.values(MFSN_MONTHLY_INCOME).reduce((a, b) => a + b, 0))
     }
   });
