@@ -20,7 +20,10 @@ fetch('/api/me').then(function(r){return r.json();}).then(function(m){
   // now open to employees too (see index.html's pipelineNavBtn + role.js),
   // so there's no need to relabel this one to stand in for it anymore.
   // Just add the locked New Clients queue button.
-  if(m&&m.role==='employee'){
+  // Any non-admin holding production, not just role==='employee' -- a VA has
+  // the same job here and was being skipped by a role-name check.
+  var caps=(m&&Array.isArray(m.capabilities))?m.capabilities:[];
+  if(caps.indexOf('admin')<0&&caps.indexOf('production')>=0){
     var navCl=document.getElementById('navClients');
     if(navCl&&!document.getElementById('pvNewClientsBtn')){
       var nb=document.createElement('button');nb.id='pvNewClientsBtn';nb.setAttribute('onclick','pvGoNewClients()');

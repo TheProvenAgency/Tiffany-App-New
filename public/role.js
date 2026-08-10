@@ -54,16 +54,25 @@
   // password + Sign out (Account group). Finance and Marketing stay fully
   // hidden, same as before.
   var ALLOWED_GROUPS = { ov: 1, cl: 1, pr: 1, ac: 1 };
+  var HOME = { view: 'team', waitFor: 'teamNavBtn', group: 'ov' };
   var ALLOWED_IDS = {
     teamNavBtn: 1, pipelineNavBtn: 1, pvNewClientsBtn: 1, clientsNavBtn: 1,
-    fuNavBtn: 1, msgNavBtn: 1, changePwNavBtn: 1, signOutNavBtn: 1
+    fuNavBtn: 1, msgNavBtn: 1, changePwNavBtn: 1, signOutNavBtn: 1,
+    // A disputer's only view. Without this the nav filter hid the one button
+    // their whole job runs through.
+    disputesNavBtn: 1
   };
   function gateNav() {
     // teamNavBtn only exists once team.js's own /api/me check has resolved
     // and injected it (see public/team.js) -- that's the async part; the
     // rest (pvNavBtn, clientsNavBtn) are created synchronously on page load
     // and are always present by the time this is even worth checking.
-    if (!document.getElementById('teamNavBtn')) return false;
+    // Which button marks "this worker's modules have finished injecting"
+    // depends on what they can reach. This used to wait unconditionally for
+    // teamNavBtn, which a disputer never gets -- so gateNav simply never ran
+    // for them: full unfiltered nav, and a landing on a Dashboard the server
+    // refuses. HOME is set from capabilities just below.
+    if (!document.getElementById(HOME.waitFor)) return false;
 
     Array.prototype.forEach.call(document.querySelectorAll('.navgroup button'), function (b) {
       if (!ALLOWED_IDS[b.id]) b.style.display = 'none';
@@ -78,8 +87,8 @@
     Array.prototype.forEach.call(document.querySelectorAll('.railbtn[data-g]'), function (rb) {
       if (!ALLOWED_GROUPS[rb.dataset.g]) rb.style.display = 'none';
     });
-    if (typeof window.setNavGroup === 'function') window.setNavGroup('ov', false);
-    if (typeof window.showView === 'function') window.showView('team');
+    if (typeof window.setNavGroup === 'function') window.setNavGroup(HOME.group, false);
+    if (typeof window.showView === 'function') window.showView(HOME.view);
     return true;
   }
 
@@ -160,6 +169,13 @@
       var st = document.createElement('style');
       st.textContent = 'body:not([data-caps~="production"]) #dStage{pointer-events:none;opacity:.55}';
       document.head.appendChild(st);
+
+      // Where a worker lands, and which injected button proves their modules
+      // are ready. A disputer has no Dashboard and no Team Dashboard, so
+      // sending them to either is a blank screen or a 403.
+      if (can('production')) HOME = { view: 'team', waitFor: 'teamNavBtn', group: 'ov' };
+      else if (can('disputes')) HOME = { view: 'disputes', waitFor: 'disputesNavBtn', group: 'cl' };
+      else HOME = { view: 'team', waitFor: 'teamNavBtn', group: 'ov' };
 
       hideAdminChrome();
       retry(gateNav);

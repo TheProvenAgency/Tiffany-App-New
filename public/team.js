@@ -126,7 +126,15 @@ function initTeam(){
   if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc); else document.body.appendChild(sec);
 
   fetch('/api/me').then(function(r){return r.json();}).then(function(m){
-    if(!m||m.role!=='employee')return; // real Admin (not previewing): no-op, nothing changes for them
+    // Capability-driven, not role-name equality. This used to read
+    // m.role!=='employee', which meant a VA -- who holds exactly the
+    // capabilities this view is built from -- signed in and got no home view
+    // at all. Anyone who can reach Deal Production and isn't an admin gets
+    // the employee home; a real Admin (not previewing) is a no-op.
+    if(!m)return;
+    var caps=Array.isArray(m.capabilities)?m.capabilities:[];
+    if(caps.indexOf('admin')>=0)return;
+    if(caps.indexOf('production')<0)return; // e.g. a disputer: their home is the round queue
     active=true;
     var nav=document.getElementById('nav'); // the Overview group's container -- currently just "Dashboard"
     if(nav&&!document.getElementById('teamNavBtn')){
