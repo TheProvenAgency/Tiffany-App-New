@@ -231,7 +231,12 @@ function loadTotalIncome(range){
   if (range && range.to) qs.set('to', range.to);
   fetch('/api/dashboard' + (qs.toString() ? '?' + qs : '')).then(function(r){ return r.json(); }).then(function(d){
     var el = document.getElementById('admTotalIncome');
-    if(el && d && d.kpis) el.textContent = '$' + Math.round(d.kpis.revenueTotal).toLocaleString();
+    if(el && d && d.kpis) el.textContent = '$' + Math.round(d.kpis.totalIncome != null ? d.kpis.totalIncome : d.kpis.revenueTotal).toLocaleString();
+    var tr = document.querySelector('#admTotalIncomeTrend .fw-medium');
+    if(tr && d && d.kpis && d.kpis.totalIncome != null){
+      tr.textContent = 'Commas $' + Math.round(d.kpis.revenueTotal).toLocaleString()
+        + ' + MFSN $' + Math.round(d.kpis.mfsnIncomeEst || 0).toLocaleString() + ' (est.)';
+    }
     var head = document.querySelector('[data-card="total-income"] .kpi-head span');
     if(head && range && range.label) head.textContent = 'Total income · ' + range.label;
   }).catch(function(){});

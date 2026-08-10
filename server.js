@@ -774,7 +774,11 @@ app.get('/api/dashboard', async (req, res) => {
     let revenueTotal = paysIn.reduce((s, p) => s + (p.amount || 0), 0);
     let revenueApprox = false;
     let revenueSource = 'fanbasis';
-    if (liveMode() && !FANBASIS_TRUSTED && payments.length === 0) {
+    // Approximate from GHL whenever the webhook backfill hasn't landed --
+    // not only at exactly zero events. A handful of stray events (a $50
+    // test sale) used to bypass this and present themselves as the whole
+    // month's income.
+    if (liveMode() && !FANBASIS_TRUSTED) {
       const lastPays = clients.filter(c => inRange(c.lastPaymentDate, from, to));
       revenueSeries = seriesFrom(lastPays, granularity, c => c.numberOfPayments ? c.totalSpent / c.numberOfPayments : c.totalSpent, c => c.lastPaymentDate);
       paymentsCount = lastPays.length;
@@ -900,11 +904,26 @@ app.get('/api/dashboard', async (req, res) => {
       socialOk: (() => { const l = snaps.length ? snaps[snaps.length - 1].date : null; return l ? (Date.now() - new Date(l)) < 48 * 3600e3 : false; })()
     };
 
+    // MFSN affiliate income estimate for the range: per-member commission
+    // (real audited figures in lib/affiliate.js) summed over enrolled
+    // members = a monthly run-rate, prorated by the range's day count.
+    // Estimated, and labeled so -- MFSN exposes no per-day payout feed.
+    let mfsnMonthlyEst = 0;
+    try {
+      for (const m of store.getMfsnMembers()) mfsnMonthlyEst += affiliate.commissionForMember(m) || 0;
+    } catch (e) { /* no member list yet */ }
+    const rangeDays = (from && to)
+      ? Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1)
+      : null;
+    const mfsnIncomeEst = Math.round(rangeDays ? mfsnMonthlyEst * (rangeDays / 30.44) : mfsnMonthlyEst * 12);
+
     res.json({
       mode: liveMode() ? 'live' : 'demo',
       generatedAt: new Date().toISOString(),
       kpis: {
         revenueTotal: Math.round(revenueTotal * 100) / 100,
+        mfsnIncomeEst,
+        totalIncome: Math.round(revenueTotal + mfsnIncomeEst),
         revenueApprox,
         revenueSource,
         paymentsCount,
