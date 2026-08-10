@@ -527,7 +527,15 @@ function trendData(withMf){
   // Monthly is the grain both sources actually report. Trim the long tail of
   // months before either platform was in use, and mark January so a span
   // crossing years can't read as one twelve-month run.
+  // Start where sales start. MFSN commission runs back to Jul 2023, but
+  // Commas only from Apr 2025, so including the earlier months drags 21
+  // flat-zero points across a card titled "Sales trend" and squeezes the
+  // part anyone is actually reading into the right third. The full 37-month
+  // commission history is on the Credit Monitoring page, which is where a
+  // question about commission alone belongs.
+  var firstSale=INCOME_YMS.find(function(ym){ return (INCOME_BY_MONTH[ym].co||0)>0; });
   var yms=INCOME_YMS.filter(function(ym){
+    if(firstSale && ym<firstSale) return false;
     return (INCOME_BY_MONTH[ym].co||0)>0 || (INCOME_BY_MONTH[ym].mf||0)>0;
   });
   var labels=yms.map(function(ym){
@@ -570,7 +578,7 @@ function drawTrend(targetId){
   // grain actually has an MFSN series to go with it.
   var mfLegend=document.getElementById('dashTrendLegendMf'); if(mfLegend) mfLegend.style.display=hasMf?'':'none';
   charts[targetId]=new Chart(el.getContext('2d'),{type:'line',data:{labels:d.labels,datasets:datasets},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10.5},color:'#9ca3af'},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10.5},color:'#9ca3af',maxTicksLimit:12}}}}});
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+money0(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return moneyK(v);},font:{size:10.5},color:'#9ca3af'},grid:{color:'rgba(156,163,175,.2)'}},x:{grid:{display:false},ticks:{font:{size:10.5},color:'#9ca3af',maxTicksLimit:18}}}}});
 }
 // redraws whichever of the two Sales-trend canvases currently exist in the
 // document -- the Revenue page's isn't in the DOM unless that view has
