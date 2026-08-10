@@ -941,6 +941,20 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         <iframe src="/admina-dashboard.html?card=upgraded" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="Upgraded"></iframe>
       </div></div>
 
+      <!-- What changed: the decline, told from the two monthly tables we
+           trust. Deliberately not a per-product autopsy -- the payment
+           events' dates don't survive the export (see COMMAS_MONTHLY_REVENUE
+           in server.js), so any "which package stopped selling and when"
+           breakdown built from them would be the same mistake that once made
+           this business look like it was growing. -->
+      <div class="grid-stack-item" gs-id="what-changed" gs-x="6" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+        <div class="rv-card">
+          <div class="rv-head">
+            <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#F59E0B"><i class="ri-line-chart-line"></i></span>What changed</h3><div class="cap" style="margin:0">Peak month against the latest, split by where the money comes from.</div></div>
+          </div>
+          <div id="whatChanged" style="padding:4px 2px"><div class="cardsub">Loading…</div></div>
+        </div>
+      </div></div>
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">

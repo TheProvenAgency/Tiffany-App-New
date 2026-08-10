@@ -766,6 +766,7 @@ function initRV(){
   // ...and Member upgrade progress (gs-id="dash-upgrade"), now an Admina
   // Order Summary-style donut -- see drawUpgradeChart() above.
   drawUpgradeChart();
+  renderWhatChanged();
   // Dashboard's Customer lifecycle ring (index.html) makes its first
   // draw attempt before this deferred script has run, so MF isn't
   // defined yet and it bails out silently (see drawLifecycle() guard).
@@ -802,6 +803,59 @@ function initRV(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
 
+/* ---------- What changed ----------
+   The decline, from the two monthly tables that are actually reliable. No
+   per-product timeline: the payment events' dates don't survive the export,
+   which is exactly what once made this business look like it was growing when
+   Commas showed it shrinking. A breakdown nobody can trust is worse than a
+   smaller one that holds. */
+function renderWhatChanged(){
+  var el=document.getElementById('whatChanged'); if(!el)return;
+  var yms=INCOME_YMS.filter(function(ym){ return (INCOME_BY_MONTH[ym].co||0)>0; });
+  if(yms.length<2){ el.innerHTML='<div class="cardsub">Not enough months to compare yet.</div>'; return; }
+
+  var tot=function(ym){ return (INCOME_BY_MONTH[ym].co||0)+(INCOME_BY_MONTH[ym].mf||0); };
+  var peak=yms[0]; yms.forEach(function(ym){ if(tot(ym)>tot(peak)) peak=ym; });
+  var last=yms[yms.length-1];
+  if(peak===last){ el.innerHTML='<div class="cardsub">The latest month is the best month so far.</div>'; return; }
+
+  var pc=INCOME_BY_MONTH[peak].co||0, pm=INCOME_BY_MONTH[peak].mf||0;
+  var lc=INCOME_BY_MONTH[last].co||0, lm=INCOME_BY_MONTH[last].mf||0;
+  var pct=function(a,b){ return b? Math.round((a-b)/b*100) : 0; };
+  var lbl=function(ym){ return MONTH_ABBR[+ym.slice(5,7)-1]+" '"+ym.slice(2,4); };
+  var arrow=function(n){ return n<0?'↓':'↑'; };
+  var col=function(n){ return n<0?'var(--red)':'var(--green)'; };
+
+  var dCo=pct(lc,pc), dMf=pct(lm,pm), dTot=pct(lc+lm,pc+pm);
+  // Which source actually moved the number, in dollars rather than percent --
+  // a big percentage swing on a small line is not the story.
+  var moveCo=Math.abs(lc-pc), moveMf=Math.abs(lm-pm);
+  var driver = moveCo>=moveMf ? 'Commas sales' : 'MFSN commission';
+  var shareNow = (lc+lm)? Math.round(lm/(lc+lm)*100) : 0;
+  var sharePeak = (pc+pm)? Math.round(pm/(pc+pm)*100) : 0;
+
+  var row=function(name,peakV,lastV,d){
+    return '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)">'
+      +'<div style="font-weight:700;font-size:13px">'+name+'</div>'
+      +'<div class="cardsub" style="font-variant-numeric:tabular-nums">'+money0(peakV)+'</div>'
+      +'<div style="font-weight:700;font-variant-numeric:tabular-nums">'+money0(lastV)+'</div>'
+      +'<div style="font-weight:700;color:'+col(d)+';min-width:56px;text-align:right">'+arrow(d)+' '+Math.abs(d)+'%</div>'
+      +'</div>';
+  };
+
+  el.innerHTML=''
+   +'<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;padding-bottom:6px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700">'
+   +'<div></div><div>'+lbl(peak)+' peak</div><div>'+lbl(last)+'</div><div style="text-align:right">change</div></div>'
+   +row('Commas sales',pc,lc,dCo)
+   +row('MFSN commission',pm,lm,dMf)
+   +row('Total',pc+pm,lc+lm,dTot)
+   +'<div class="cardsub" style="margin-top:12px;line-height:1.55">'
+   +'<b>'+driver+'</b> accounts for most of the move ('+money0(Math.max(moveCo,moveMf))+' of it). '
+   +'MFSN commission has gone from <b>'+sharePeak+'%</b> of income at the peak to <b>'+shareNow+'%</b> now'
+   +(dMf>=0?' — the recurring book held while one-off sales fell away.':'.')
+   +'</div>';
+}
+
 // Draw once from the fallback so nothing is blank, then swap in the real
 // figures the moment they arrive and redraw everything that depends on them.
 hydrateFromServer().then(function(ok){
@@ -810,6 +864,7 @@ hydrateFromServer().then(function(ok){
     drawTrend('dashTrend');
     drawKpiSparklines();
     drawUpgradeChart();
+    renderWhatChanged();
     updateTotalIncomeCard();
     updateTrendStats();
     if(document.getElementById('view-rev') && document.getElementById('view-rev').style.display!=='none') render();
