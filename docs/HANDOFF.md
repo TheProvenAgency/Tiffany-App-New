@@ -122,3 +122,65 @@ push to `main`).
   must be added to the allowlists in `lib/auth.js` — otherwise it's 403 by
   default (which is the safe direction).
 - After changing inline JS in `index.html`, syntax-check it before trusting.
+
+---
+
+## 2026-08-10 — capabilities, dispute desk, range-aware package revenue
+
+**Permissions are now per-feature, not per-role.** `lib/auth.js` exports
+`CAPABILITIES`, `ROLE_CAPS`, `capsFor()`, `has()`. A role is only a named
+preset; the gate checks the capability. A user row may carry an explicit
+`capabilities` array that overrides its preset entirely (settable via
+POST/PATCH `/api/users`; `null` clears it and returns the account to the
+preset). Presets:
+
+| role | capabilities |
+|---|---|
+| `admin` | all |
+| `employee` | production, messages, clients, pipeline, followups, tickets |
+| `va` | production, messages, clients, followups, tickets |
+| `disputer` | disputes, tickets |
+
+`employee`'s preset is exactly the old employee surface, so no existing
+account changed on this deploy. Deny-by-default still holds. `req.actor` and
+`req.capabilities` are set by the gate; `/api/me` returns `capabilities` so
+the UI gates on the same list the server does.
+
+Static assets are tied to the capability they serve (`ASSET_CAPS`) rather
+than a flat allowlist. **`team.js` is deliberately in `COMMON_ASSETS`, not
+behind `admin`** — `role.js`'s `gateNav()` polls for the `#teamNavBtn` it
+injects, so denying the file stalls nav gating ~3s for every non-admin (§6).
+
+**Dispute desk** (`lib/disputes.js`, `public/disputes.js`,
+`GET /api/disputes/queue`, `GET|PATCH /api/disputes/:id`). A projection over
+Deal Production, not a second store — the bureau columns, round, CFPB login
+and document checklist already live on that row. Rows are built field by
+field, so a money column added to Deal Production later cannot leak into a
+disputer's surface by default. Queue ranks ready-to-file above
+blocked-on-monitoring, then longest-waiting. Writable fields for a disputer
+are `DISPUTE_FIELDS` (tu/eq/ex/cfpb/note) — not `stage`, not `docs`.
+
+**Revenue by package now follows the date filter.** It previously always read
+`byProductAllTime`. The pre-webhook Commas block
+(`HISTORICAL_PRODUCT_SALES`) is a dateless snapshot, so it is only attributed
+to All Time; narrower ranges use `byProduct` (live Fanbasis events) and the
+subtitle states which is on screen.
+
+Tests: **282 total, 279 passing.** The 3 failures are still the pre-existing
+`tests/messages-reply.test.js` ones (READ_ONLY 500-vs-403, a sendMessage mock
+mismatch, and `'EMAIL'` vs `'Email'` casing) — untouched by this work.
+
+### Still open after this session
+1. The 3 messages-reply failures.
+2. **Tier-2 Postgres durability.** Only config, events and MFSN members
+   hydrate on boot. notes/tasks/taskNotes/worked/affiliate_overrides mirror
+   into Postgres but are never read back, and notifications/ticket_views/
+   dashboard_layouts/tickets/snapshots are not mirrored at all. On a host with
+   no persistent disk this is live data loss on every spin-down.
+3. `users` table migration — blocks the three stores that need a real
+   `users.id` FK.
+4. Revenue view still needs the reference chart set rebuilt against the
+   Admina tokens (donut with source split, affiliate report, half-donut
+   package gauge, active-by-round bars, enrolled/actives/upgraded rings).
+5. `personal-finances.js` still ships a real income figure in client source.
+6. `mfsn_old_status` is still a manual snapshot with no re-audit path.
