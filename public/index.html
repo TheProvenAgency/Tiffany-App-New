@@ -254,7 +254,7 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
    admina-assets/css/style.css) plus whitespace. In dark mode the shadow
    is invisible and the card-vs-bg contrast (dark-2 on dark-1) does the
    separating, exactly like Admina's own dark theme. */
-.card{background:var(--card);border:none;border-radius:20px;padding:0.875rem 1.5rem;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05)}
+.card{background:var(--card);border:none;border-radius:8px;padding:0.875rem 1.5rem;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05)}
 /* gradient KPI stat cards -- the "at a glance" headline numbers, in
    Tiffany's brand colors (pink/rose) plus a couple of complementary
    accents so four in a row don't read as one flat block. */
@@ -265,7 +265,7 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
    cards off-screen to the right. min-width:0 on the card itself and a
    hard max-width on the sparkline close the same hole from the other
    side. */
-.kpi{background:var(--card);border:none;border-top:3px solid transparent;border-radius:16px;padding:0.875rem 1.5rem;
+.kpi{background:var(--card);border:none;border-top:3px solid transparent;border-radius:8px;padding:0.875rem 1.5rem;
   box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05);display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;overflow:hidden}
 .kpi>div{display:flex;flex-direction:column;min-width:0}
 .kpi .ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:12px;flex:0 0 auto}
@@ -469,7 +469,7 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-card,
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpis,
 .grid-stack-item.ui-draggable-dragging .grid-stack-item-content>.rv-kpi{outline-color:var(--pink);box-shadow:0 10px 30px rgba(0,0,0,.15)}
-.gs-placeholder>.placeholder-content{background:var(--pink-soft)!important;border-radius:16px}
+.gs-placeholder>.placeholder-content{background:var(--pink-soft)!important;border-radius:8px}
 .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .badge-soft{font-size:9.5px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:12px}
 .badge-ok{background:var(--green-soft);color:var(--green)}
@@ -804,11 +804,11 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
   <div class="nav navgroup" data-g="ma" style="--rc:#F86624">
     <button data-v="social" onclick="showView('social')" style="--ic:#F86624"><span class="ico2"><i class="ri-sparkling-2-line"></i></span>Social</button>
   </div>
-  <div class="sec" data-g="ac">Settings</div>
+  <div class="sec" data-g="ac">Account</div>
   <div class="nav navgroup" data-g="ac" style="--rc:#9CA3AF">
     <button id="backToProvenBtn" style="--ic:#9CA3AF;display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2"><i class="ri-arrow-left-line"></i></span>Back to Proven Agency</button>
     <button onclick="openNotifications()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-notification-3-line"></i></span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
-    <button onclick="openSettings()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-plug-line"></i></span>Settings &amp; Integrations</button>
+    <button onclick="openSettings()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-plug-line"></i></span>Settings &amp; Connections</button>
     <button id="changePwNavBtn" onclick="openChangePw()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-key-2-line"></i></span>Change password</button>
     <button onclick="showView('tickets')" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-coupon-3-line"></i></span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
     <button onclick="openSupportTicket()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-mail-line"></i></span>Submit a Support Ticket</button>
@@ -926,19 +926,19 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            only shows/activates its one tile. -->
 
       <div class="grid-stack-item" gs-id="kpi-total-income" gs-x="0" gs-y="0" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
-        <iframe src="/admina-dashboard.html?card=total-income" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="Total income"></iframe>
+        <iframe src="/admina-dashboard.html?card=total-income" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="Total income"></iframe>
       </div></div>
 
       <div class="grid-stack-item" gs-id="kpi-enrolled" gs-x="3" gs-y="0" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
-        <iframe src="/admina-dashboard.html?card=enrolled" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="Enrolled members"></iframe>
+        <iframe src="/admina-dashboard.html?card=enrolled" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="Enrolled members"></iframe>
       </div></div>
 
       <div class="grid-stack-item" gs-id="kpi-actives" gs-x="0" gs-y="4" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
-        <iframe src="/admina-dashboard.html?card=actives" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="New portal actives"></iframe>
+        <iframe src="/admina-dashboard.html?card=actives" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="New portal actives"></iframe>
       </div></div>
 
       <div class="grid-stack-item" gs-id="kpi-upgraded" gs-x="3" gs-y="4" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
-        <iframe src="/admina-dashboard.html?card=upgraded" style="width:100%;height:100%;border:0;border-radius:20px;display:block" title="Upgraded"></iframe>
+        <iframe src="/admina-dashboard.html?card=upgraded" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="Upgraded"></iframe>
       </div></div>
 
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">

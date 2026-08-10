@@ -13,7 +13,7 @@ var css=''+
 '#view-team .tm-sub{color:var(--muted);font-size:12.5px;margin:2px 0 16px;max-width:820px}'+
 '#view-team .tm-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}'+
 '@media(max-width:1100px){#view-team .tm-grid{grid-template-columns:1fr}}'+
-'#view-team .tm-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;min-height:0}'+
+'#view-team .tm-card{background:var(--card);border:none;border-radius:8px;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05);padding:16px 18px;display:flex;flex-direction:column;min-height:0}'+
 '#view-team .tm-card h3{margin:0;font-size:14px;display:flex;justify-content:space-between;align-items:baseline}'+
 '#view-team .tm-card h3 .n{font-size:20px;font-weight:800;color:var(--ink)}'+
 '#view-team .tm-cap{color:var(--muted);font-size:11.5px;margin:3px 0 12px}'+

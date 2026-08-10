@@ -206,14 +206,14 @@ var css=''+
    #dashGrid, gs-id="rev-kpis"/"rev-trend"), so the same rules have to
    apply outside #view-rev too. */
 '.rv-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}'+
-'.rv-kpi{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;border-top:3px solid var(--line)}'+
+'.rv-kpi{background:var(--card);border:none;border-radius:8px;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05);padding:24px;border-top:3px solid var(--line)}'+
 '.rv-kpi .l{color:var(--muted);font-weight:500;padding-bottom:9px;margin-bottom:8px;border-bottom:1px solid var(--line)}'+
 '.rv-kpi .v{font-size:28px;font-weight:600;margin-top:6px;letter-spacing:-.5px;color:var(--ink)}'+
 '.rv-kpi .s{font-size:11px;color:var(--muted);margin-top:3px}'+
 '.rv-kpi.hero{background:var(--card);border-top-color:var(--green)}.rv-kpi.hero .v{color:var(--ink);font-size:25px}.rv-kpi.hero .s{color:var(--muted)}'+
 '#view-rev .rv-grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}'+
 '#view-rev .rv-grid11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}'+
-'.rv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}'+
+'.rv-card{background:var(--card);border:none;border-radius:8px;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05);padding:16px 18px}'+
 '.rv-card h3{margin:0 0 3px;font-size:14px}.rv-card .cap{color:var(--muted);font-size:12px;margin:0 0 12px}'+
 '.rv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}'+
 '.rv-wrap{position:relative;height:280px}.rv-wrap.sm{height:230px}'+
