@@ -67,6 +67,40 @@ const HISTORICAL_MENTORSHIP_BUYERS = [
   { name: 'Al Coney', email: 'firmfoundation01@yahoo.com', amount: 3000, date: '2025-12-14' }
 ];
 
+// ------------------------- MFSN affiliate commission, real -------------------------
+// Actual monthly payouts read off the MyFreeScoreNow affiliate portal's
+// Commission Summary (Commission + Referral + One-Time Bonus + Target
+// Incentive), covering Sep 2025 through Jul 2026. These are paid figures,
+// not a per-member estimate -- MFSN pays monthly and exposes no per-day
+// feed, so a month is the finest real grain available.
+//
+// A range that covers part of a month gets that month prorated by the
+// number of days it overlaps, which is the honest reading of "how much of
+// this month's payout falls inside the window".
+const MFSN_MONTHLY_INCOME = {
+  '2025-09': 16038.40, '2025-10': 16981.89, '2025-11': 17236.10, '2025-12': 16572.14,
+  '2026-01': 16573.09, '2026-02': 16914.95, '2026-03': 19099.75, '2026-04': 19002.08,
+  '2026-05': 18999.00, '2026-06': 17191.55, '2026-07': 18113.84
+};
+
+function mfsnIncomeForRange(from, to) {
+  let total = 0;
+  for (const [ym, amount] of Object.entries(MFSN_MONTHLY_INCOME)) {
+    const [y, m] = ym.split('-').map(Number);
+    const monthStart = new Date(Date.UTC(y, m - 1, 1));
+    const monthEnd = new Date(Date.UTC(y, m, 0));
+    const daysInMonth = monthEnd.getUTCDate();
+    const winStart = from ? new Date(from + 'T00:00:00Z') : monthStart;
+    const winEnd = to ? new Date(to + 'T00:00:00Z') : monthEnd;
+    const lo = winStart > monthStart ? winStart : monthStart;
+    const hi = winEnd < monthEnd ? winEnd : monthEnd;
+    if (hi < lo) continue;
+    const overlapDays = Math.round((hi - lo) / 86400000) + 1;
+    total += amount * (overlapDays / daysInMonth);
+  }
+  return Math.round(total);
+}
+
 // Merges the historical Commas snapshot with any live Fanbasis payment
 // events that carry a `product` field (real sales since the webhook secret
 // got fixed on 2026-07-30) so the card grows on its own from here.
@@ -908,18 +942,10 @@ app.get('/api/dashboard', async (req, res) => {
       socialOk: (() => { const l = snaps.length ? snaps[snaps.length - 1].date : null; return l ? (Date.now() - new Date(l)) < 48 * 3600e3 : false; })()
     };
 
-    // MFSN affiliate income estimate for the range: per-member commission
-    // (real audited figures in lib/affiliate.js) summed over enrolled
-    // members = a monthly run-rate, prorated by the range's day count.
-    // Estimated, and labeled so -- MFSN exposes no per-day payout feed.
-    let mfsnMonthlyEst = 0;
-    try {
-      for (const m of store.getMfsnMembers()) mfsnMonthlyEst += affiliate.commissionForMember(m) || 0;
-    } catch (e) { /* no member list yet */ }
-    const rangeDays = (from && to)
-      ? Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1)
-      : null;
-    const mfsnIncomeEst = Math.round(rangeDays ? mfsnMonthlyEst * (rangeDays / 30.44) : mfsnMonthlyEst * 12);
+    // Real MFSN payouts for the range (see MFSN_MONTHLY_INCOME above):
+    // actual monthly commission from the affiliate portal, prorated across
+    // any partially-covered month.
+    const mfsnIncomeEst = mfsnIncomeForRange(from, to);
 
     res.json({
       mode: liveMode() ? 'live' : 'demo',
