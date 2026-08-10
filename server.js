@@ -496,7 +496,11 @@ app.get('/api/me', (req, res) => {
     // and views on the same thing the server gates routes on instead of
     // inferring it from the role name. Presentation only -- the real
     // boundary is still the middleware above.
-    capabilities: req.capabilities
+    capabilities: req.capabilities,
+    // The LIVE/DEMO pill used to be set only from /api/dashboard, which a VA
+    // or disputer is refused -- so they saw "DEMO" stamped over real client
+    // data. Every session can be told which mode it is in.
+    mode: liveMode() ? 'live' : 'demo'
   });
 });
 

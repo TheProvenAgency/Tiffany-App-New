@@ -151,6 +151,8 @@
       // name -- a per-user override would otherwise be invisible here.
       // Presentation only; the boundary is still server-side.
       window.__me = me;
+      var pill = document.getElementById('modePill');
+      if (pill && me.mode) pill.textContent = me.mode === 'live' ? 'LIVE' : 'DEMO';
       var caps = Array.isArray(me.capabilities) ? me.capabilities : [];
       var can = function (c) { return caps.indexOf(c) >= 0; };
       document.body.setAttribute('data-caps', caps.join(' '));

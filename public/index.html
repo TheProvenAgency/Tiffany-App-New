@@ -1680,7 +1680,10 @@ async function loadDashboard(){
   // series this payload already carries, rather than fetching it again.
   window.__msfsDash=d;
   broadcastRangeToKpiFrames();
-  $('modePill').textContent=d.mode==='live'?'LIVE':'DEMO';
+  // Only when the payload actually says. A 403 body has no mode, and writing
+  // DEMO from it stamped "DEMO" over real data for anyone without dashboard
+  // access.
+  if(d.mode)$('modePill').textContent=d.mode==='live'?'LIVE':'DEMO';
   // hero -- this card lives on the Revenue page now (moved off Dashboard),
   // so guard every reference: on Dashboard these elements are absent and
   // must not throw, or the rest of loadDashboard (packages, mentorship,

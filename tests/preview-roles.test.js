@@ -93,3 +93,19 @@ test('the picker offers every previewable role', () => {
   }
   assert.ok(!sel.includes('value="admin"'), 'admin is not a preview target');
 });
+
+test('a worker is told the real mode instead of being shown DEMO', async () => {
+  // The LIVE/DEMO pill was only ever set from /api/dashboard, which a VA and a
+  // disputer are refused -- so the 403 body's missing `mode` resolved to DEMO
+  // and got stamped over real client data.
+  await req('/api/preview/start', { method: 'POST', body: { role: 'va' } });
+  const me = await (await req('/api/me')).json();
+  assert.ok(me.mode === 'live' || me.mode === 'demo', '/api/me should carry the mode');
+  await req('/api/preview/stop', { method: 'POST' });
+
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  assert.ok(/if\(d\.mode\)\$\('modePill'\)/.test(page),
+    'a payload without a mode must not relabel the app');
+  const role = fs.readFileSync(path.join(__dirname, '..', 'public', 'role.js'), 'utf8');
+  assert.ok(/me\.mode === 'live'/.test(role), 'role.js should set the pill for every session');
+});
