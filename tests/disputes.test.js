@@ -90,3 +90,41 @@ test('a dispute record strips money even if the source row carries it', () => {
 test('a missing record yields null rather than throwing', () => {
   assert.equal(disputes.toDisputeRecord(null), null);
 });
+
+test('the queue says whether paperwork is missing, without shipping the documents', () => {
+  // Missing paperwork is the usual reason a round that reads "ready" cannot
+  // actually go out, and it was invisible from the queue -- a disputer would
+  // open the record, find a missing affidavit, and close it again. A count is
+  // enough for triage; the documents themselves stay in the record.
+  const q = disputes.buildQueue([
+    { id: 'a', name: 'A', stage: 'Ready', days: 3, tu: { st: 'ready', r: 1 },
+      docs: { SSC: true, DL: false, POA: false } }
+  ]);
+  assert.equal(q[0].docsMissing, 2);
+  assert.equal(q[0].docs, undefined, 'the queue row should not carry the documents');
+});
+
+test('no record of documents is not the same as none missing', () => {
+  // Reporting 0 for a client nobody has filled in yet would read as "all in"
+  // and send a disputer to file something they cannot file.
+  const q = disputes.buildQueue([
+    { id: 'b', name: 'B', stage: 'Ready', days: 3, tu: { st: 'ready', r: 1 } },
+    { id: 'c', name: 'C', stage: 'Ready', days: 2, tu: { st: 'ready', r: 1 }, docs: {} }
+  ]);
+  for (const row of q) {
+    assert.equal(row.docsMissing, null, `${row.id} has nothing recorded, so nothing to claim`);
+  }
+});
+
+test('a fully-documented client reports zero rather than null', () => {
+  const q = disputes.buildQueue([
+    { id: 'd', name: 'D', stage: 'Ready', days: 1, tu: { st: 'ready', r: 1 }, docs: { SSC: true } }
+  ]);
+  assert.equal(q[0].docsMissing, 0);
+});
+
+test('countMissingDocs still refuses anything that is not a document map', () => {
+  assert.equal(disputes.countMissingDocs(null), null);
+  assert.equal(disputes.countMissingDocs({ docs: 'yes' }), null);
+  assert.equal(disputes.countMissingDocs({}), null);
+});

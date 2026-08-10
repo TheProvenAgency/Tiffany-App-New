@@ -10,7 +10,13 @@
 (function(){
 var BUREAU_LABEL={tu:'TransUnion',eq:'Equifax',ex:'Experian'};
 var BUREAUS=['tu','eq','ex'];
-var state={queue:[],filter:'ready',loading:false,openId:null,record:null,err:''};
+var state={queue:[],filter:'ready',loading:false,openId:null,record:null,err:'',me:null};
+// Who is signed in, so the Mine tab can mean something. Deal Production
+// records the assignee by display name, so that is what we match on.
+fetch('/api/me').then(function(r){return r.json();}).then(function(m){
+  state.me=m&&m.name||null;
+  if(document.getElementById('dqBody'))render();
+}).catch(function(){});
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function plural(n,w){return n+' '+w+(n===1?'':'s');}
@@ -88,6 +94,7 @@ var sectionHTML=''+
  '<div class="dq-kpi"><div class="l">Longest wait</div><div class="v" id="dqKOld">—</div><div class="s">days in current stage</div></div>'+
 '</div>'+
 '<div class="dq-tabs">'+
+ '<button data-f="mine">Mine</button>'+
  '<button data-f="ready" class="on">Ready</button>'+
  '<button data-f="blocked">Blocked</button>'+
  '<button data-f="all">All</button>'+
@@ -112,11 +119,23 @@ function loadQueue(){
 }
 
 function visible(){
+  if(state.filter==='mine'){
+    if(!state.me)return [];
+    return state.queue.filter(function(r){return r.assignedTo===state.me;});
+  }
   if(state.filter==='all')return state.queue;
   return state.queue.filter(function(r){return r.status===state.filter;});
 }
 
 /* ---------- queue render ---------- */
+// Missing paperwork is the usual reason a round that reads "ready" can't
+// actually go out. null means nothing is recorded for this client, which is
+// not the same as nothing missing, so it stays blank rather than showing 0.
+function docCell(n){
+  if(n===null||n===undefined)return '<span style="opacity:.35">—</span>';
+  if(n===0)return '<span class="chip done">all in</span>';
+  return '<span class="chip login">'+n+' missing</span>';
+}
 function chip(st){
   var label={ready:'Ready',login:'Blocked',done:'Filed',none:'—'}[st]||st;
   return '<span class="chip '+esc(st)+'">'+esc(label)+'</span>';
@@ -134,9 +153,14 @@ function render(){
   if(state.loading){host.innerHTML='<div class="empty">Loading…</div>';return;}
   if(state.err){host.innerHTML='<div class="empty">'+esc(state.err)+'</div>';return;}
   var rows=visible();
-  if(!rows.length){host.innerHTML='<div class="empty">Nothing in this list right now.</div>';return;}
+  if(!rows.length){
+    host.innerHTML='<div class="empty">'+(state.filter==='mine'
+      ? (state.me?'Nothing is assigned to you yet.':'Could not tell who you are signed in as.')
+      : 'Nothing in this list right now.')+'</div>';
+    return;
+  }
 
-  var h='<table><thead><tr><th>Client</th><th>Stage</th><th>Round</th><th>TransUnion</th><th>Equifax</th><th>Experian</th><th>Waiting</th><th>Assigned</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Client</th><th>Stage</th><th>Round</th><th>TransUnion</th><th>Equifax</th><th>Experian</th><th>Docs</th><th>Waiting</th><th>Assigned</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var stAt=function(b){
       if(r.readyBureaus.indexOf(b)>=0)return 'ready';
@@ -150,6 +174,7 @@ function render(){
       '<td>'+chip(stAt('tu'))+'</td>'+
       '<td>'+chip(stAt('eq'))+'</td>'+
       '<td>'+chip(stAt('ex'))+'</td>'+
+      '<td>'+docCell(r.docsMissing)+'</td>'+
       '<td class="days'+((r.days||0)>180?' old':'')+'">'+(r.days||0)+'d</td>'+
       '<td>'+(r.assignedTo?esc(r.assignedTo):'<span style="opacity:.45">—</span>')+'</td>'+
     '</tr>';
