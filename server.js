@@ -68,19 +68,29 @@ const HISTORICAL_MENTORSHIP_BUYERS = [
 ];
 
 // ------------------------- MFSN affiliate commission, real -------------------------
-// Actual monthly payouts read off the MyFreeScoreNow affiliate portal's
-// Commission Summary (Commission + Referral + One-Time Bonus + Target
-// Incentive), covering Sep 2025 through Jul 2026. These are paid figures,
-// not a per-member estimate -- MFSN pays monthly and exposes no per-day
-// feed, so a month is the finest real grain available.
+// Actual monthly payouts, exported from the MyFreeScoreNow affiliate
+// portal's Commission Summary on 2026-08-10: all 37 months from Jul 2023
+// through Jul 2026 (Commission + Referral + One-Time Bonus + Target
+// Incentive). Sums to $244,194.34, which matches the portal's own lifetime
+// figure -- that agreement is the check that this table is complete.
+//
+// These are paid figures, not a per-member estimate. MFSN pays monthly and
+// exposes no per-day feed, so a month is the finest real grain available.
 //
 // A range that covers part of a month gets that month prorated by the
 // number of days it overlaps, which is the honest reading of "how much of
 // this month's payout falls inside the window".
 const MFSN_MONTHLY_INCOME = {
-  '2025-09': 16038.40, '2025-10': 16981.89, '2025-11': 17236.10, '2025-12': 16572.14,
-  '2026-01': 16573.09, '2026-02': 16914.95, '2026-03': 19099.75, '2026-04': 19002.08,
-  '2026-05': 18999.00, '2026-06': 17191.55, '2026-07': 18113.84
+  '2023-07': 0.0, '2023-08': 105.25, '2023-09': 164.0, '2023-10': 166.75,
+  '2023-11': 272.06, '2023-12': 197.35, '2024-01': 230.39, '2024-02': 244.49,
+  '2024-03': 256.06, '2024-04': 692.34, '2024-05': 1232.22, '2024-06': 1373.29,
+  '2024-07': 1432.26, '2024-08': 1136.56, '2024-09': 1394.58, '2024-10': 1355.85,
+  '2024-11': 2943.93, '2024-12': 2945.14, '2025-01': 2395.34, '2025-02': 2167.55,
+  '2025-03': 3518.55, '2025-04': 4953.55, '2025-05': 4390.65, '2025-06': 4510.04,
+  '2025-07': 7033.54, '2025-08': 6359.81, '2025-09': 16038.4, '2025-10': 16981.89,
+  '2025-11': 17236.1, '2025-12': 16572.14, '2026-01': 16573.09, '2026-02': 16914.95,
+  '2026-03': 19099.75, '2026-04': 19002.08, '2026-05': 18999.0, '2026-06': 17191.55,
+  '2026-07': 18113.84
 };
 
 function mfsnIncomeForRange(from, to) {
