@@ -2107,11 +2107,12 @@ app.patch('/api/production/:id', async (req, res) => {
 });
 
 // Only listen when run directly, so tests can mount the app on a free port.
-// Restore config from Postgres first (see store.hydrateConfigFromPostgres --
-// matters on hosts with no persistent disk, where config.json is wiped on
-// every restart); never block boot on it failing/hanging.
+// Restore config AND the MFSN member list from Postgres first (see
+// store.hydrateConfigFromPostgres / hydrateMfsnFromPostgres -- matters on
+// hosts with no persistent disk, where both JSON files are wiped on every
+// restart); never block boot on either failing/hanging.
 if (require.main === module) {
-  store.hydrateConfigFromPostgres().catch(() => {}).finally(() => {
+  Promise.all([store.hydrateConfigFromPostgres(), store.hydrateMfsnFromPostgres()]).catch(() => {}).finally(() => {
     app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
   });
 }
