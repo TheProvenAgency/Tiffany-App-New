@@ -2265,7 +2265,11 @@ if (require.main === module) {
     store.hydrateNotesFromPostgres(),
     store.hydrateWorkedFromPostgres(),
     store.hydrateAffiliateOverridesFromPostgres()
-  ]).catch(() => {}).finally(() => {
+  ]).catch(() => {}).then(() => {
+    // After Postgres restore, top the event log up with the real Commas sale
+    // history (idempotent by payment id -- see store.seedCommasPayments).
+    try { store.seedCommasPayments(); } catch (e) { /* never block boot */ }
+  }).finally(() => {
     app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
   });
 }
