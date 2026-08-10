@@ -1917,8 +1917,12 @@ app.patch('/api/disputes/:id', async (req, res) => {
     const existing = await dealProd.readOneProdRecord(req.params.id);
     if (!existing) return res.status(404).json({ error: 'no such client' });
     await dealProd.patchProdRecord(req.params.id, { ...allowed }, who);
-    const fresh = await dealProd.readOneProdRecord(req.params.id);
-    res.json(disputes.toDisputeRecord(fresh));
+    // Same JSON-backup merge as the Deal Production PATCH -- without it, a
+    // save in a Postgres-less environment silently changed nothing (caught
+    // by an end-to-end check, not a unit test: the route answered 200 with
+    // the unmodified record).
+    const lead = await applyProdPatchToJson(req.params.id, allowed, who);
+    res.json(disputes.toDisputeRecord(lead || await dealProd.readOneProdRecord(req.params.id)));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2158,6 +2162,41 @@ app.post('/internal/cron/sync-ghl', async (req, res) => {
 // whole-array JSON approach this comment used to describe). The JSON
 // backup below still reads/mutates/writes the full array, so two PATCHes
 // to two DIFFERENT records landing in the same instant could theoretically
+// Apply an already-permission-filtered patch to the JSON backup: the same
+// deep-merge both PATCH routes need. Postgres is written first by the
+// caller (dealProd.patchProdRecord); this keeps the local fallback copy in
+// step so a save still lands when Postgres is unreachable -- which is also
+// the only copy in a no-DATABASE_URL environment.
+async function applyProdPatchToJson(id, allowed, who) {
+  const list = await readProd();
+  if (!Array.isArray(list)) return null;
+  const idx = list.findIndex(c => c.id === id);
+  if (idx === -1) return null;
+  const note = allowed.note;
+  const rest = { ...allowed };
+  delete rest.note;
+  const lead = { ...list[idx] };
+  for (const k of Object.keys(rest)) {
+    if (['tu', 'eq', 'ex', 'docs'].includes(k) && rest[k] && typeof rest[k] === 'object') {
+      lead[k] = { ...(lead[k] || {}), ...rest[k] };
+    } else {
+      lead[k] = rest[k];
+    }
+  }
+  if (note && String(note).trim()) {
+    lead.notes = (lead.notes || []).concat([{
+      when: new Date().toISOString().slice(0, 10),
+      who,
+      text: String(note).trim()
+    }]);
+  }
+  lead.updatedAt = new Date().toISOString();
+  lead.updatedBy = who;
+  list[idx] = lead;
+  dealProd.writeJsonBackup(list);
+  return lead;
+}
+
 // clobber each other on the JSON side only -- acceptable given JSON is now
 // a backup, not the source of truth; Postgres has both changes correctly
 // either way.
@@ -2181,38 +2220,13 @@ app.patch('/api/production/:id', async (req, res) => {
     return res.status(403).json({ error: 'not allowed to change: ' + denied.join(', ') });
   }
 
-  const note = allowed.note;
   const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
 
   // Postgres first, per the "webhooks/APIs store to Supabase first, then
-  // JSON" requirement -- a targeted update to just the affected tables.
+  // JSON" requirement -- a targeted update to just the affected tables --
+  // then the same deep-merge into the JSON backup both PATCH routes share.
   await dealProd.patchProdRecord(req.params.id, { ...allowed }, who);
-
-  delete allowed.note;
-
-  // Deep-merge the sub-objects so a partial patch (one document, one round
-  // field) does not replace the whole object and undo a colleague's edit.
-  const lead = { ...list[idx] };
-  for (const k of Object.keys(allowed)) {
-    if (['tu', 'eq', 'ex', 'docs'].includes(k) && allowed[k] && typeof allowed[k] === 'object') {
-      lead[k] = { ...(lead[k] || {}), ...allowed[k] };
-    } else {
-      lead[k] = allowed[k];
-    }
-  }
-  if (note && String(note).trim()) {
-    lead.notes = (lead.notes || []).concat([{
-      when: new Date().toISOString().slice(0, 10),
-      who,
-      text: String(note).trim()
-    }]);
-  }
-
-  // A monotonic stamp so an open drawer elsewhere can tell the lead moved.
-  lead.updatedAt = new Date().toISOString();
-  lead.updatedBy = who;
-  list[idx] = lead;
-  dealProd.writeJsonBackup(list);
+  const lead = await applyProdPatchToJson(req.params.id, allowed, who);
   res.json({ ok: true, client: lead });
 });
 
