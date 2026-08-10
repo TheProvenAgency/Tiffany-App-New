@@ -94,6 +94,58 @@ const MFSN_MONTHLY_INCOME = {
   '2026-07': 18113.84
 };
 
+// The MyFreeScoreNow book as of the last portal audit. This lived in three
+// places at once -- here, public/mfsn.js and public/admina-dashboard.html --
+// and the admina copy silently went stale (it still read 1,493 enrolled and
+// 736 actives long after the portal moved on). Serving it from one place is
+// the only way the KPI tiles and the Credit Monitoring page can't disagree.
+const MFSN_MEMBERS = {
+  enrolled: 1505, active: 217, upgraded: 439, toUpgrade: 1067,
+  newActives: 756, targetActives: 1185,
+  auditedAt: '2026-08-10'
+};
+
+// Month-by-month payout list for sparklines. Object key order is insertion
+// order for string keys, but sort anyway so a hand-edit out of sequence
+// can't silently reorder a chart.
+function mfsnIncomeSeries() {
+  return Object.keys(MFSN_MONTHLY_INCOME).sort().map(function (ym) {
+    return { label: ym, value: MFSN_MONTHLY_INCOME[ym] };
+  });
+}
+
+// Real income per calendar month, both sources side by side. Commas is
+// summed straight off the payment events (the 5,133-row backfill plus
+// anything the Fanbasis webhook has added since), so it needs no hand
+// maintenance; MFSN comes from the payout table above.
+//
+// This exists because public/revenue.js and public/mfsn.js each carried
+// their own typed-out copy of these numbers, and both drifted -- revenue.js
+// was still summing MFSN through June 2026, so every Total income figure it
+// produced was short by July's $18,113.84. Deriving it once on the server is
+// the only version that can't silently go stale.
+function incomeByMonth() {
+  const months = {};
+  for (const [ym, amount] of Object.entries(MFSN_MONTHLY_INCOME)) {
+    months[ym] = { ym, commas: 0, mfsn: Math.round(amount * 100) / 100, total: 0 };
+  }
+  for (const e of getPaymentEvents()) {
+    const at = e.at || e.receivedAt;
+    if (!at) continue;
+    const ym = String(at).slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(ym)) continue;
+    if (!months[ym]) months[ym] = { ym, commas: 0, mfsn: 0, total: 0 };
+    months[ym].commas += Number(e.amount) || 0;
+  }
+  return Object.keys(months).sort().map(ym => {
+    const m = months[ym];
+    m.commas = Math.round(m.commas);
+    m.mfsn = Math.round(m.mfsn);
+    m.total = m.commas + m.mfsn;
+    return m;
+  });
+}
+
 function mfsnIncomeForRange(from, to) {
   let total = 0;
   for (const [ym, amount] of Object.entries(MFSN_MONTHLY_INCOME)) {
@@ -1927,6 +1979,20 @@ app.post('/api/mfsn-old-status', (req, res) => {
 // the current roster + synced member list on every call; nothing is
 // persisted here, so it always reflects the latest /webhooks/mfsn sync.
 // Admin-only (not in the employee allowlist, so denied by default).
+// The MFSN book and payout history, for any surface that needs to render it
+// without recomputing the whole dashboard. Deliberately cheap: constants and
+// a sort, no roster read, no GoHighLevel call -- the KPI tiles hit this on
+// every load and must not cost what /api/dashboard costs.
+app.get('/api/mfsn-summary', (req, res) => {
+  res.json({
+    members: MFSN_MEMBERS,
+    months: incomeByMonth(),
+    lifetime: {
+      mfsn: Math.round(Object.values(MFSN_MONTHLY_INCOME).reduce((a, b) => a + b, 0))
+    }
+  });
+});
+
 app.get('/api/mfsn-gap', async (req, res) => {
   try {
     const clients = await readProd() || [];
@@ -2361,3 +2427,7 @@ async function bootstrap() {
 }
 
 module.exports = app;
+module.exports.MFSN_MEMBERS = MFSN_MEMBERS;
+module.exports.mfsnIncomeSeries = mfsnIncomeSeries;
+module.exports.incomeByMonth = incomeByMonth;
+module.exports.MFSN_MONTHLY_INCOME = MFSN_MONTHLY_INCOME;

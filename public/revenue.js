@@ -19,7 +19,21 @@ var METHODS=[
   {name:'Klarna',    amt:6524,   pct:0.7,  color:C.pink}
 ];
 
-/* ---------- MyFreeScoreNow (affiliate) — from the affiliate portal ---------- */
+/* ---------- MyFreeScoreNow (affiliate) — from the affiliate portal ----------
+   Everything in this block and the Commas block above started life as
+   numbers read off two dashboards by hand on Jul 28 2026, and they went
+   stale exactly the way hand-copied numbers do. Two of them were badly
+   wrong rather than merely old: MF_MONTHLY stopped at June, so every
+   "Total income" this page produced was short a full month of commission;
+   and CO_MONTHLY was never month-by-month revenue at all (it opened with
+   $543,648 for January, which is the lifetime figure, then decayed) -- so
+   the Sales trend showed the business shrinking through 2026 when the
+   transaction records show it growing.
+
+   These now serve only as a fallback for the moment before the fetch in
+   hydrateFromServer() lands. /api/mfsn-summary is the real source: MFSN
+   from the portal's payout table, Commas summed off the payment events
+   themselves. Nothing here needs hand-editing again. */
 var MF={ ytd:107780, latestMonth:17192, active:203, enrolled:1493, upgraded:420, toUpgrade:1073, newActives:736 };
 window.MF=MF; // this whole file is wrapped in its own IIFE (see top), so MF
 // is otherwise invisible to index.html's separate inline script -- the
@@ -48,6 +62,53 @@ var INCOME_BY_MONTH=(function(){
   return m;
 })();
 var INCOME_YMS=Object.keys(INCOME_BY_MONTH).sort();
+
+// Replaces every hand-copied figure above with the server's real numbers,
+// then repaints whatever is already on screen. Deliberately non-blocking:
+// if this fails the page still renders the (stale but harmless) fallback
+// rather than showing nothing.
+var MONTH_ABBR_EARLY=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function hydrateFromServer(){
+  return fetch('/api/mfsn-summary')
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(sum){
+      var months=sum.months||[]; if(!months.length) return;
+      var byMonth={};
+      months.forEach(function(m){ byMonth[m.ym]={co:m.commas||0, mf:m.mfsn||0}; });
+      INCOME_BY_MONTH=byMonth;
+      INCOME_YMS=Object.keys(byMonth).sort();
+
+      // Commas monthly, real, for the current calendar year.
+      var yr=String(new Date().getFullYear());
+      var co=months.filter(function(m){ return m.ym.slice(0,4)===yr; });
+      if(co.length){
+        CO_MONTHLY={ labels: co.map(function(m){ return MONTH_ABBR_EARLY[+m.ym.slice(5,7)-1]; }),
+                     rev:    co.map(function(m){ return m.commas; }),
+                     cust:   CO_MONTHLY.cust };
+        CO.ytd = co.reduce(function(a,m){ return a+m.commas; }, 0);
+        CO.month = co[co.length-1].commas;
+      }
+
+      // MFSN monthly, real, last 12 reported months.
+      var mf=months.filter(function(m){ return m.mfsn>0; }).slice(-12);
+      if(mf.length){
+        MF_MONTHLY={ labels: mf.map(function(m){ return MONTH_ABBR_EARLY[+m.ym.slice(5,7)-1]; }),
+                     vals:   mf.map(function(m){ return m.mfsn; }) };
+        MF.latestMonth = mf[mf.length-1].mfsn;
+        MF.ytd = months.filter(function(m){ return m.ym.slice(0,4)===yr; })
+                       .reduce(function(a,m){ return a+m.mfsn; }, 0);
+      }
+
+      var mem=sum.members||{};
+      ['enrolled','active','upgraded','toUpgrade','newActives','targetActives'].forEach(function(k){
+        if(mem[k]!=null) MF[k]=mem[k];
+      });
+
+      TOTAL_YTD = CO.ytd + MF.ytd;
+      return true;
+    })
+    .catch(function(e){ console.error('Revenue: /api/mfsn-summary failed, using fallback figures', e); });
+}
 function parseYMD(s){ if(!s)return null; var p=String(s).split('-'); return new Date(+p[0],+p[1]-1,+(p[2]||1)); }
 // Sums whichever tracked months overlap [fromStr,toStr] (either bound can be
 // null/omitted, meaning "open ended" -- that's how the "All" preset works).
@@ -694,6 +755,21 @@ function initRV(){
   window.__resizeExtraCharts=function(){ if(_prevResizeExtra)_prevResizeExtra(); for(var k in charts){ if(charts[k]) charts[k].resize(); } };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRV);else initRV();
+
+// Draw once from the fallback so nothing is blank, then swap in the real
+// figures the moment they arrive and redraw everything that depends on them.
+hydrateFromServer().then(function(ok){
+  if(!ok) return;
+  try{
+    drawTrend('dashTrend');
+    drawKpiSparklines();
+    drawUpgradeChart();
+    updateTotalIncomeCard();
+    updateTrendStats();
+    if(document.getElementById('view-rev') && document.getElementById('view-rev').style.display!=='none') render();
+    if(window.__redrawLifecycle) window.__redrawLifecycle();
+  }catch(e){ console.error('Revenue: redraw after hydrate failed', e); }
+});
 
 /* NOTE: this used to force-patch the main Dashboard's hero/KPI rail with a
    hardcoded Jul 28 2026 snapshot every second (startPatch below), from back

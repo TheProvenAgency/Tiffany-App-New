@@ -92,6 +92,11 @@
   applyMfsTheme();
   window.addEventListener('storage', function(e){ if(e.key==='mfsTheme') applyMfsTheme(); });
 })();</script>
+<style>
+/* A KPI that hasn't loaded must not read as a real number -- "$0" on the
+   income tile is a sales figure, not a spinner. */
+.kpi-pending{ opacity:.35; }
+</style>
 </head>
 <body>
 <script>
@@ -125,10 +130,10 @@
             </div>
             <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
               <div class="kpi-text">
-                <h2 class="text-2xl mb-0" id="admTotalIncome">$0</h2>
+                <h2 class="text-2xl mb-0 kpi-pending" id="admTotalIncome">&mdash;</h2>
                 <div class="mt-16" id="admTotalIncomeTrend">
                   <span class="text-primary-600 text-lg line-height-1"><i class="ph ph-arrow-up"></i></span>
-                  <span class="text-primary-600 fw-medium">Commas + MFSN</span>
+                  <span class="text-primary-600 fw-medium" id="admTotalIncomeSub">Commas + MFSN</span>
                 </div>
               </div>
               <div class="kpi-chart"><div id="barChart"></div></div>
@@ -148,10 +153,10 @@
             </div>
             <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
               <div class="kpi-text">
-                <h2 class="text-2xl mb-0">1,493</h2>
+                <h2 class="text-2xl mb-0 kpi-pending" id="admEnrolled">&mdash;</h2>
                 <div class="mt-16">
                   <span class="text-warning-600 text-lg line-height-1"><i class="ph ph-arrows-down-up"></i></span>
-                  <span class="text-warning-600 fw-medium">14% active monitoring</span>
+                  <span class="text-warning-600 fw-medium" id="admEnrolledSub">active monitoring</span>
                 </div>
               </div>
               <div class="kpi-chart" style="width:140px">
@@ -173,10 +178,10 @@
             </div>
             <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
               <div class="kpi-text">
-                <h2 class="text-2xl mb-0">736</h2>
+                <h2 class="text-2xl mb-0 kpi-pending" id="admActives">&mdash;</h2>
                 <div class="mt-16">
                   <span class="text-warning-600 text-lg line-height-1"><i class="ph ph-arrow-up-right"></i></span>
-                  <span class="text-warning-600 fw-medium">60% of target</span>
+                  <span class="text-warning-600 fw-medium" id="admActivesSub">of target</span>
                 </div>
               </div>
               <div class="kpi-chart"><div id="radialChart" class="m--8-px" style="min-width:60px; min-height:60px;"></div></div>
@@ -196,10 +201,10 @@
             </div>
             <div class="kpi-body d-flex align-items-center justify-content-between gap-8">
               <div class="kpi-text">
-                <h2 class="text-2xl mb-0">420</h2>
+                <h2 class="text-2xl mb-0 kpi-pending" id="admUpgraded">&mdash;</h2>
                 <div class="mt-16">
                   <span class="text-danger-600 text-lg line-height-1"><i class="ph ph-arrow-down"></i></span>
-                  <span class="text-danger-600 fw-medium">28% on new platform</span>
+                  <span class="text-danger-600 fw-medium" id="admUpgradedSub">on new platform</span>
                 </div>
               </div>
               <div class="kpi-chart" style="width:140px"><div id="columnChart"></div></div>
@@ -221,77 +226,121 @@ var trackColor   = getCssVar('--primary-100') || '#BFDCFF';
 var warningColor = getCssVar('--warning-600') || '#F59E0B';
 var dangerColor  = getCssVar('--danger-600')  || '#DC2626';
 
-// The parent posts the currently-selected date range on every
-// loadDashboard() run (see index.html). Refetch for that range so this tile
-// tracks the picker like every non-iframe card; the initial no-range load
-// only covers the moment before the first message arrives.
-function loadTotalIncome(range){
-  var qs = new URLSearchParams();
-  if (range && range.from) qs.set('from', range.from);
-  if (range && range.to) qs.set('to', range.to);
-  fetch('/api/dashboard' + (qs.toString() ? '?' + qs : '')).then(function(r){ return r.json(); }).then(function(d){
-    var el = document.getElementById('admTotalIncome');
-    if(el && d && d.kpis) el.textContent = '$' + Math.round(d.kpis.totalIncome != null ? d.kpis.totalIncome : d.kpis.revenueTotal).toLocaleString();
-    var tr = document.querySelector('#admTotalIncomeTrend .fw-medium');
-    if(tr && d && d.kpis && d.kpis.totalIncome != null){
-      tr.textContent = 'Commas $' + Math.round(d.kpis.revenueTotal).toLocaleString()
-        + ' + MFSN $' + Math.round(d.kpis.mfsnIncomeEst || 0).toLocaleString() + ' (est.)';
-    }
-    var head = document.querySelector('[data-card="total-income"] .kpi-head span');
-    if(head && range && range.label) head.textContent = 'Total income · ' + range.label;
-  }).catch(function(){});
+var charts = {};
+function money0(n){ return '$' + Math.round(n||0).toLocaleString(); }
+function pct(a,b){ return b ? Math.round(a/b*100) : 0; }
+function setText(id, txt){ var el=document.getElementById(id); if(el){ el.textContent=txt; el.classList.remove('kpi-pending'); } }
+
+// Only the card this frame was asked for is visible (see the ?card= handler
+// at the top), so rendering the other three is three ApexCharts instances of
+// pure waste per frame -- times four frames. Draw ours and nothing else.
+var ONLY = new URLSearchParams(location.search).get('card');
+function wanted(card){ return !ONLY || ONLY === card; }
+
+function draw(id, opts){
+  var el = document.querySelector('#'+id); if(!el) return;
+  if (charts[id]) { charts[id].destroy(); }
+  charts[id] = new ApexCharts(el, opts); charts[id].render();
 }
-loadTotalIncome(null);
+
+/* ---------- income ---------- */
+// Renders from a dashboard payload. The parent already fetched one before
+// this frame even existed, so it hands it down rather than making us ask
+// again -- see the note on the message listener below.
+function applyDashboard(d, range){
+  if(!d || !d.kpis) return;
+  var k = d.kpis;
+  var total = k.totalIncome != null ? k.totalIncome : k.revenueTotal;
+  setText('admTotalIncome', money0(total));
+  setText('admTotalIncomeSub',
+    'Commas ' + money0(k.revenueTotal) + ' + MFSN ' + money0(k.mfsnIncomeEst || 0));
+  var head = document.querySelector('[data-card="total-income"] .kpi-head span');
+  if(head && range && range.label) head.textContent = 'Total income · ' + range.label;
+}
+
+/* ---------- the MFSN book + the real monthly income history ---------- */
+function applySummary(sum){
+  if(!sum) return;
+  var m = sum.members || {};
+  setText('admEnrolled', (m.enrolled||0).toLocaleString());
+  setText('admEnrolledSub', pct(m.active, m.enrolled) + '% active monitoring');
+  setText('admActives', (m.newActives||0).toLocaleString());
+  setText('admActivesSub', pct(m.newActives, m.targetActives) + '% of ' + (m.targetActives||0).toLocaleString() + ' target');
+  setText('admUpgraded', (m.upgraded||0).toLocaleString());
+  setText('admUpgradedSub', pct(m.upgraded, m.enrolled) + '% on new platform');
+
+  var months = (sum.months || []).slice(-12);
+  var labels = months.map(function(x){ return x.ym; });
+
+  // Total income: real combined income, last 12 months. The old version was
+  // a fixed array of seven invented numbers.
+  if (wanted('total-income')) draw('barChart', {
+    series: [
+      { name:'Commas', data: months.map(function(x){ return x.commas; }) },
+      { name:'MFSN',   data: months.map(function(x){ return x.mfsn; }) }
+    ],
+    chart: { type:'bar', height:80, width:130, stacked:true, sparkline:{enabled:true} },
+    plotOptions: { bar: { columnWidth:'65%', borderRadius:2 } },
+    colors: [primaryColor, warningColor],
+    labels: labels,
+    dataLabels: { enabled:false },
+    tooltip: { enabled:true, x:{ formatter:function(v,o){ return labels[o.dataPointIndex]||''; } },
+               y:{ formatter:function(v){ return money0(v); } } }
+  });
+
+  // The three member tiles have no real history behind them -- MFSN reports
+  // the book as a snapshot, not a time series. The previous charts here were
+  // invented trend lines, so they're replaced with the real ratio each tile's
+  // caption already states rather than a curve nobody can source.
+  function ratio(id, value, of, color){
+    draw(id, {
+      series: [pct(value, of)],
+      chart: { type:'radialBar', height:90, width:90, sparkline:{enabled:true} },
+      plotOptions: { radialBar: { startAngle:0, endAngle:360, hollow:{size:'68%'},
+        track:{ background:trackColor, strokeWidth:'100%', margin:0 },
+        dataLabels:{ name:{show:false}, value:{ fontSize:'12px', fontWeight:500,
+          color:color, offsetY:0, show:true, formatter:function(v){ return v+'%'; } } } } },
+      fill: { colors:[color] }, stroke: { lineCap:'round' }
+    });
+  }
+  if (wanted('enrolled'))  ratio('lineChart',   m.active,     m.enrolled,      primaryColor);
+  if (wanted('actives'))   ratio('radialChart', m.newActives, m.targetActives, warningColor);
+  if (wanted('upgraded'))  ratio('columnChart', m.upgraded,   m.enrolled,      dangerColor);
+}
+
+// Cheap, constants-only endpoint -- safe for all four frames to call.
+fetch('/api/mfsn-summary')
+  .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
+  .then(applySummary)
+  .catch(function(e){
+    // Swallowing this is what let the tiles sit on a placeholder looking like
+    // real data. Say so instead.
+    ['admEnrolled','admActives','admUpgraded'].forEach(function(id){ setText(id, 'n/a'); });
+    console.error('KPI tile: /api/mfsn-summary failed', e);
+  });
+
+/* ---------- where the income figure comes from ----------
+   This frame used to fetch /api/dashboard itself. With four frames on the
+   page that meant five concurrent copies of the most expensive request in
+   the app: one alone measured 1.3s, four together 6.5s, and on a cold Render
+   start they starved each other badly enough that sibling requests returned
+   502. For those seconds every tile read "$0" -- indistinguishable from a
+   day with no sales, which is exactly how this was reported.
+   The parent has the payload already, so it pushes it down. */
 window.addEventListener('message', function(ev){
-  if (ev.origin !== location.origin) return;
-  if (!ev.data || ev.data.type !== 'msfs-range') return;
-  loadTotalIncome(ev.data);
+  if (ev.origin !== location.origin || !ev.data) return;
+  if (ev.data.type === 'msfs-kpi') applyDashboard(ev.data.dashboard, ev.data.range);
 });
-// The parent's broadcast can fire before this frame exists (its
-// loadDashboard usually beats iframe load), so ask for the current range
-// once ready rather than waiting for the next filter change.
 if (window.parent !== window) {
+  // The parent's broadcast usually lands before this frame is listening, so
+  // ask once on load rather than waiting for the next date-picker change.
   try { window.parent.postMessage({type:'msfs-range-request'}, location.origin); } catch(e) {}
+} else {
+  // Standalone (opened directly, not embedded) -- nobody to hand us data.
+  fetch('/api/dashboard').then(function(r){ return r.json(); })
+    .then(function(d){ applyDashboard(d, null); })
+    .catch(function(e){ setText('admTotalIncome','n/a'); console.error('KPI tile: /api/dashboard failed', e); });
 }
-
-var barChart = new ApexCharts(document.querySelector("#barChart"), {
-  series: [{ data: [543648,87000,72000,62000,48000,33129,29100].map(function(v){return Math.round(v/1000);}) }],
-  chart: { type: "bar", height: 80, width: 130, sparkline: { enabled: true } },
-  plotOptions: { bar: { columnWidth: "65%", borderRadius: 3 } },
-  colors: [primaryColor],
-  fill: { opacity: [0.35,0.35,0.35,0.35,0.35,0.35,1] },
-  dataLabels: { enabled: false }, tooltip: { enabled: false }
-});
-barChart.render();
-
-var lineChart = new ApexCharts(document.querySelector("#lineChart"), {
-  series: [{ data: [1210,1265,1301,1340,1375,1402,1430,1448,1461,1472,1483,1489,1493] }],
-  chart: { type: "area", height: 80, sparkline: { enabled: true } },
-  stroke: { curve: "smooth", width: 2 },
-  fill: { type: "gradient", gradient: { opacityFrom: 0.4, opacityTo: 0 } },
-  colors: [primaryColor], tooltip: { enabled: true }
-});
-lineChart.render();
-
-var radialChart = new ApexCharts(document.querySelector("#radialChart"), {
-  series: [Math.round(736/1226*100)],
-  chart: { type: "radialBar", height: 90, width: 90, sparkline: { enabled: true } },
-  plotOptions: { radialBar: { startAngle:0, endAngle:360, hollow:{size:"70%"},
-    track:{background:trackColor,strokeWidth:"100%",margin:0},
-    dataLabels:{ name:{show:false}, value:{ fontSize:"12px", fontWeight:500, color:warningColor, offsetY:0, show:true, formatter:function(v){return v+"%";} } } } },
-  fill: { colors: [warningColor] }, stroke: { lineCap: "round" }, labels: ["New portal actives"]
-});
-radialChart.render();
-
-var columnChart = new ApexCharts(document.querySelector("#columnChart"), {
-  series: [{ data: [30,55,80,120,180,260,340,420].map(function(v){return v;}) }],
-  chart: { type: "bar", height: 80, sparkline: { enabled: true } },
-  plotOptions: { bar: { columnWidth: "40%", borderRadius: 3 } },
-  colors: [dangerColor],
-  fill: { opacity: [1,0.3,1,0.3,1,0.3,1,1] },
-  dataLabels: { enabled: false }, tooltip: { enabled: false }
-});
-columnChart.render();
 
 // The vw/vh clamp() rules above handle the text/padding side of "the card
 // doesn't adjust when resized" -- this handles the chart side. ApexCharts
