@@ -221,10 +221,33 @@ var trackColor   = getCssVar('--primary-100') || '#BFDCFF';
 var warningColor = getCssVar('--warning-600') || '#F59E0B';
 var dangerColor  = getCssVar('--danger-600')  || '#DC2626';
 
-fetch('/api/dashboard').then(function(r){ return r.json(); }).then(function(d){
-  var el = document.getElementById('admTotalIncome');
-  if(el && d && d.kpis) el.textContent = '$' + Math.round(d.kpis.revenueTotal).toLocaleString();
-}).catch(function(){});
+// The parent posts the currently-selected date range on every
+// loadDashboard() run (see index.html). Refetch for that range so this tile
+// tracks the picker like every non-iframe card; the initial no-range load
+// only covers the moment before the first message arrives.
+function loadTotalIncome(range){
+  var qs = new URLSearchParams();
+  if (range && range.from) qs.set('from', range.from);
+  if (range && range.to) qs.set('to', range.to);
+  fetch('/api/dashboard' + (qs.toString() ? '?' + qs : '')).then(function(r){ return r.json(); }).then(function(d){
+    var el = document.getElementById('admTotalIncome');
+    if(el && d && d.kpis) el.textContent = '$' + Math.round(d.kpis.revenueTotal).toLocaleString();
+    var head = document.querySelector('[data-card="total-income"] .kpi-head span');
+    if(head && range && range.label) head.textContent = 'Total income · ' + range.label;
+  }).catch(function(){});
+}
+loadTotalIncome(null);
+window.addEventListener('message', function(ev){
+  if (ev.origin !== location.origin) return;
+  if (!ev.data || ev.data.type !== 'msfs-range') return;
+  loadTotalIncome(ev.data);
+});
+// The parent's broadcast can fire before this frame exists (its
+// loadDashboard usually beats iframe load), so ask for the current range
+// once ready rather than waiting for the next filter change.
+if (window.parent !== window) {
+  try { window.parent.postMessage({type:'msfs-range-request'}, location.origin); } catch(e) {}
+}
 
 var barChart = new ApexCharts(document.querySelector("#barChart"), {
   series: [{ data: [543648,87000,72000,62000,48000,33129,29100].map(function(v){return Math.round(v/1000);}) }],

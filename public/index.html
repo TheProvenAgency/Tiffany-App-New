@@ -1614,9 +1614,27 @@ async function renderAffiliateGap(){
       <div class="cardsub" style="margin-top:8px;font-style:italic">Smart Credit audit as of ${new Date(o.auditedAt).toLocaleDateString()} — pulled by hand from MyFreeScoreNow's Member List (Member Type = Old); MFSN's sync feed doesn't carry that flag yet, so this refreshes only when the audit is re-run.</div>`:''}`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
 }
+function broadcastRangeToKpiFrames(){
+  document.querySelectorAll('iframe[src^="/admina-dashboard.html"]').forEach(f=>{
+    try{ f.contentWindow.postMessage({type:'msfs-range', from, to, label: rangeLabel()}, location.origin); }catch(e){}
+  });
+}
+// An iframe that loads after our broadcast asks for the range itself --
+// without this, the tile keeps its initial all-time figure until the next
+// time someone touches the date picker.
+window.addEventListener('message', ev=>{
+  if(ev.origin!==location.origin||!ev.data||ev.data.type!=='msfs-range-request')return;
+  broadcastRangeToKpiFrames();
+});
 async function loadDashboard(){
   renderAffiliateGap();
   const qs=new URLSearchParams({granularity});if(from)qs.set('from',from);if(to)qs.set('to',to);
+  // The four Admina KPI tiles are same-origin iframes that fetch their own
+  // figures; without this they'd sit on their initial all-time pull forever,
+  // which is exactly what the Total income tile used to do while every other
+  // card obeyed the date picker. postMessage rather than reaching into the
+  // frame so the card page stays self-contained.
+  broadcastRangeToKpiFrames();
   const r=await fetch('/api/dashboard?'+qs);if(r.status===401){location.href='/login.html';return;}
   const d=await r.json();const k=d.kpis;
   $('modePill').textContent=d.mode==='live'?'LIVE':'DEMO';
