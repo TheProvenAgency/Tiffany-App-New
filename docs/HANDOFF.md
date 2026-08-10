@@ -184,3 +184,27 @@ mismatch, and `'EMAIL'` vs `'Email'` casing) — untouched by this work.
    package gauge, active-by-round bars, enrolled/actives/upgraded rings).
 5. `personal-finances.js` still ships a real income figure in client source.
 6. `mfsn_old_status` is still a manual snapshot with no re-audit path.
+
+### Later the same day (2026-08-10, continued)
+
+- **All 287 tests pass, 0 failing.** The three messages-reply failures are
+  fixed: READ_ONLY is read at call time (was captured at module load, so
+  setting it after require() did nothing), and the other two were the test's
+  own fetch-stub capturing its own request -- req() now always uses the real
+  fetch. The route was correct all along.
+- **Postgres boot-restore extended** to tasks, task notes, client notes,
+  worked-marks and affiliate overrides (restore-only-when-empty, .pgId
+  re-linked). Still JSON-only: notifications, ticket_views,
+  dashboard_layouts, tickets, snapshots -- blocked on a users migration.
+- **Dispute PATCH persists without Postgres**: both PATCH routes now share
+  applyProdPatchToJson(). Before, the dispute route answered 200 with the
+  unmodified record in a Postgres-less environment (found end-to-end, not by
+  unit tests).
+- **Total income KPI tile follows the date picker** via a postMessage
+  handshake between index.html and the admina-dashboard.html iframe
+  (parent broadcasts on every loadDashboard; frame requests on load because
+  the first broadcast usually beats iframe load).
+- End-to-end verified against a locally-running server: disputer role
+  isolation (403s on production/dashboard/messages + asset gating), queue,
+  record drawer, bureau PATCH, stage rejection; dashboard range coherence
+  at 30D/90D/All.
