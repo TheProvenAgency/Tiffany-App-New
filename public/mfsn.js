@@ -5,23 +5,60 @@ var PAL=['#144BD6','#45B369','#F4941E','#E30A0A','#00B8F2','#7F27FF','#F86624','
 var charts={}, curSub='overview';
 
 /* ---------- real figures (MyFreeScoreNow affiliate portal) ---------- */
-var M={ enrolled:1493, active:203, upgraded:420, toUpgrade:1073, newActives:736, targetActives:1226,
-        latestMonth:17192, ytd:107780 };
-// Commission summary — most recent 10 months (Commission + Referral + One-Time Bonus + Target Incentive).
+// Member figures re-read from the affiliate portal on 2026-08-10. The
+// previous set was a 2026-07-28 snapshot -- the book moves every week, so
+// these go stale on their own; the counts here are what the portal showed
+// that morning.
+var M={ enrolled:1505, active:217, upgraded:439, toUpgrade:1067, newActives:756, targetActives:1185,
+        latestMonth:18114, ytd:125894, lifetime:244194 };
+// Full commission history exported from the MyFreeScoreNow affiliate portal
+// on 2026-08-10: all 37 months, Jul 2023 through Jul 2026. Sums to
+// $244,194.34, matching the portal's own lifetime figure -- an earlier
+// hand-copied version held only the most recent 10 months, so anything
+// reaching further back silently under-reported. server.js keeps the same
+// figures in MFSN_MONTHLY_INCOME for range math; tests/mfsn-income.test.js
+// asserts that total so a partial edit fails loudly.
 var COMM=[
- {mo:'June 2026',      comm:15636.20, ref:1455.35, bonus:100,  target:0,       total:17191.55},
- {mo:'May 2026',       comm:16974.45, ref:1524.55, bonus:500,  target:0,       total:18999.00},
- {mo:'April 2026',     comm:17634.08, ref:1268.00, bonus:100,  target:0,       total:19002.08},
- {mo:'March 2026',     comm:17538.30, ref:1061.45, bonus:500,  target:0,       total:19099.75},
- {mo:'February 2026',  comm:15984.10, ref:930.85,  bonus:0,    target:0,       total:16914.95},
- {mo:'January 2026',   comm:15554.50, ref:818.59,  bonus:200,  target:0,       total:16573.09},
- {mo:'December 2025',  comm:15722.00, ref:750.14,  bonus:100,  target:0,       total:16572.14},
- {mo:'November 2025',  comm:16211.25, ref:724.85,  bonus:300,  target:0,       total:17236.10},
- {mo:'October 2025',   comm:16057.00, ref:724.89,  bonus:200,  target:0,       total:16981.89},
- {mo:'September 2025', comm:12026.75, ref:604.96,  bonus:400,  target:3006.69, total:16038.40}
+ {mo:'July 2026', comm:16147.43, ref:1766.41, bonus:200.00, target:0.00, total:18113.84, paid:'2026-08-05'},
+ {mo:'June 2026', comm:15636.20, ref:1455.35, bonus:100.00, target:0.00, total:17191.55, paid:'2026-07-10'},
+ {mo:'May 2026', comm:16974.45, ref:1524.55, bonus:500.00, target:0.00, total:18999.00, paid:'2026-07-10'},
+ {mo:'April 2026', comm:17634.08, ref:1268.00, bonus:100.00, target:0.00, total:19002.08, paid:'2026-06-05'},
+ {mo:'March 2026', comm:17538.30, ref:1061.45, bonus:500.00, target:0.00, total:19099.75, paid:'2026-05-07'},
+ {mo:'February 2026', comm:15984.10, ref:930.85, bonus:0.00, target:0.00, total:16914.95, paid:'2026-04-21'},
+ {mo:'January 2026', comm:15554.50, ref:818.59, bonus:200.00, target:0.00, total:16573.09, paid:'2026-03-10'},
+ {mo:'December 2025', comm:15722.00, ref:750.14, bonus:100.00, target:0.00, total:16572.14, paid:'2026-02-20'},
+ {mo:'November 2025', comm:16211.25, ref:724.85, bonus:300.00, target:0.00, total:17236.10, paid:'2025-12-31'},
+ {mo:'October 2025', comm:16057.00, ref:724.89, bonus:200.00, target:0.00, total:16981.89, paid:'2025-12-01'},
+ {mo:'September 2025', comm:12026.75, ref:604.96, bonus:400.00, target:3006.69, total:16038.40, paid:'2025-10-31'},
+ {mo:'August 2025', comm:5596.75, ref:563.06, bonus:200.00, target:0.00, total:6359.81, paid:'2025-10-13'},
+ {mo:'July 2025', comm:5181.00, ref:557.29, bonus:0.00, target:1295.25, total:7033.54, paid:'2025-09-03'},
+ {mo:'June 2025', comm:3903.25, ref:506.79, bonus:100.00, target:0.00, total:4510.04, paid:'2025-08-01'},
+ {mo:'May 2025', comm:3908.00, ref:482.65, bonus:0.00, target:0.00, total:4390.65, paid:'2025-07-02'},
+ {mo:'April 2025', comm:3541.75, ref:426.36, bonus:100.00, target:885.44, total:4953.55, paid:'2025-06-06'},
+ {mo:'March 2025', comm:2501.25, ref:391.99, bonus:0.00, target:625.31, total:3518.55, paid:'2025-05-04'},
+ {mo:'February 2025', comm:1869.75, ref:297.80, bonus:0.00, target:0.00, total:2167.55, paid:'2025-04-08'},
+ {mo:'January 2025', comm:2149.50, ref:245.84, bonus:0.00, target:0.00, total:2395.34, paid:'2025-03-07'},
+ {mo:'December 2024', comm:2727.25, ref:217.89, bonus:0.00, target:0.00, total:2945.14, paid:'2025-02-10'},
+ {mo:'November 2024', comm:2137.50, ref:172.05, bonus:100.00, target:534.38, total:2943.93, paid:'2025-01-06'},
+ {mo:'October 2024', comm:1215.00, ref:140.85, bonus:0.00, target:0.00, total:1355.85, paid:'2024-12-10'},
+ {mo:'September 2024', comm:1091.50, ref:103.08, bonus:200.00, target:0.00, total:1394.58, paid:'2024-11-20'},
+ {mo:'August 2024', comm:1048.75, ref:87.81, bonus:0.00, target:0.00, total:1136.56, paid:'2024-10-09'},
+ {mo:'July 2024', comm:1348.25, ref:84.01, bonus:0.00, target:0.00, total:1432.26, paid:'2024-09-04'},
+ {mo:'June 2024', comm:1293.25, ref:80.04, bonus:0.00, target:0.00, total:1373.29, paid:'2024-08-14'},
+ {mo:'May 2024', comm:924.25, ref:76.91, bonus:0.00, target:231.06, total:1232.22, paid:'2024-07-10'},
+ {mo:'April 2024', comm:508.75, ref:56.40, bonus:0.00, target:127.19, total:692.34, paid:'2024-06-11'},
+ {mo:'March 2024', comm:219.25, ref:36.81, bonus:0.00, target:0.00, total:256.06, paid:'2024-05-14'},
+ {mo:'February 2024', comm:223.00, ref:21.49, bonus:0.00, target:0.00, total:244.49, paid:'2024-04-11'},
+ {mo:'January 2024', comm:219.00, ref:11.39, bonus:0.00, target:0.00, total:230.39, paid:'2024-03-03'},
+ {mo:'December 2023', comm:193.25, ref:4.10, bonus:0.00, target:0.00, total:197.35, paid:'2024-02-13'},
+ {mo:'November 2023', comm:219.00, ref:3.06, bonus:50.00, target:0.00, total:272.06, paid:'2024-01-16'},
+ {mo:'October 2023', comm:166.75, ref:0.00, bonus:0.00, target:0.00, total:166.75, paid:'2023-12-11'},
+ {mo:'September 2023', comm:164.00, ref:0.00, bonus:0.00, target:0.00, total:164.00, paid:'2023-11-08'},
+ {mo:'August 2023', comm:105.25, ref:0.00, bonus:0.00, target:0.00, total:105.25, paid:'2023-10-13'},
+ {mo:'July 2023', comm:0.00, ref:0.00, bonus:0.00, target:0.00, total:0.00, paid:'2023-10-13'}
 ];
-var COMM_TREND={ labels:['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
-  vals:[16038,16982,17236,16572,16573,16915,19100,19002,18999,17192] };
+var COMM_TREND={ labels:['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'],
+  vals:[6360,16038,16982,17236,16572,16573,16915,19100,19002,18999,17192,18114] };
 
 /* ---------- helpers ---------- */
 function money0(n){var neg=n<0;return (neg?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US');}
