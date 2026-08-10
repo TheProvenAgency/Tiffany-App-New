@@ -279,6 +279,55 @@ accounts, then user-scoped stores, then the Commas seed.
   restored at boot, through an expiry check so a restart can't revive a
   lapsed token.
 
+### The graphs pass (Aug 10) — and a correction
+
+Commas revenue is now hardcoded per month in `COMMAS_MONTHLY_REVENUE`
+(server.js) from Commas' own reporting: Dashboard -> Revenue -> "Y" plots
+cumulative revenue per year, and the underlying series can be read straight
+off the chart. Apr 2025 through Jul 2026. The two years sum to $874,877.30.
+
+That total is the tell. `revenue.js` carried $874,877 as `CO.ytd` — the
+LIFETIME figure, labelled year-to-date — and its monthly array opened with
+$543,648 for January, which is just everything older than six months dumped
+into the first bucket ($874,877 − $543,648 = $331,229, which the same file
+carried as `CO.sixMo`). That is what produced the Sales-trend cliff.
+
+**Correction to the previous entry.** It said the transaction records showed
+the business growing, January $14,148 to July $21,348. That was wrong. It came
+from summing payment events by date, and those dates do not survive the
+export. Commas reports $74,255.19 for January 2026, not $14,148. The real 2026
+shape is a **decline**: $74,255 in January to $28,500 in July, off a Sep 2025
+peak of $116,500. `tests/commas-revenue.test.js` pins that direction now.
+
+The payment events are still a good record of *which* sales happened and what
+each was for — they are not a good clock, so they no longer decide *when*.
+Range revenue and lifetime come from the monthly table, prorated where a
+window cuts a month, the same way MFSN income already worked.
+
+**Maintaining it:** months after `COMMAS_HISTORY_THROUGH` are deliberately not
+in the table and come from the live feed, so the current month keeps moving on
+its own. When Commas closes a month, add the real figure and advance the
+marker by one. `tests/commas-revenue.test.js` fails if the table ever runs past
+the marker (which would freeze the live feed out).
+
+Also gone: `CO_DAILY` (thirty hardcoded numbers) and `CO_WEEKLY` (twelve),
+which stood in for a daily and weekly history no source reports. Both grains
+now read the real payment series off the dashboard payload and follow the date
+picker; an empty range says so rather than drawing a shape.
+
+### Two things worth knowing about what you'll see
+
+- **The live payment feed stops on 2026-07-20.** That is open item 2 below —
+  the Zapier feed still points at the old app — and it is why the Daily and
+  Weekly grains run out partway through a 30-day window. Monthly is unaffected
+  (it comes from the Commas table).
+- **Cold start is ~17s.** Measured on the live site: `/api/dashboard` is ~1.8s
+  warm and ~17s on a cold container, because Render's free tier spins down
+  after about fifteen minutes idle. For those seconds the dashboard renders
+  empty, which reads as broken. The KPI tiles now show an explicit pending
+  state rather than `$0`, but the only real fix is a paid instance or a keep-
+  alive ping.
+
 ### Genuinely still open
 1. **The GHL token.** Client-count cards stay empty until it's fixed --
    Settings -> Test GHL connection names the exact error. Per README the
