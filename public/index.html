@@ -1752,15 +1752,16 @@ async function loadDashboard(){
   // For any narrower range we show byProduct, which is built from live
   // Fanbasis events that do carry a date, and say so in the subtitle rather
   // than silently mixing an unfilterable lump into a filtered view.
-  const allTimeSelected = (preset === 'all');
-  const prod = allTimeSelected
-    ? ((b.byProductAllTime && b.byProductAllTime.length) ? b.byProductAllTime : (b.byProduct || b.byDeal))
-    : ((b.byProduct && b.byProduct.length) ? b.byProduct : []);
+  // Every sale now carries a real date (the Commas backfill covers everything
+  // before the webhook existed), so the range-scoped breakdown is complete --
+  // no more falling back to an unfilterable all-time lump.
+  const prod = (b.byProduct && b.byProduct.length) ? b.byProduct
+             : ((b.byProductAllTime && b.byProductAllTime.length) ? b.byProductAllTime : (b.byDeal || []));
   const dealsSub = $('dealsSub');
   if (dealsSub) {
-    dealsSub.textContent = allTimeSelected
-      ? 'All-time · Commas + Fanbasis sales'
-      : (prod.length ? rangeLabel() + ' · Fanbasis sales with a product' : rangeLabel() + ' · no packaged sales in range');
+    dealsSub.textContent = prod.length
+      ? rangeLabel() + ' · Commas + Fanbasis sales'
+      : rangeLabel() + ' · no packaged sales in range';
   }
   const m=k.mentorship||{};
   // "Total mentees" is clickable -- goClientsDeal('Mentorship') routes to

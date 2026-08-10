@@ -70,9 +70,13 @@ const HISTORICAL_MENTORSHIP_BUYERS = [
 // Merges the historical Commas snapshot with any live Fanbasis payment
 // events that carry a `product` field (real sales since the webhook secret
 // got fixed on 2026-07-30) so the card grows on its own from here.
+// The Commas backfill (seed/commas-payments-seed.json) now carries every
+// pre-webhook sale as a real dated event, so HISTORICAL_PRODUCT_SALES is no
+// longer merged in here -- doing both would count the same sales twice.
+// The constant is kept only as the provenance record of what was pulled by
+// hand on 2026-07-30, before the full export existed.
 function getProductBreakdownAllTime(allPayments) {
   const m = {};
-  for (const h of HISTORICAL_PRODUCT_SALES) m[h.key] = { count: h.count, revenue: h.revenue };
   for (const p of allPayments) {
     const k = (p.product || '').trim();
     if (!k) continue;
