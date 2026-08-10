@@ -321,6 +321,12 @@ picker; an empty range says so rather than drawing a shape.
   the Zapier feed still points at the old app — and it is why the Daily and
   Weekly grains run out partway through a 30-day window. Monthly is unaffected
   (it comes from the Commas table).
+- **Income no longer waits for the roster.** `/api/mfsn-summary` answers
+  income for a window from the two monthly tables plus the payment feed —
+  no roster, no GoHighLevel — and the Total income tile renders from it.
+  Measured on the live site: the figure is on screen in **0.83s** where it
+  used to take the full cold start. The roster cards still take the cold
+  start, because they genuinely need the roster.
 - **Cold start is ~17s.** Measured on the live site: `/api/dashboard` is ~1.8s
   warm and ~17s on a cold container, because Render's free tier spins down
   after about fifteen minutes idle. For those seconds the dashboard renders
@@ -333,10 +339,31 @@ picker; an empty range says so rather than drawing a shape.
    Settings -> Test GHL connection names the exact error. Per README the
    `contacts.readonly` scope must be ticked at Private Integration *creation*
    time; GHL does not reliably let you add it afterwards.
-2. **Zapier feeds** (Fanbasis / DisputeFox / MFSN) still point at the old app.
-   Repoint to `https://tiffany-app-new.onrender.com/webhooks/...` with
-   `?secret=` from Settings. Until then new sales arrive only in the backfill,
-   which is a point-in-time export.
+2. ~~**Zapier feeds still point at the old app.**~~ Checked Aug 10 against the
+   Zapier account itself. This was already done and the note was stale:
+
+   - `DisputeFox client update to Webhooks` -> new app, **on, firing today**
+   - `DisputeFox Report Imported -> Command Center Dashboard` -> new app, on
+   - `Fanbasis New Sale/Order to Dashboard Webhook` -> new app, on
+   - `FanBasis New Sale -> Command Center Dashboard` -> **old app**, but the
+     Zap is **off**; it is the superseded version of the one above. Left off
+     rather than repointed, because turning it on alongside its replacement
+     would post every sale twice.
+
+   Note: `paused: true` appears on every webhook action node in the Zapier
+   API, including Zaps that demonstrably work. It is a default, not a signal.
+   Do not diagnose off it.
+
+   **What is actually going on with sales data:** the Fanbasis -> new app Zap
+   has never fired on a real sale — its only run is a `Test` on Aug 8 with 0
+   tasks. The last real Fanbasis run of any kind was the *old* Zap on
+   **Jul 20 2026, 4:09pm**, which is exactly where the payment feed stops.
+   Commas independently reports **$0.00 for August 2026** (both the yearly
+   revenue chart and the Overview gross-revenue tile). So the gap looks like
+   an absence of sales rather than broken plumbing — but that is worth
+   confirming against Commas' transaction list before treating it as fact,
+   because it would be three weeks without a sale in a business that took
+   $28,500 in July.
 3. **August MFSN payout** posts in early September. It now only needs adding
    to `MFSN_MONTHLY_INCOME` in server.js -- `/api/mfsn-summary` feeds the KPI
    tiles and the Revenue page from there, so those can no longer drift.
