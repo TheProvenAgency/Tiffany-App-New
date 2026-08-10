@@ -8,6 +8,7 @@ const fs = require('fs');
 const store = require('./lib/store');
 const dealProd = require('./lib/production'); // Deal Production, Postgres-primary -- see that file's header comment
 const auth = require('./lib/auth');
+const disputes = require('./lib/disputes'); // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
 const affiliate = require('./lib/affiliate');
@@ -1862,6 +1863,57 @@ function withMfsnTags(clients) {
 app.get('/api/production', async (req, res) => {
   try { res.json({ clients: withMfsnTags(await readProd()), mode: liveMode() ? 'live' : 'demo' }); }
   catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ------------------------- dispute desk -------------------------
+//
+// A projection over Deal Production (see lib/disputes.js), not a second
+// store. Its own routes rather than a filtered /api/production because a
+// disputer must not receive the whole tracker row -- building the response
+// field-by-field means a column added to Deal Production later cannot leak
+// into this surface by default.
+
+app.get('/api/disputes/queue', async (req, res) => {
+  try {
+    const list = await readProd();
+    if (!Array.isArray(list)) return res.status(503).json({ error: 'no production data loaded' });
+    res.json({ queue: disputes.buildQueue(list), mode: liveMode() ? 'live' : 'demo' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/disputes/:id', async (req, res) => {
+  try {
+    const rec = await dealProd.readOneProdRecord(req.params.id);
+    const record = disputes.toDisputeRecord(rec);
+    if (!record) return res.status(404).json({ error: 'no such client' });
+    res.json(record);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Same write path as a Deal Production PATCH -- Postgres first, then the JSON
+// backup -- but the writable set comes from the caller's capabilities, so a
+// disputer reaches the bureau columns and the round's CFPB login and nothing
+// else (DISPUTE_FIELDS in lib/auth.js).
+app.patch('/api/disputes/:id', async (req, res) => {
+  const patch = { ...(req.body || {}) };
+  delete patch.id;
+  delete patch.who;
+  delete patch.notes;
+
+  const { allowed, denied } = auth.filterEditable(req.actor, patch);
+  if (denied.length) {
+    return res.status(403).json({ error: 'not allowed to change: ' + denied.join(', ') });
+  }
+  if (!Object.keys(allowed).length) return res.status(400).json({ error: 'nothing to change' });
+
+  const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+  try {
+    const existing = await dealProd.readOneProdRecord(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'no such client' });
+    await dealProd.patchProdRecord(req.params.id, { ...allowed }, who);
+    const fresh = await dealProd.readOneProdRecord(req.params.id);
+    res.json(disputes.toDisputeRecord(fresh));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // One lead, for an open drawer to poll cheaply instead of pulling all 3,578
