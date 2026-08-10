@@ -2138,9 +2138,41 @@ function withMfsnTags(clients) {
   return clients.map(c => ({ ...c, mfsn: tagOf.get(c.id) || null }));
 }
 
+// Deal Production records come from the sheet and carry no purchase date --
+// only days-in-stage. "Newest purchase first" is how the team actually works
+// the onboarding queue (it is the sort their spreadsheet is kept in), so the
+// date is joined on from the GoHighLevel roster, which does have it.
+//
+// Matched on email first and normalised name second, the same order and the
+// same helpers lib/affiliate.js uses, so a client that matches for the MFSN
+// tag matches here too rather than the two disagreeing about who is who.
+async function withLastPaid(clients) {
+  if (!Array.isArray(clients) || !clients.length) return clients;
+  let roster = [];
+  try { roster = await getClients(); } catch (e) { return clients; } // no date is better than a wrong one
+  const byEmail = new Map(), byName = new Map();
+  for (const r of roster) {
+    if (!r.lastPaymentDate) continue;
+    const e = affiliate.normEmail(r.email);
+    if (e && !byEmail.has(e)) byEmail.set(e, r.lastPaymentDate);
+    const n = affiliate.normName(r.name);
+    if (n && !byName.has(n)) byName.set(n, r.lastPaymentDate);
+  }
+  return clients.map(c => {
+    const e = affiliate.normEmail(c.email);
+    let paid = e ? byEmail.get(e) : null;
+    if (!paid) { const n = affiliate.normName(c.name); if (n) paid = byName.get(n); }
+    return { ...c, lastPaid: paid || null };
+  });
+}
+
 app.get('/api/production', async (req, res) => {
-  try { res.json({ clients: withMfsnTags(await readProd()), mode: liveMode() ? 'live' : 'demo' }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  try {
+    res.json({
+      clients: await withLastPaid(withMfsnTags(await readProd())),
+      mode: liveMode() ? 'live' : 'demo'
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ------------------------- dispute desk -------------------------

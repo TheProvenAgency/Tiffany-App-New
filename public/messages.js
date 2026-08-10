@@ -5,7 +5,7 @@ Production, and wraps window.showView rather than touching index.html's core scr
 (function(){
 var CHAN_COLOR={SMS:'#00B8F2',EMAIL:'#F4941E',FACEBOOK:'#3b5998',INSTAGRAM:'#DE3ACE',WHATSAPP:'#25d366',CALL:'#6B7280',VOICEMAIL:'#6B7280',GMB:'#4285f4',LIVE_CHAT:'#45B369',REVIEW:'#F86624',OTHER:'#9CA3AF'};
 function chanColor(k){return CHAN_COLOR[k]||CHAN_COLOR.OTHER;}
-var CONVOS=[], CHANNELS=[], curChannel='ALL', curSearch='', curId=null, curContactId=null, curChannelKey=null, sending=false, loaded=false, pollTimer=null;
+var CONVOS=[], CHANNELS=[], curChannel='ALL', curSearch='', curId=null, curContactId=null, curChannelKey=null, sending=false, loaded=false, pollTimer=null, unreadOnly=false;
 
 /* ---------- styles ---------- */
 var css=''+
@@ -30,6 +30,7 @@ var css=''+
 '#view-messages .msg-time{font-size:10.5px;color:var(--muted);white-space:nowrap;flex:none}'+
 '#view-messages .msg-snip{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}'+
 '#view-messages .msg-row.unread .msg-snip{color:var(--ink);font-weight:600}'+
+'#view-messages .msg-chip-unread{margin-left:auto}'+
 '#view-messages .msg-unreaddot{width:8px;height:8px;border-radius:50%;background:var(--red);flex:none;margin-top:4px}'+
 '#view-messages .msg-empty{padding:30px 16px;color:var(--muted);font-size:12.5px;text-align:center}'+
 '#view-messages .msg-thread{background:var(--card);border:none;border-radius:8px;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05);display:flex;flex-direction:column;min-height:0;overflow:hidden}'+
@@ -68,7 +69,11 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 
 /* ---------- data ---------- */
 function loadList(){
+// The server already filters on unread (see /api/messages), so this is the
+// same list narrowed server-side rather than a second client-side pass that
+// could disagree with the counts.
 var qs=new URLSearchParams({channel:curChannel,q:curSearch});
+if(unreadOnly)qs.set('unread','1');
 return fetch('/api/messages?'+qs).then(function(r){return r.json();}).then(function(d){
 CONVOS=d.conversations||[];CHANNELS=d.channels||[];
 renderChips();renderRows();
@@ -136,17 +141,30 @@ var chips=[{k:'ALL',label:'All'}].concat(CHANNELS.map(function(k){
 var found=CONVOS.find(function(c){return c.channelKey===k;});
 return{k:k,label:found?found.channel:k};
 }));
+// Unread sits apart from the channel chips because it is a different axis --
+// you filter to unread WITHIN a channel, not instead of one.
+var unreadCount=CONVOS.reduce(function(n,c){return n+(c.unread>0?1:0);},0);
 wrap.innerHTML=chips.map(function(c){
 return'<div class="msg-chip'+(curChannel===c.k?' on':'')+'" data-k="'+esc(c.k)+'">'+
 (c.k==='ALL'?'':'<span class="dot" style="background:'+chanColor(c.k)+'"></span>')+esc(c.label)+'</div>';
-}).join('');
+}).join('')
++'<div class="msg-chip msg-chip-unread'+(unreadOnly?' on':'')+'" data-unread="1" title="Only conversations waiting on a reply">'
++'<span class="dot" style="background:var(--red)"></span>Unread'
++(unreadOnly||!unreadCount?'':' <span style="opacity:.6">'+unreadCount+'</span>')
++'</div>';
 Array.prototype.forEach.call(wrap.querySelectorAll('.msg-chip'),function(el){
-el.onclick=function(){curChannel=el.dataset.k;loadList();};
+el.onclick=function(){
+  if(el.dataset.unread){unreadOnly=!unreadOnly;}
+  else{curChannel=el.dataset.k;}
+  loadList();
+};
 });
 }
 function renderRows(){
 var wrap=document.getElementById('msgRows');
-if(!CONVOS.length){wrap.innerHTML='<div class="msg-empty">No conversations yet.</div>';return;}
+if(!CONVOS.length){
+wrap.innerHTML='<div class="msg-empty">'+(unreadOnly?'Nothing unread. Everyone has been replied to.':'No conversations yet.')+'</div>';
+return;}
 wrap.innerHTML=CONVOS.map(function(c){
 var dirPrefix=c.lastDirection==='outbound'?'You: ':'';
 return'<div class="msg-row'+(c.id===curId?' on':'')+(c.unread?' unread':'')+'" data-id="'+esc(c.id)+'">'+

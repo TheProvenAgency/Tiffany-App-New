@@ -127,7 +127,10 @@ var sectionHTML=''+
  '<div class="pv-chips" id="pvChips"></div>'+
  '<div class="pv-bar"><div class="pv-tools"><input id="pvSearch" placeholder="Search a client or package…"><span class="pv-count" id="pvCount"></span></div></div>'+
  '<div id="pvQueue"><div class="pv-tablewrap"><table class="pv-table"><thead><tr>'+
-   '<th>Client</th><th>Package</th><th>Stage</th><th>In stage</th><th class="ctr">TransUnion</th><th class="ctr">Equifax</th><th class="ctr">Experian</th><th class="ctr">Docs</th><th>Assigned</th><th>MFSN</th><th>Next action</th>'+
+   '<th data-s="name">Client</th><th data-s="pkg">Package</th><th data-s="stage">Stage</th><th data-s="days">In stage</th>'+
+   '<th data-s="paid">Purchased</th>'+
+   '<th class="ctr">TransUnion</th><th class="ctr">Equifax</th><th class="ctr">Experian</th>'+
+   '<th class="ctr" data-s="docs">Docs</th><th data-s="va">Assigned</th><th data-s="mfsn">MFSN</th><th>Next action</th>'+
    '</tr></thead><tbody id="pvBody"></tbody></table></div><div class="pv-pager" id="pvPager"></div></div>'+
  '<div id="pvBoardView" style="display:none"><div class="pv-board" id="pvBoard"></div></div>'+
 '</div>'+
@@ -189,9 +192,36 @@ function docCell(c){var n=docCount(c),t=DOCS.length;var cl=n===t?'doc-ok':n>=t/2
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function fmt(n){return n.toLocaleString();}
 
+// Newest purchase first by default. That is the order the team already works
+// the onboarding queue in -- it is how the spreadsheet this replaces is kept
+// -- so opening on anything else would mean re-sorting every time.
+var curSort='paid', sortDir=-1;
+function paidCell(d){
+  if(!d)return '<span style="opacity:.35">—</span>';
+  var t=new Date(d); if(isNaN(t))return '<span style="opacity:.35">—</span>';
+  var days=Math.floor((Date.now()-t)/86400000);
+  var label=days===0?'today':(days===1?'1d ago':days+'d ago');
+  return '<span title="'+esc(t.toISOString().slice(0,10))+'"'+(days<=14?' style="font-weight:700"':'')+'>'+label+'</span>';
+}
+function sortVal(c,key){
+  switch(key){
+    case 'paid': return c.lastPaid?new Date(c.lastPaid).getTime():-Infinity;
+    case 'days': return c.days==null?-Infinity:c.days;
+    case 'docs': return docCount(c);
+    case 'mfsn': return c.mfsn==='affiliate'?2:(c.mfsn==='needs'?1:0);
+    default: return String(c[key]==null?'':c[key]).toLowerCase();
+  }
+}
 function currentRows(){
   var fl=FILTERS.filter(function(x){return x.id===curFilter;})[0]||FILTERS[0];
-  return CLIENTS.filter(fl.f).filter(function(c){return !curSearch||((c.name||'')+' '+(c.pkg||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase().indexOf(curSearch)>=0;});
+  var rows=CLIENTS.filter(fl.f).filter(function(c){return !curSearch||((c.name||'')+' '+(c.pkg||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase().indexOf(curSearch)>=0;});
+  return rows.slice().sort(function(a,b){
+    var x=sortVal(a,curSort), y=sortVal(b,curSort);
+    if(x<y)return -1*sortDir;
+    if(x>y)return 1*sortDir;
+    // Stable tie-break so paging doesn't reshuffle rows that compare equal.
+    return String(a.name||'').localeCompare(String(b.name||''));
+  });
 }
 
 /* ---------- server load/save ---------- */
@@ -367,8 +397,28 @@ function renderChips(){
   chips.innerHTML=list.map(function(fl){var n=CLIENTS.filter(fl.f).length;return '<div class="pv-chip'+(fl.id===curFilter?' active':'')+'" data-f="'+fl.id+'"><span class="dotc" style="background:'+fl.dot+'"></span>'+fl.label+' <span class="n">'+fmt(n)+'</span></div>';}).join('');
   chips.querySelectorAll('.pv-chip').forEach(function(el){el.onclick=function(){curFilter=el.getAttribute('data-f');curPage=1;drawWork();};});
 }
+function wireSort(){
+  var ths=document.querySelectorAll('#pvQueue thead th[data-s]');
+  Array.prototype.forEach.call(ths,function(th){
+    var k=th.getAttribute('data-s');
+    th.style.cursor='pointer';
+    th.setAttribute('title','Sort by '+th.textContent.replace(/[▲▼]/g,'').trim());
+    if(!th.dataset.wired){
+      th.dataset.wired='1';
+      th.onclick=function(){
+        if(curSort===k)sortDir=-sortDir;
+        // Dates and counts are most useful biggest-first; names aren't.
+        else{curSort=k;sortDir=(k==='paid'||k==='days'||k==='docs'||k==='mfsn')?-1:1;}
+        curPage=1; drawWork();
+      };
+    }
+    var base=th.textContent.replace(/\s*[▲▼]$/,'');
+    th.textContent=base+(curSort===k?(sortDir===1?' ▲':' ▼'):'');
+  });
+}
 function drawWork(){
   var rows=currentRows();
+  wireSort();
   document.getElementById('pvCount').textContent=fmt(rows.length)+' of '+fmt(CLIENTS.length)+' clients';
   document.querySelectorAll('#pvChips .pv-chip').forEach(function(el){el.classList.toggle('active',el.getAttribute('data-f')===curFilter);});
   if(curView==='queue'){
@@ -376,9 +426,10 @@ function drawWork(){
     var slice=rows.slice((curPage-1)*PAGE,curPage*PAGE);
     document.getElementById('pvBody').innerHTML=slice.length?slice.map(function(c){var na=nextAction(c);return '<tr onclick="pvOpen(\''+c.id+'\')">'+
       '<td class="pv-name">'+esc(c.name)+'</td><td class="pv-pkg">'+esc(c.pkg)+'</td><td>'+stagePill(c.stage)+'</td><td class="pv-days">'+(c.days||0)+'d</td>'+
+      '<td class="pv-days">'+paidCell(c.lastPaid)+'</td>'+
       '<td class="ctr">'+bpill(c.tu)+'</td><td class="ctr">'+bpill(c.eq)+'</td><td class="ctr">'+bpill(c.ex)+'</td>'+
       '<td class="ctr">'+docCell(c)+'</td><td>'+esc(c.va||'—')+'</td><td>'+mfsnPill(c)+'</td><td class="pv-next'+(na.a?' attn':'')+'">'+na.t+'</td></tr>';
-    }).join(''):'<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted)">No clients in this queue.</td></tr>';
+    }).join(''):'<tr><td colspan="12" style="padding:30px;text-align:center;color:var(--muted)">No clients in this queue.</td></tr>';
     var from=rows.length?((curPage-1)*PAGE+1):0, to=Math.min(curPage*PAGE,rows.length);
     document.getElementById('pvPager').innerHTML='<button id="pvPrev"'+(curPage<=1?' disabled':'')+'>‹ Prev</button><span>'+fmt(from)+'–'+fmt(to)+' of '+fmt(rows.length)+'</span><button id="pvNext"'+(curPage>=pages?' disabled':'')+'>Next ›</button>';
     var pv=document.getElementById('pvPrev'),nx=document.getElementById('pvNext');
