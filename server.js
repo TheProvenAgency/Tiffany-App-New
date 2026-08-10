@@ -1396,7 +1396,11 @@ app.get('/api/activity', async (req, res) => {
     for (const p of events.filter(e => e.type === 'payment').slice(-40))
       items.push({ kind: 'sale', at: p.at || p.receivedAt, title: p.name || p.email, sub: (p.product || 'payment'), amount: p.amount });
     for (const d of events.filter(e => e.type === 'dispute').slice(-20))
-      items.push({ kind: 'dispute', at: d.at || d.receivedAt, title: d.name || d.email, sub: (d.action || 'dispute') + (d.round ? ' · R' + d.round : '') });
+      // DisputeFox does send account-level events with no client attached
+      // (e.g. action:"report_imported") -- name/email blank is expected
+      // there, not a mapping bug; fall back to something displayable
+      // instead of a nameless "?" row.
+      items.push({ kind: 'dispute', at: d.at || d.receivedAt, title: d.name || d.email || 'DisputeFox update', sub: (d.action || 'dispute') + (d.round ? ' · R' + d.round : '') });
     for (const c of clients.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 15))
       items.push({ kind: 'client', at: c.createdAt, title: c.name, sub: 'new client' });
     items.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
