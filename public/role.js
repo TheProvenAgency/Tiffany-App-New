@@ -111,6 +111,10 @@
 
     if (me.previewing) {
       if (banner) banner.style.display = '';
+      // Name the role actually being previewed -- with four presets, a banner
+      // that always says "Employee" is worse than none.
+      var rn = document.getElementById('previewRoleName');
+      if (rn) rn.textContent = ({ va: 'a VA', disputer: 'a Disputer', employee: 'an Employee' })[me.role] || me.role;
       if (exitLink) exitLink.onclick = function (e) {
         e.preventDefault();
         fetch('/api/preview/stop', { method: 'POST' }).then(function () { location.reload(); });
@@ -118,8 +122,17 @@
     } else {
       if (toggleBtn) {
         toggleBtn.style.display = '';
-        toggleBtn.onclick = function () {
-          fetch('/api/preview/start', { method: 'POST' }).then(function () { location.reload(); });
+        toggleBtn.onchange = function () {
+          var role = toggleBtn.value;
+          if (!role) return;
+          fetch('/api/preview/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: role })
+          }).then(function (r) {
+            if (!r.ok) { toggleBtn.value = ''; return; }
+            location.reload();
+          });
         };
       }
     }

@@ -10,11 +10,29 @@
 (function(){
 var BUREAU_LABEL={tu:'TransUnion',eq:'Equifax',ex:'Experian'};
 var BUREAUS=['tu','eq','ex'];
-var state={queue:[],filter:'ready',loading:false,openId:null,record:null,err:'',me:null};
+var state={queue:[],filter:'ready',loading:false,openId:null,record:null,err:'',me:null,caps:[],canAssign:false};
 // Who is signed in, so the Mine tab can mean something. Deal Production
 // records the assignee by display name, so that is what we match on.
+var DISPUTERS=[];
 fetch('/api/me').then(function(r){return r.json();}).then(function(m){
   state.me=m&&m.name||null;
+  state.caps=(m&&Array.isArray(m.capabilities))?m.capabilities:[];
+  // Assigning is a desk-manager job, not a disputer one -- a disputer should
+  // work their own files, not hand them around. The server enforces this too
+  // (va sits in PRODUCTION_FIELDS); hiding the control just avoids offering
+  // something that would be refused.
+  state.canAssign=state.caps.indexOf('assign')>=0||state.caps.indexOf('admin')>=0;
+  if(state.canAssign){
+    fetch('/api/users').then(function(r){return r.json();}).then(function(us){
+      DISPUTERS=(us||[]).filter(function(u){
+        if(u.disabled)return false;
+        var c=u.capabilities||[];
+        // Fall back to the role when no override is stored.
+        if(!u.capabilities)return u.role==='disputer'||u.role==='va'||u.role==='employee';
+        return c.indexOf('disputes')>=0;
+      }).map(function(u){return u.name||u.username;});
+    }).catch(function(){});
+  }
   if(document.getElementById('dqBody'))render();
 }).catch(function(){});
 
@@ -212,7 +230,19 @@ function renderRecord(){
   document.getElementById('dqdName').textContent=r.name||'—';
   document.getElementById('dqdMeta').textContent=r.stage+' · round '+(r.currentRound||0)+' · '+plural(r.days||0,'day')+' in stage'+(r.assignedTo?(' · '+r.assignedTo):'');
 
-  var h='<h4>Bureau status</h4>';
+  var h='';
+  if(state.canAssign){
+    var opts=['<option value="">Unassigned</option>'].concat(
+      DISPUTERS.concat(r.assignedTo&&DISPUTERS.indexOf(r.assignedTo)<0?[r.assignedTo]:[])
+        .map(function(n){return '<option value="'+esc(n)+'"'+(r.assignedTo===n?' selected':'')+'>'+esc(n)+'</option>';})
+    ).join('');
+    h+='<h4>Assigned to</h4><div class="brow" style="grid-template-columns:1fr">'
+      +'<select id="dqdAssign" aria-label="Assigned disputer" style="width:100%">'+opts+'</select>'
+      +'</div>';
+  } else if(r.assignedTo){
+    h+='<h4>Assigned to</h4><div class="brow" style="grid-template-columns:1fr"><b>'+esc(r.assignedTo)+'</b></div>';
+  }
+  h+='<h4>Bureau status</h4>';
   BUREAUS.forEach(function(b){
     var cur=r.bureaus[b]||{round:0,status:'none'};
     h+='<div class="brow"><b>'+BUREAU_LABEL[b]+'</b>'+
@@ -264,6 +294,13 @@ function saveRecord(){
     var cur=r.bureaus[b]||{round:0,status:'none'};
     if(round!==cur.round||status!==cur.status) patch[b]={r:round,st:status};
   });
+  var asg=document.getElementById('dqdAssign');
+  if(asg){
+    var want=asg.value||'';
+    var cur=r.assignedTo||'';
+    if(want!==cur)patch.va=want;
+  }
+
   var noteEl=document.getElementById('dqdNote');
   var note=noteEl?noteEl.value.trim():'';
   if(note)patch.note=note;

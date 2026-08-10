@@ -506,9 +506,23 @@ app.get('/api/me', (req, res) => {
 // every guard downstream, treats it as an employee until /stop is called.
 app.post('/api/preview/start', (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
-  sessions.setPreview(cookieToken(req), 'employee');
+  // Any non-admin preset, not just 'employee'. Previewing was the only way to
+  // see what a worker actually gets without creating an account and signing
+  // out, and it could only ever show one of the four roles -- so the VA and
+  // disputer views were unverifiable from an admin session.
+  // Omitted means employee, for the older client that sent no body at all --
+  // which matters more than it sounds, because a browser running a stale
+  // cached role.js is exactly the case this has to keep working. But a role
+  // that was actually supplied and isn't valid is refused rather than
+  // quietly becoming employee.
+  const raw = req.body && req.body.role;
+  const wanted = raw === undefined || raw === null ? 'employee' : String(raw);
+  if (!ROLE_NAMES.includes(wanted) || wanted === 'admin') {
+    return res.status(400).json({ error: `role must be one of ${ROLE_NAMES.filter(r => r !== 'admin').join(', ')}` });
+  }
+  sessions.setPreview(cookieToken(req), wanted);
   persistSessions();
-  res.json({ ok: true });
+  res.json({ ok: true, role: wanted });
 });
 app.post('/api/preview/stop', (req, res) => {
   sessions.setPreview(cookieToken(req), null);
@@ -795,7 +809,22 @@ app.post('/api/support-tickets/:id/notes', async (req, res) => {
   }
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Static assets with no Cache-Control were being held by the browser across
+// deploys: a fix would ship, the server would serve the new file, and the
+// page would keep running the old one until someone hard-reloaded. That is
+// invisible to whoever shipped it and looks like "you didn't build it" to
+// everyone else -- which is exactly how it surfaced.
+//
+// no-cache does not mean "don't cache", it means "revalidate before use", so
+// the common case is still a cheap 304 rather than a re-download. Only the
+// app's own code gets it; images and fonts don't change under a fixed name.
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  setHeaders(res, filePath) {
+    if (/\.(js|css|html)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+    else res.setHeader('Cache-Control', 'public, max-age=604800');
+  }
+}));
 
 // ------------------------- read-only guard -------------------------
 // Set READ_ONLY=1 when developing against Tiffany's real GoHighLevel keys.

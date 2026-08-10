@@ -830,9 +830,14 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
          existed; role.js reveals exactly one of the two once it knows the
          account's real role and whether a preview is already active. -->
     <span class="livepill" id="previewBanner" style="display:none;background:var(--gold-soft,#FFF9E2);color:var(--gold-ink);margin-right:8px;cursor:default">
-      Viewing as Employee <a href="#" id="exitPreviewBtn" style="margin-left:8px;color:var(--gold-ink);font-weight:800;text-decoration:underline">Exit preview</a>
+      Viewing as <span id="previewRoleName">Employee</span> <a href="#" id="exitPreviewBtn" style="margin-left:8px;color:var(--gold-ink);font-weight:800;text-decoration:underline">Exit preview</a>
     </span>
-    <button class="btn ghost" id="viewAsEmployeeBtn" style="display:none;margin-right:8px">View as Employee</button>
+    <select class="btn ghost" id="viewAsEmployeeBtn" style="display:none;margin-right:8px;padding:7px 10px">
+      <option value="">View as…</option>
+      <option value="va">VA</option>
+      <option value="disputer">Disputer</option>
+      <option value="employee">Employee</option>
+    </select>
     <input class="search" id="globalSearch" placeholder="Search clients, payments…">
     <div class="hdr-icons">
       <button class="hdr-ibtn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode">
@@ -2673,15 +2678,15 @@ function copySetupLink(){
 // if the two ever drift, because a preset that lies about what an account can
 // reach is worse than no preset.
 const ROLE_PRESETS={
-  admin:['production','messages','disputes','clients','pipeline','followups','tickets','revenue','admin'],
-  employee:['production','messages','clients','pipeline','followups','tickets'],
-  va:['production','messages','clients','followups','tickets'],
+  admin:['production','messages','disputes','clients','pipeline','followups','tickets','revenue','admin','assign'],
+  employee:['production','messages','clients','pipeline','followups','tickets','assign'],
+  va:['production','messages','clients','followups','tickets','assign'],
   disputer:['disputes','tickets']
 };
 const CAP_LABELS={
   production:'Deal Production', messages:'Messages', disputes:'Dispute rounds',
   clients:'Clients', pipeline:'Pipeline', followups:'Follow-ups',
-  tickets:'Support tickets', revenue:'Revenue & money', admin:'Settings & team'
+  tickets:'Support tickets', revenue:'Revenue & money', assign:'Assign work', admin:'Settings & team'
 };
 const ROLE_BLURBS={
   va:'VA — the client desk: full Deal Production and the inbox. No money.',

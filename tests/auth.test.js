@@ -238,13 +238,30 @@ test('an employee may not rewrite the notes array', () => {
   assert.deepEqual(denied, ['notes']);
 });
 
-test('an employee may change stage but not va', () => {
-  // stage moves a lead through the pipeline -- opened to both roles
-  // 2026-08-05 (Pipeline detail panel). va reassigns ownership and stayed
-  // admin-only.
-  const { allowed, denied } = auth.filterEditable('employee', { stage: 'Completed', va: 'Someone' });
-  assert.deepEqual(allowed, { stage: 'Completed' });
+test('reassigning an owner needs the assign capability, not just production', () => {
+  // History: `va` was admin-only on purpose, because it hands a client to
+  // someone else. The team then needed a desk manager to assign a disputer
+  // per client without being made an admin. Rather than fold it into
+  // `production` -- which would have handed reassignment to every employee at
+  // once -- it became its own capability, so it can also be unticked per
+  // person in the Team form.
+  const deskCaps = { role: 'x', capabilities: ['production', 'assign'] };
+  const noAssign = { role: 'x', capabilities: ['production'] };
+
+  const desk = auth.filterEditable(deskCaps, { stage: 'Completed', va: 'Someone' });
+  assert.deepEqual(desk.denied, [], 'a desk manager can assign');
+
+  const worker = auth.filterEditable(noAssign, { stage: 'Completed', va: 'Someone' });
+  assert.deepEqual(worker.allowed, { stage: 'Completed' });
+  assert.deepEqual(worker.denied, ['va'], 'production alone must not reassign');
+});
+
+test('a disputer can never reassign a file, whatever else changes', () => {
+  // The point of the split: a disputer works their own files rather than
+  // handing them around. This is the assertion that has to keep holding.
+  const { allowed, denied } = auth.filterEditable('disputer', { va: 'Someone', tu: { r: 1, st: 'done' } });
   assert.deepEqual(denied, ['va']);
+  assert.ok(allowed.tu, 'their own bureau work is untouched');
 });
 
 test('an admin may change any field', () => {
