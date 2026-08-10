@@ -20,7 +20,11 @@ let base, server, adminCookie, employeeCookie;
 const realFetch = global.fetch;
 
 function req(pathname, { method = 'GET', cookie, body } = {}) {
-  return fetch(base + pathname, {
+  // realFetch, never the global: these tests stub global.fetch to observe
+  // the server's outbound GoHighLevel call, and a stubbed global would
+  // otherwise swallow the test's own request to the test server -- capturing
+  // the request we sent instead of the one the route made.
+  return realFetch(base + pathname, {
     method,
     headers: { ...(cookie ? { cookie } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined

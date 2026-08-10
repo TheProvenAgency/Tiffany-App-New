@@ -623,7 +623,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 //
 // The refusal is deliberately loud. Returning a fake success would leave you
 // believing a tag changed when it did not.
-const READ_ONLY = process.env.READ_ONLY === '1' || process.env.READ_ONLY === 'true';
+// Read at call time rather than captured at module load: the flag is a
+// safety switch, and a switch you can only throw before require() is one
+// that silently does nothing when flipped later (which is exactly how the
+// messages-reply tests were failing -- they set it after loading the app).
+function readOnly() {
+  return process.env.READ_ONLY === '1' || process.env.READ_ONLY === 'true';
+}
 function refuseWrite(res, action, detail) {
   console.warn(`[READ-ONLY] refused ${action} ${detail}`);
   return res.status(403).json({
@@ -1137,7 +1143,7 @@ app.post('/api/clients/:id/affiliate', async (req, res) => {
 app.post('/api/clients/:id/status', async (req, res) => {
   try {
     const status = req.body.status === 'active' ? 'active' : 'inactive';
-    if (READ_ONLY && liveMode()) return refuseWrite(res, 'setStatus', `${req.params.id} -> ${status}`);
+    if (readOnly() && liveMode()) return refuseWrite(res, 'setStatus', `${req.params.id} -> ${status}`);
     if (liveMode()) {
       await ghl.setStatus(store.getConfig(), req.params.id, status);
       store.clearCache();
@@ -1160,7 +1166,7 @@ app.post('/api/clients/:id/contact', async (req, res) => {
     const email = (req.body.email || '').trim() || undefined;
     const phone = (req.body.phone || '').trim() || undefined;
     if (!email && !phone) return res.status(400).json({ error: 'email or phone required' });
-    if (READ_ONLY && liveMode()) return refuseWrite(res, 'updateContact', `${req.params.id} -> ${email || phone}`);
+    if (readOnly() && liveMode()) return refuseWrite(res, 'updateContact', `${req.params.id} -> ${email || phone}`);
     if (liveMode()) {
       const c = await ghl.updateContact(store.getConfig(), req.params.id, { email, phone });
       store.clearCache();
@@ -1182,7 +1188,7 @@ app.post('/api/clients/:id/tags', async (req, res) => {
     const add = Array.isArray(req.body.add) ? req.body.add.filter(Boolean) : [];
     const remove = Array.isArray(req.body.remove) ? req.body.remove.filter(Boolean) : [];
     if (!add.length && !remove.length) return res.status(400).json({ error: 'add or remove required' });
-    if (READ_ONLY && liveMode()) return refuseWrite(res, 'setTags', `${req.params.id} +[${add}] -[${remove}]`);
+    if (readOnly() && liveMode()) return refuseWrite(res, 'setTags', `${req.params.id} +[${add}] -[${remove}]`);
     if (liveMode()) {
       if (add.length) await ghl.addTags(store.getConfig(), req.params.id, add);
       if (remove.length) await ghl.removeTags(store.getConfig(), req.params.id, remove).catch(() => {});
@@ -1209,7 +1215,7 @@ app.post('/api/clients/:id/round', async (req, res) => {
   try {
     const round = req.body.round != null && String(req.body.round).trim() !== '' ? String(req.body.round).trim() : null;
     if (round && !/^\d+$/.test(round)) return res.status(400).json({ error: 'round must be a whole number' });
-    if (READ_ONLY && liveMode()) return refuseWrite(res, 'setRound', `${req.params.id} -> ${round}`);
+    if (readOnly() && liveMode()) return refuseWrite(res, 'setRound', `${req.params.id} -> ${round}`);
     const clients = await getClients();
     const c = clients.find(x => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: 'not found' });
@@ -1235,7 +1241,7 @@ app.post('/api/clients/:id/sms', async (req, res) => {
   try {
     const message = (req.body.message || '').trim();
     if (!message) return res.status(400).json({ error: 'empty message' });
-    if (READ_ONLY && liveMode()) return refuseWrite(res, 'sendSMS', `${req.params.id} (${message.length} chars)`);
+    if (readOnly() && liveMode()) return refuseWrite(res, 'sendSMS', `${req.params.id} (${message.length} chars)`);
     if (!liveMode()) return res.json({ ok: true, demo: true, note: 'Demo mode — no SMS actually sent. Connect GHL to enable.' });
     const r = await ghl.sendSMS(store.getConfig(), req.params.id, message);
     store.addEvent({ type: 'sms_out', at: new Date().toISOString(), clientId: req.params.id });
@@ -1255,7 +1261,7 @@ app.post('/api/clients', async (req, res) => {
     const phone = (req.body.phone || '').trim() || null;
     if (!name) return res.status(400).json({ error: 'name required' });
     if (!email && !phone) return res.status(400).json({ error: 'email or phone required (GoHighLevel needs one to create a contact)' });
-    if (READ_ONLY && liveMode()) return refuseWrite(res, 'createClient', `${name} (${email || phone})`);
+    if (readOnly() && liveMode()) return refuseWrite(res, 'createClient', `${name} (${email || phone})`);
 
     if (liveMode()) {
       const parts = name.split(/\s+/);
@@ -1686,7 +1692,7 @@ async function handlePaymentWebhook(req, res) {
   // READ_ONLY (dev-against-real-keys safety switch) skips the GHL write,
   // same as every other live write in this file; the payment itself is
   // still recorded either way.
-  if (liveMode() && !READ_ONLY && (ev.email || ev.phone)) {
+  if (liveMode() && !readOnly() && (ev.email || ev.phone)) {
     try { client = await ensureClientFromPayment(ev); }
     catch (e) { console.error('payment webhook: client/production sync failed:', e.message); }
   }
@@ -1996,7 +2002,7 @@ app.post('/api/messages/:id/reply', async (req, res) => {
     const type = (req.body.type || 'SMS').toUpperCase();
     if (!message) return res.status(400).json({ error: 'empty message' });
     if (!contactId) return res.status(400).json({ error: 'contactId required' });
-    if (READ_ONLY && liveMode()) return refuseWrite(res, 'replyMessage', `${req.params.id} (${type}, ${message.length} chars)`);
+    if (readOnly() && liveMode()) return refuseWrite(res, 'replyMessage', `${req.params.id} (${type}, ${message.length} chars)`);
     if (!liveMode()) return res.json({ ok: true, demo: true, note: 'Demo mode — no message actually sent. Connect GHL to enable.' });
     const r = await ghl.sendMessage(store.getConfig(), { contactId, conversationId: req.params.id, type, message });
     store.addEvent({ type: 'message_out', channel: type, at: new Date().toISOString(), contactId, conversationId: req.params.id });
