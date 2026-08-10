@@ -1406,8 +1406,24 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <input id="u_username" placeholder="username" style="flex:1;min-width:110px">
       <input id="u_name" placeholder="full name" style="flex:1;min-width:110px">
       <input id="u_password" placeholder="password (optional — leave blank to send a setup link)" style="flex:1;min-width:230px">
-      <select id="u_role" style="flex:0 0 auto"><option value="employee">Employee</option><option value="admin">Admin</option></select>
+      <select id="u_role" style="flex:0 0 auto" onchange="onRoleChange()">
+        <option value="va">VA</option>
+        <option value="disputer">Disputer</option>
+        <option value="employee">Employee</option>
+        <option value="admin">Admin</option>
+      </select>
       <button class="btn ghost" onclick="addUser()">Add</button>
+    </div>
+    <!-- The roles above are presets, not walls. Per-feature assignment was the
+         model asked for, so the preset is shown as a starting point and every
+         box can be changed before the account is created. -->
+    <div id="u_capsBox" style="margin-top:10px;padding:11px 13px;background:var(--bg);border:1px solid var(--line);border-radius:9px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <div style="font-size:12.5px;font-weight:700" id="u_roleBlurb"></div>
+        <button class="btn ghost" style="font-size:11.5px;padding:3px 9px" onclick="resetCapsToRole()">Reset to preset</button>
+      </div>
+      <div id="u_caps" style="display:flex;gap:7px 14px;flex-wrap:wrap;margin-top:9px"></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:8px">Revenue is the only box that shows money. Leave it off for anyone who shouldn't see what the business earns.</div>
     </div>
     <span class="testres" id="r_user"></span>
     <div id="r_userLink" style="display:none;margin-top:8px;padding:9px 12px;background:var(--bg);border:1px solid var(--line);border-radius:9px;font-size:12.5px">
@@ -2616,11 +2632,12 @@ async function copyWebhookSecret(){
 /* ---------- team management (admin only; employees never see Settings) ---------- */
 function escUser(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 async function loadUsers(){
+  if($('u_caps')&&!$('u_caps').children.length)onRoleChange();
   try{
     const users=await(await fetch('/api/users')).json();
     $('userList').innerHTML=users.map(u=>
       `<div class="hookurl" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-         <span>${escUser(u.name)} · ${escUser(u.username)} · ${escUser(u.role)}${u.disabled?' · disabled':''}${u.mustSetPassword?' · <span style="color:var(--gold)">hasn\'t set a password yet</span>':''}</span>
+         <span>${escUser(u.name)} · ${escUser(u.username)} · ${escUser(u.role)}${u.capabilities?' <span style="color:var(--gold)">(custom access)</span>':''}${u.disabled?' · disabled':''}${u.mustSetPassword?' · <span style="color:var(--gold)">hasn\'t set a password yet</span>':''}<br><span style="font-size:11.5px;color:var(--muted)">${escUser((u.capabilities||ROLE_PRESETS[u.role]||[]).map(c=>CAP_LABELS[c]||c).join(' · '))}</span></span>
          <span style="display:flex;gap:6px">
            <button class="btn ghost" onclick="resetUserPassword('${escUser(u.id)}')">${u.mustSetPassword?'Resend setup link':'Reset password'}</button>
            <button class="btn ghost" onclick="toggleUser('${escUser(u.id)}',${u.disabled?'false':'true'})">${u.disabled?'Enable':'Disable'}</button>
@@ -2638,9 +2655,52 @@ function copySetupLink(){
   $('r_userLinkUrl').select();
   navigator.clipboard?.writeText($('r_userLinkUrl').value).catch(()=>document.execCommand('copy'));
 }
+// Kept in step with lib/auth.js ROLE_CAPS -- tests/team-roles.test.js fails
+// if the two ever drift, because a preset that lies about what an account can
+// reach is worse than no preset.
+const ROLE_PRESETS={
+  admin:['production','messages','disputes','clients','pipeline','followups','tickets','revenue','admin'],
+  employee:['production','messages','clients','pipeline','followups','tickets'],
+  va:['production','messages','clients','followups','tickets'],
+  disputer:['disputes','tickets']
+};
+const CAP_LABELS={
+  production:'Deal Production', messages:'Messages', disputes:'Dispute rounds',
+  clients:'Clients', pipeline:'Pipeline', followups:'Follow-ups',
+  tickets:'Support tickets', revenue:'Revenue & money', admin:'Settings & team'
+};
+const ROLE_BLURBS={
+  va:'VA — the client desk: full Deal Production and the inbox. No money.',
+  disputer:'Disputer — the round queue and the bureau record behind it. Nothing else.',
+  employee:'Employee — the client desk plus pipeline. No money.',
+  admin:'Admin — everything, including revenue, settings and the team.'
+};
+function renderCaps(selected){
+  const box=$('u_caps'); if(!box)return;
+  box.innerHTML=Object.keys(CAP_LABELS).map(function(c){
+    const on=selected.indexOf(c)>-1;
+    return '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer">'
+      +'<input type="checkbox" data-cap="'+c+'"'+(on?' checked':'')+'>'+CAP_LABELS[c]+'</label>';
+  }).join('');
+}
+function onRoleChange(){
+  const role=$('u_role').value;
+  $('u_roleBlurb').textContent=ROLE_BLURBS[role]||'';
+  renderCaps(ROLE_PRESETS[role]||[]);
+}
+function resetCapsToRole(){ onRoleChange(); }
+function selectedCaps(){
+  return [...document.querySelectorAll('#u_caps input[data-cap]')]
+    .filter(i=>i.checked).map(i=>i.getAttribute('data-cap'));
+}
 async function addUser(){
   $('r_userLink').style.display='none';
-  const body={username:$('u_username').value.trim(),name:$('u_name').value.trim(),role:$('u_role').value};
+  const role=$('u_role').value;
+  const body={username:$('u_username').value.trim(),name:$('u_name').value.trim(),role:role};
+  // Only send capabilities when they differ from the preset, so an untouched
+  // account keeps following its role as the presets evolve.
+  const caps=selectedCaps(), preset=(ROLE_PRESETS[role]||[]).slice().sort();
+  if(caps.slice().sort().join(',')!==preset.join(','))body.capabilities=caps;
   const pw=$('u_password').value;
   if(pw)body.password=pw; // otherwise the server issues a setup link instead of a password
   if(!body.username){$('r_user').textContent='Username is required';$('r_user').className='testres bad';return;}
