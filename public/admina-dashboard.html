@@ -318,13 +318,24 @@ function applySummary(sum){
 // fast enough to be the thing that puts the income figure on screen. The
 // parent's /api/dashboard payload arrives later and only refines the label.
 var pendingRange = null;
+// Every load gets a sequence number and a late reply is dropped.
+//
+// Without this the tile raced itself: the frame fires an unranged request on
+// load (which the server answers with ALL history), the parent then pushes
+// the real date range a moment later, and whichever reply lands last wins.
+// The unranged one usually did -- so the card showed $1,119,071 of lifetime
+// income under a "LAST 30 DAYS" heading. A wrong number under a confident
+// label is worse than a slow one.
+var reqSeq = 0;
 function loadSummary(range){
+  var mine = ++reqSeq;
   var qs = new URLSearchParams();
   if (range && range.from) qs.set('from', range.from);
   if (range && range.to) qs.set('to', range.to);
   return fetch('/api/mfsn-summary' + (qs.toString() ? '?' + qs : ''))
     .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
     .then(function(sum){
+      if (mine !== reqSeq) return sum; // a newer request is already in flight
       applySummary(sum);
       if (sum.income) {
         setText('admTotalIncome', money0(sum.income.total));
@@ -336,11 +347,19 @@ function loadSummary(range){
       return sum;
     })
     .catch(function(e){
+      if (mine !== reqSeq) return; // a newer request superseded this failure
       ['admEnrolled','admActives','admUpgraded','admTotalIncome'].forEach(function(id){ setText(id, 'n/a'); });
       console.error('KPI tile: /api/mfsn-summary failed', e);
     });
 }
-loadSummary(null);
+// Embedded, the parent sends the selected range within a beat, so asking for
+// all-history first would only ever produce a wrong number to be corrected.
+// The timer is the safety net for the case where the parent never answers.
+if (window.parent !== window) {
+  setTimeout(function(){ if (reqSeq === 0) loadSummary(null); }, 2500);
+} else {
+  loadSummary(null);
+}
 
 
 /* ---------- where the income figure comes from ----------

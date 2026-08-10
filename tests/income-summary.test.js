@@ -146,3 +146,27 @@ test('the fast endpoint respects the selected window', () => {
   const all = server.commasIncomeForRange(null, null);
   assert.ok(feb < all, 'a one-month window must not return the lifetime figure');
 });
+
+test('a stale reply can never overwrite a newer one', () => {
+  // The bug this pins: the tile fired an unranged request on load (which the
+  // server answers with ALL history) while the parent pushed the real date
+  // range a moment later. Whichever reply landed last won, and the unranged
+  // one usually did -- so the card read $1,119,071 of lifetime income under a
+  // "LAST 30 DAYS" heading. A wrong number under a confident label is worse
+  // than a slow one.
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'admina-dashboard.html'), 'utf8');
+  assert.ok(/var reqSeq/.test(page), 'requests should be sequenced');
+  assert.ok(/mine\s*!==\s*reqSeq/.test(page), 'a superseded reply must be dropped');
+  // ...and the failure path needs the same guard, or a slow error clears a
+  // figure a newer success already put on screen.
+  const catchBlock = page.split('.catch(function(e){')[1] || '';
+  assert.ok(catchBlock.indexOf('mine !== reqSeq') < catchBlock.indexOf('n/a'),
+    'the catch handler should bail out before blanking the tile');
+});
+
+test('an embedded tile waits for the range instead of asking for all history', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'admina-dashboard.html'), 'utf8');
+  const embedded = page.split('if (window.parent !== window) {')[1] || '';
+  assert.ok(/reqSeq === 0/.test(embedded),
+    'the fallback should only fire if no ranged request ever happened');
+});
