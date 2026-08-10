@@ -124,6 +124,14 @@
       // behaves correctly during a preview with no extra code, e.g. the
       // #dStage lock rule below.
       document.body.setAttribute('data-role', me.role);
+      // Capabilities are what the server actually gates on (lib/auth.js), so
+      // the UI reads the same list rather than re-deriving it from the role
+      // name -- a per-user override would otherwise be invisible here.
+      // Presentation only; the boundary is still server-side.
+      window.__me = me;
+      var caps = Array.isArray(me.capabilities) ? me.capabilities : [];
+      var can = function (c) { return caps.indexOf(c) >= 0; };
+      document.body.setAttribute('data-caps', caps.join(' '));
       wirePreviewToggle(me);
 
       // Shown only for a session that arrived via the Proven Agency's
@@ -134,21 +142,24 @@
         if (back) back.style.display = '';
       }
 
-      if (me.role === 'admin') {
-        // Loaded only for a real (non-previewing) admin: the file has
-        // balances hardcoded in it, and an effective employee gets 403 for
-        // it, which would log a console error.
-        var s = document.createElement('script');
-        s.src = '/personal-finances.js';
-        document.body.appendChild(s);
-        return;
+      if (can('revenue')) {
+        // Loaded only for someone who actually holds the money capability:
+        // the file has balances hardcoded in it, and anyone else gets a 403
+        // for it, which would only log a console error.
+        var pf = document.createElement('script');
+        pf.src = '/personal-finances.js';
+        document.body.appendChild(pf);
       }
 
-      // The server rejects a stage change from an employee, so don't offer the
-      // control — a rejected save looks identical to a successful one.
-      var s = document.createElement('style');
-      s.textContent = 'body[data-role="employee"] #dStage{pointer-events:none;opacity:.55}';
-      document.head.appendChild(s);
+      if (me.role === 'admin') return;
+
+      // The server rejects a stage change from anyone without the production
+      // capability, so don't offer the control — a rejected save looks
+      // identical to a successful one. Keyed off data-caps rather than a role
+      // name so it holds for every preset that lacks it.
+      var st = document.createElement('style');
+      st.textContent = 'body:not([data-caps~="production"]) #dStage{pointer-events:none;opacity:.55}';
+      document.head.appendChild(st);
 
       hideAdminChrome();
       retry(gateNav);
