@@ -1022,7 +1022,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="revenue-package" gs-x="9" gs-y="9" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-vip-diamond-line"></i></span> Revenue by package</h3>
-          <div class="cardsub">All-time · Commas + Fanbasis sales</div>
+          <div class="cardsub" id="dealsSub">All-time · Commas + Fanbasis sales</div>
           <div class="cwrap2" style="height:170px"><canvas id="chDeals"></canvas></div>
           <div id="dealsLegend" class="pkg-legend"></div>
         </div>
@@ -1726,7 +1726,24 @@ async function loadDashboard(){
     scales:{x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:10}},y:{stacked:true,ticks:{callback:v=>Math.abs(v)}}}}});
   // packages / rounds / churn / social
   const b=d.breakdowns;
-  const prod=(b.byProductAllTime&&b.byProductAllTime.length)?b.byProductAllTime:((b.byProduct&&b.byProduct.length)?b.byProduct:b.byDeal);
+  // Revenue by package follows the date filter like every other card.
+  //
+  // The catch is that the pre-webhook Commas block (HISTORICAL_PRODUCT_SALES
+  // in server.js) is a single dateless snapshot -- counts and totals with no
+  // per-sale dates -- so it can only honestly be attributed to "All Time".
+  // For any narrower range we show byProduct, which is built from live
+  // Fanbasis events that do carry a date, and say so in the subtitle rather
+  // than silently mixing an unfilterable lump into a filtered view.
+  const allTimeSelected = (preset === 'all');
+  const prod = allTimeSelected
+    ? ((b.byProductAllTime && b.byProductAllTime.length) ? b.byProductAllTime : (b.byProduct || b.byDeal))
+    : ((b.byProduct && b.byProduct.length) ? b.byProduct : []);
+  const dealsSub = $('dealsSub');
+  if (dealsSub) {
+    dealsSub.textContent = allTimeSelected
+      ? 'All-time · Commas + Fanbasis sales'
+      : (prod.length ? rangeLabel() + ' · Fanbasis sales with a product' : rangeLabel() + ' · no packaged sales in range');
+  }
   const m=k.mentorship||{};
   // "Total mentees" is clickable -- goClientsDeal('Mentorship') routes to
   // the Clients page pre-filtered to real mentorship buyers (matched by
