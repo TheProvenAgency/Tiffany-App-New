@@ -282,14 +282,27 @@ app.use((req, res, next) => {
   // preview is a real server-enforced downgrade, not a client-side mock.
   req.effectiveRole = session.previewRole || session.role;
 
+  // Permissions are per-capability now (see lib/auth.js). Resolve the actor
+  // the gate checks: previewing means "see it exactly as that role's preset",
+  // deliberately ignoring any per-user capability override on the real
+  // account -- otherwise an admin previewing an employee would still carry
+  // their own extras and the preview would lie.
+  const account = getUsers().find(x => x.id === session.userId);
+  req.actor = session.previewRole
+    ? { role: session.previewRole }
+    : { role: session.role, capabilities: account && account.capabilities };
+  req.capabilities = [...auth.capsFor(req.actor)];
+
   // The preview toggle routes are the one place that must always gate on
-  // the REAL role: an admin mid-preview still needs to be able to exit it.
+  // the REAL account: an admin mid-preview still needs to be able to exit it.
   const isPreviewToggle = req.path === '/api/preview/start' || req.path === '/api/preview/stop';
-  const roleForGate = isPreviewToggle ? session.role : req.effectiveRole;
+  const actorForGate = isPreviewToggle
+    ? { role: session.role, capabilities: account && account.capabilities }
+    : req.actor;
 
   const permitted = req.path.startsWith('/api/')
-    ? auth.canAccess(roleForGate, req.method, req.path)
-    : auth.canAccessAsset(roleForGate, req.path);
+    ? auth.canAccess(actorForGate, req.method, req.path)
+    : auth.canAccessAsset(actorForGate, req.path);
   if (!permitted) return res.status(403).json({ error: 'forbidden' });
   next();
 });
@@ -306,7 +319,12 @@ app.get('/api/me', (req, res) => {
   res.json({
     id: req.user.userId, name: u ? u.name : 'User', username: u ? u.username : null,
     role: req.effectiveRole, realRole: req.user.role, previewing: !!req.user.previewRole,
-    viaSso: !!req.user.viaSso
+    viaSso: !!req.user.viaSso,
+    // The resolved capability list for this session, so the UI can gate nav
+    // and views on the same thing the server gates routes on instead of
+    // inferring it from the role name. Presentation only -- the real
+    // boundary is still the middleware above.
+    capabilities: req.capabilities
   });
 });
 
@@ -326,9 +344,28 @@ app.post('/api/preview/stop', (req, res) => {
   res.json({ ok: true });
 });
 
-// user management (admin only — employees are blocked by canAccess)
+// Roles are presets of capabilities (lib/auth.js). A user may also carry an
+// explicit `capabilities` array that overrides the preset entirely.
+const ROLE_NAMES = Object.keys(auth.ROLE_CAPS);
+const INVALID_CAPS = Symbol('invalid');
+function normalizeCapabilities(input) {
+  if (input === undefined || input === null) return null;
+  if (!Array.isArray(input)) return INVALID_CAPS;
+  const out = [...new Set(input)];
+  if (out.some(c => !auth.CAPABILITIES.includes(c))) return INVALID_CAPS;
+  return out;
+}
+
+// user management (admin only — non-admins are blocked by canAccess)
 app.get('/api/users', (req, res) => {
-  res.json(getUsers().map(u => ({ id: u.id, username: u.username, name: u.name, role: u.role, disabled: !!u.disabled, mustSetPassword: !!u.mustSetPassword })));
+  res.json(getUsers().map(u => ({
+    id: u.id, username: u.username, name: u.name, role: u.role,
+    disabled: !!u.disabled, mustSetPassword: !!u.mustSetPassword,
+    // The per-user override, when one is set, plus what the account actually
+    // resolves to -- the Team panel needs both to show "preset" vs "custom".
+    capabilities: u.capabilities || null,
+    effectiveCapabilities: [...auth.capsFor(u)]
+  })));
 });
 
 // password is optional -- leave it out and the account is created with
@@ -336,12 +373,19 @@ app.get('/api/users', (req, res) => {
 // admin never has to invent (and relay) a temporary password. Still accepts
 // an explicit password too, for anyone who'd rather just set one directly.
 app.post('/api/users', (req, res) => {
-  const { username, name, role, password } = req.body || {};
+  const { username, name, role, password, capabilities } = req.body || {};
   if (!username) return res.status(400).json({ error: 'username required' });
-  if (role !== 'admin' && role !== 'employee') return res.status(400).json({ error: 'role must be admin or employee' });
+  if (!ROLE_NAMES.includes(role)) {
+    return res.status(400).json({ error: `role must be one of ${ROLE_NAMES.join(', ')}` });
+  }
+  const caps = normalizeCapabilities(capabilities);
+  if (caps === INVALID_CAPS) return res.status(400).json({ error: 'unknown capability' });
   const list = getUsers();
   if (list.some(u => u.username === username)) return res.status(409).json({ error: 'username already taken' });
   const user = auth.makeUser({ username, name, role, password });
+  // Only persist an override when one was actually asked for -- otherwise the
+  // account follows its role preset and keeps following it as presets evolve.
+  if (caps) user.capabilities = caps;
   store.setConfig({ users: list.concat([user]) });
   const resp = { ok: true, id: user.id, username, role };
   if (user.mustSetPassword) resp.setupLink = setupLinkFor(user.id);
@@ -359,11 +403,19 @@ app.patch('/api/users/:id', (req, res) => {
     return res.status(400).json({ error: 'cannot disable or demote the last admin' });
   }
   if (req.body.name) u.name = req.body.name;
-  if (req.body.role === 'admin' || req.body.role === 'employee') u.role = req.body.role;
+  if (ROLE_NAMES.includes(req.body.role)) u.role = req.body.role;
+  if ('capabilities' in req.body) {
+    const caps = normalizeCapabilities(req.body.capabilities);
+    if (caps === INVALID_CAPS) return res.status(400).json({ error: 'unknown capability' });
+    // null clears the override and puts the account back on its role preset.
+    if (caps) u.capabilities = caps; else delete u.capabilities;
+  }
   if (typeof req.body.disabled === 'boolean') u.disabled = req.body.disabled;
   if (req.body.password) { Object.assign(u, auth.hashPassword(req.body.password)); u.mustSetPassword = false; }
   // Revoking access must take effect immediately, not at cookie expiry.
-  if (u.disabled || req.body.password || req.body.role) { sessions.destroyForUser(u.id); persistSessions(); }
+  if (u.disabled || req.body.password || req.body.role || 'capabilities' in req.body) {
+    sessions.destroyForUser(u.id); persistSessions();
+  }
   store.setConfig({ users: list });
   res.json({ ok: true });
 });
@@ -989,8 +1041,8 @@ app.get('/api/clients', async (req, res) => {
       return dir === 'asc' ? cmp : -cmp;
     });
     const p = Math.max(1, parseInt(page)), ps = Math.min(100, parseInt(pageSize));
-    const moneyVisible = req.effectiveRole === 'admin';
-    const pageClients = list.slice((p - 1) * ps, p * ps).map(c => auth.redactClient(req.effectiveRole, c));
+    const moneyVisible = auth.has(req.actor, 'revenue');
+    const pageClients = list.slice((p - 1) * ps, p * ps).map(c => auth.redactClient(req.actor, c));
     res.json({ total: list.length, page: p, pageSize: ps, clients: pageClients, moneyVisible });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1026,9 +1078,9 @@ app.get('/api/clients/:id', async (req, res) => {
       .sort((a, b) => (b.at || '').localeCompare(a.at || ''));
     const disputes = store.getEvents().filter(e => e.type === 'dispute' && (e.email || '').toLowerCase() === email)
       .sort((a, b) => (b.at || '').localeCompare(a.at || ''));
-    const moneyVisible = req.effectiveRole === 'admin';
+    const moneyVisible = auth.has(req.actor, 'revenue');
     res.json({
-      client: auth.redactClient(req.effectiveRole, c),
+      client: auth.redactClient(req.actor, c),
       // The payment history is itself a list of dollar amounts -- drop the
       // whole thing rather than trying to redact each entry.
       payments: moneyVisible ? payments.slice(0, 50) : [],
@@ -2066,7 +2118,7 @@ app.patch('/api/production/:id', async (req, res) => {
 
   // Reject the whole patch rather than applying it partially — a partial save
   // looks identical to a successful one from the UI.
-  const { allowed, denied } = auth.filterEditable(req.effectiveRole, patch);
+  const { allowed, denied } = auth.filterEditable(req.actor, patch);
   if (denied.length) {
     return res.status(403).json({ error: 'not allowed to change: ' + denied.join(', ') });
   }
