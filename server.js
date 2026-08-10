@@ -8,7 +8,8 @@ const fs = require('fs');
 const store = require('./lib/store');
 const dealProd = require('./lib/production'); // Deal Production, Postgres-primary -- see that file's header comment
 const auth = require('./lib/auth');
-const disputes = require('./lib/disputes'); // dispute desk projection over Deal Production
+const disputes = require('./lib/disputes');
+const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
 const affiliate = require('./lib/affiliate');
@@ -296,7 +297,7 @@ app.get('/api/sso', (req, res) => {
     return res.status(401).send('This sign-in link is invalid or expired. Go back to the Proven Agency dashboard and click Tiffany again.');
   }
   const { users, user } = auth.findOrCreateSsoUser(getUsers(), payload);
-  store.setConfig({ users });
+  saveUsers(users);
   const token = sessions.create(user, { viaSso: true });
   persistSessions();
   res.setHeader('Set-Cookie', `msfs=${token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax`);
@@ -393,6 +394,16 @@ app.post('/api/preview/stop', (req, res) => {
   res.json({ ok: true });
 });
 
+// Every account write keeps the Postgres mirror current, so the user-scoped
+// stores (notifications, ticket views, dashboard layouts) can always resolve
+// a real users.id. Fire-and-forget on purpose -- a mirror failure must not
+// fail the write the admin actually asked for.
+function saveUsers(users) {
+  store.setConfig({ users });
+  store.mirrorUsers(users).catch(e => console.error('User mirror failed:', e.message));
+  return users;
+}
+
 // Roles are presets of capabilities (lib/auth.js). A user may also carry an
 // explicit `capabilities` array that overrides the preset entirely.
 const ROLE_NAMES = Object.keys(auth.ROLE_CAPS);
@@ -435,7 +446,7 @@ app.post('/api/users', (req, res) => {
   // Only persist an override when one was actually asked for -- otherwise the
   // account follows its role preset and keeps following it as presets evolve.
   if (caps) user.capabilities = caps;
-  store.setConfig({ users: list.concat([user]) });
+  saveUsers(list.concat([user]));
   const resp = { ok: true, id: user.id, username, role };
   if (user.mustSetPassword) resp.setupLink = setupLinkFor(user.id);
   res.json(resp);
@@ -465,7 +476,7 @@ app.patch('/api/users/:id', (req, res) => {
   if (u.disabled || req.body.password || req.body.role || 'capabilities' in req.body) {
     sessions.destroyForUser(u.id); persistSessions();
   }
-  store.setConfig({ users: list });
+  saveUsers(list);
   res.json({ ok: true });
 });
 
@@ -493,7 +504,7 @@ app.post('/api/set-password', (req, res) => {
   if (!u || u.disabled) return res.status(400).json({ error: 'This account is no longer available.' });
   Object.assign(u, auth.hashPassword(password));
   u.mustSetPassword = false;
-  store.setConfig({ users: list });
+  saveUsers(list);
   sessions.destroyForUser(u.id); // any stale sessions shouldn't outlive the password they were issued under
   const sessionToken = sessions.create(u);
   persistSessions();
@@ -514,7 +525,7 @@ app.post('/api/me/password', (req, res) => {
   if (!auth.verifyPassword(currentPassword || '', u)) return res.status(400).json({ error: 'Current password is incorrect' });
   Object.assign(u, auth.hashPassword(newPassword));
   u.mustSetPassword = false;
-  store.setConfig({ users: list });
+  saveUsers(list);
   // Same as the admin-driven password change: revoke everywhere, including
   // this tab, so the new password is the only thing that works from here on.
   sessions.destroyForUser(u.id);
@@ -537,7 +548,7 @@ app.delete('/api/users/:id', (req, res) => {
   if (u.role === 'admin' && !u.disabled && activeAdmins.length <= 1) {
     return res.status(400).json({ error: 'cannot remove the last active admin' });
   }
-  store.setConfig({ users: list.filter(x => x.id !== req.params.id) });
+  saveUsers(list.filter(x => x.id !== req.params.id));
   sessions.destroyForUser(u.id);
   persistSessions();
   res.json({ ok: true });
@@ -2309,7 +2320,21 @@ app.patch('/api/production/:id', async (req, res) => {
 // with no persistent disk, where all three JSON files are wiped on every
 // restart); never block boot on any of them failing/hanging.
 if (require.main === module) {
-  Promise.all([
+  bootstrap().finally(() => {
+    app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
+  });
+}
+
+// Everything that has to happen before the first request, in dependency
+// order. Nothing here may reject: this host has no persistent disk, so a
+// failed restore is a bad day, but a failed BOOT is an outage.
+async function bootstrap() {
+  // 1. Schema first -- the user-scoped stores can't be read back until their
+  //    tables exist (additive and idempotent, see lib/migrate.js).
+  await migrate.run().catch(e => console.error('Schema catch-up failed:', e.message));
+
+  // 2. Restore everything that Postgres is the durable copy of.
+  await Promise.all([
     store.hydrateConfigFromPostgres(),
     store.hydrateMfsnFromPostgres(),
     store.hydrateEventsFromPostgres(),
@@ -2318,13 +2343,21 @@ if (require.main === module) {
     store.hydrateNotesFromPostgres(),
     store.hydrateWorkedFromPostgres(),
     store.hydrateAffiliateOverridesFromPostgres()
-  ]).catch(() => {}).then(() => {
-    // After Postgres restore, top the event log up with the real Commas sale
-    // history (idempotent by payment id -- see store.seedCommasPayments).
-    try { store.seedCommasPayments(); } catch (e) { /* never block boot */ }
-  }).finally(() => {
-    app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
-  });
+  ]).catch(e => console.error('Postgres hydration failed:', e.message));
+
+  // 3. Accounts, then the three stores that key off a real users.id. Ordered
+  //    rather than parallel: the mirror is what makes those ids resolvable.
+  await store.mirrorUsers(getUsers())
+    .then(() => Promise.all([
+      store.hydrateNotificationsFromPostgres(),
+      store.hydrateTicketViewsFromPostgres(),
+      store.hydrateDashboardLayoutsFromPostgres()
+    ]))
+    .catch(e => console.error('User-scoped hydration failed:', e.message));
+
+  // 4. Top the event log up with the real Commas sale history (idempotent by
+  //    payment id -- see store.seedCommasPayments).
+  try { store.seedCommasPayments(); } catch (e) { console.error('Commas seed failed:', e.message); }
 }
 
 module.exports = app;
