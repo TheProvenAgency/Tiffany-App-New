@@ -208,3 +208,55 @@ mismatch, and `'EMAIL'` vs `'Email'` casing) — untouched by this work.
   isolation (403s on production/dashboard/messages + asset gating), queue,
   record drawer, bureau PATCH, stage rejection; dashboard range coherence
   at 30D/90D/All.
+
+### Real data + durability pass (2026-08-10, evening)
+
+**Revenue is real on both sides now, no estimates.**
+- `seed/commas-payments-seed.json` -- 5,133 succeeded Commas/Fanbasis sales
+  with exact per-sale timestamps, Apr 2025 to Jul 2026, $834,491.75. Seeded at
+  boot, idempotent by Commas payment id. This is what the "$50 total income"
+  actually needed: the webhook only started carrying a product field in late
+  July, so nearly the whole history was invisible.
+- `MFSN_MONTHLY_INCOME` in server.js -- all 37 months of real payouts, Jul
+  2023 to Jul 2026, $244,194.34, which matches the portal's own lifetime
+  figure. An earlier hand-copied version had 10 months; anything reaching
+  further back under-reported silently.
+- `HISTORICAL_PRODUCT_SALES` is no longer merged into the package breakdown
+  (it would double-count now that the same sales are dated). Kept only as the
+  provenance record of the 2026-07-30 hand-pull.
+
+**The dashboard no longer dies when GoHighLevel does.** `getClients()` was
+awaited bare in `/api/dashboard`, so a rejected GHL token took the whole page
+down -- $0 income, blank Client base. Each source is caught independently now
+and the failure is reported in `ghlError`. Regression test:
+`tests/dashboard-degrades.test.js`.
+
+**Every store now survives a restart.** `lib/migrate.js` is an additive,
+idempotent boot migration (users + notifications + ticket_views +
+dashboard_layouts, and it relaxes the old users_role_check that only allowed
+admin/employee). Boot-time because the Supabase URL only exists as a Render
+env var. `bootstrap()` in server.js states the ordering: schema, restore,
+accounts, then user-scoped stores, then the Commas seed.
+
+**306 tests, 0 failing.**
+
+### Corrections to earlier notes in this file
+- Item 5 ("personal-finances.js ships a real income figure") is **stale** --
+  the file is entirely Lunch Money placeholder data (Ally/Fidelity/Vanguard).
+  Verified by inspection; there is no real figure to move server-side.
+- Item 2 (tier-2 Postgres durability) and item 3 (users migration) are
+  **done**, above.
+
+### Genuinely still open
+1. **The GHL token.** Client-count cards stay empty until it's fixed --
+   Settings -> Test GHL connection names the exact error. Per README the
+   `contacts.readonly` scope must be ticked at Private Integration *creation*
+   time; GHL does not reliably let you add it afterwards.
+2. **Zapier feeds** (Fanbasis / DisputeFox / MFSN) still point at the old app.
+   Repoint to `https://tiffany-app-new.onrender.com/webhooks/...` with
+   `?secret=` from Settings. Until then new sales arrive only in the backfill,
+   which is a point-in-time export.
+3. **August MFSN payout** posts in early September and needs adding to both
+   `MFSN_MONTHLY_INCOME` and `public/mfsn.js` -- `tests/mfsn-frontend-sync.test.js`
+   fails loudly if they drift apart. Worth automating off the portal export.
+4. `mfsn_old_status` remains a manual audit with no re-audit mechanism.
