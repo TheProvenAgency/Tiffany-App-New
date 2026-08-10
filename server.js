@@ -805,7 +805,19 @@ function inRange(dateStr, from, to) {
 app.get('/api/dashboard', async (req, res) => {
   try {
     const { from, to, granularity = 'day' } = req.query;
-    const [clients, smsSeries, dashboardProdList] = await Promise.all([getClients(), getSmsSeries(), readProd()]);
+    // GoHighLevel is one source among several, not a prerequisite for the
+    // page. It had been awaited bare, so a rejected token (expired, or the
+    // contacts.readonly scope missing) threw before anything rendered and
+    // took the WHOLE dashboard down with it -- including revenue, which
+    // comes from the local event log and MFSN table and needs GHL for
+    // nothing at all. Degrade instead: serve everything that still works
+    // and report the failure in `health` so the UI can say what's wrong.
+    let ghlError = null;
+    const [clients, smsSeries, dashboardProdList] = await Promise.all([
+      getClients().catch(e => { ghlError = e.message || String(e); return []; }),
+      getSmsSeries().catch(() => []),
+      readProd().catch(() => [])
+    ]);
     const payments = getPaymentEvents();
 
     const paysIn = payments.filter(p => inRange(p.at, from, to));
@@ -960,6 +972,7 @@ app.get('/api/dashboard', async (req, res) => {
     res.json({
       mode: liveMode() ? 'live' : 'demo',
       generatedAt: new Date().toISOString(),
+      ghlError,
       kpis: {
         revenueTotal: Math.round(revenueTotal * 100) / 100,
         mfsnIncomeEst,
