@@ -10,7 +10,11 @@ var MYNAME=null, MYROLE=null, openStamp=null, pollTimer=null, lockedFilter=false
 fetch('/api/me').then(function(r){return r.json();}).then(function(m){
   MYNAME=m&&m.name;
   MYROLE=m&&m.role;
-  if(m&&m.role==='admin'){
+  // Bulk re-sync rewrites the whole tracker from an external source. That is
+  // an owner action, not day-to-day desk work, so it stays on the admin
+  // capability even though a VA now has the rest of this page.
+  var _c=(m&&Array.isArray(m.capabilities))?m.capabilities:[];
+  if(_c.indexOf('admin')>=0){
     var btn=document.getElementById('pvReconcileBtn'); if(btn)btn.style.display='';
     var sbtn=document.getElementById('pvSheetBtn'); if(sbtn)sbtn.style.display='';
   }

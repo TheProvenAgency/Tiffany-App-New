@@ -53,15 +53,42 @@
   // both read it), Follow-Ups + Messages (Production group), Change
   // password + Sign out (Account group). Finance and Marketing stay fully
   // hidden, same as before.
-  var ALLOWED_GROUPS = { ov: 1, cl: 1, pr: 1, ac: 1 };
   var HOME = { view: 'team', waitFor: 'teamNavBtn', group: 'ov' };
-  var ALLOWED_IDS = {
-    teamNavBtn: 1, pipelineNavBtn: 1, pvNewClientsBtn: 1, clientsNavBtn: 1,
-    fuNavBtn: 1, msgNavBtn: 1, changePwNavBtn: 1, signOutNavBtn: 1,
-    // A disputer's only view. Without this the nav filter hid the one button
-    // their whole job runs through.
-    disputesNavBtn: 1
+
+  // Each nav item against the capability that actually reaches its data.
+  // This replaces a flat allowlist, which had two problems: it could not
+  // reflect a per-user capability override (the whole point of the model), and
+  // it hid Deal Production from everyone who wasn't an admin -- so a VA, whose
+  // job IS Deal Production, only ever got the locked New Clients subset.
+  // null means "everyone who is signed in".
+  var NAV_CAPS = {
+    teamNavBtn: 'production',
+    pvNavBtn: 'production',        // Deal Production, the full tracker
+    pvNewClientsBtn: 'production', // the onboarding shortcut into it
+    disputesNavBtn: 'disputes',
+    pipelineNavBtn: 'pipeline',
+    clientsNavBtn: 'clients',
+    fuNavBtn: 'followups',
+    msgNavBtn: 'messages',
+    rvNavBtn: 'revenue',
+    mfNavBtn: 'revenue',           // MyFreeScoreNow commission is money
+    lmNavBtn: 'revenue',
+    changePwNavBtn: null,
+    signOutNavBtn: null
   };
+  // A group heading is worth showing when anything under it is.
+  var GROUP_OF = {
+    teamNavBtn: 'ov', pvNavBtn: 'pr', pvNewClientsBtn: 'cl', disputesNavBtn: 'cl',
+    pipelineNavBtn: 'cl', clientsNavBtn: 'cl', fuNavBtn: 'pr', msgNavBtn: 'pr',
+    rvNavBtn: 'fi', mfNavBtn: 'fi', lmNavBtn: 'fi',
+    changePwNavBtn: 'ac', signOutNavBtn: 'ac'
+  };
+  var CAPS = [];
+  function navAllowed(id) {
+    if (!(id in NAV_CAPS)) return false; // unknown buttons stay hidden by default
+    var need = NAV_CAPS[id];
+    return need === null || CAPS.indexOf(need) >= 0;
+  }
   function gateNav() {
     // teamNavBtn only exists once team.js's own /api/me check has resolved
     // and injected it (see public/team.js) -- that's the async part; the
@@ -74,18 +101,20 @@
     // refuses. HOME is set from capabilities just below.
     if (!document.getElementById(HOME.waitFor)) return false;
 
+    var visibleGroups = {};
     Array.prototype.forEach.call(document.querySelectorAll('.navgroup button'), function (b) {
-      if (!ALLOWED_IDS[b.id]) b.style.display = 'none';
+      if (navAllowed(b.id)) { visibleGroups[GROUP_OF[b.id]] = 1; }
+      else { b.style.display = 'none'; }
     });
     // A group heading with nothing left visible under it just reads as a
     // dangling label ("Finance" over a blank box) -- hide those too.
     Array.prototype.forEach.call(document.querySelectorAll('.sec[data-g]'), function (heading) {
-      if (!ALLOWED_GROUPS[heading.dataset.g]) heading.style.display = 'none';
+      if (!visibleGroups[heading.dataset.g]) heading.style.display = 'none';
     });
     // Same idea for the icon rail: no reason to offer an icon that only
     // leads to a blank panel.
     Array.prototype.forEach.call(document.querySelectorAll('.railbtn[data-g]'), function (rb) {
-      if (!ALLOWED_GROUPS[rb.dataset.g]) rb.style.display = 'none';
+      if (!visibleGroups[rb.dataset.g]) rb.style.display = 'none';
     });
     if (typeof window.setNavGroup === 'function') window.setNavGroup(HOME.group, false);
     if (typeof window.showView === 'function') window.showView(HOME.view);
@@ -188,6 +217,7 @@
       // Where a worker lands, and which injected button proves their modules
       // are ready. A disputer has no Dashboard and no Team Dashboard, so
       // sending them to either is a blank screen or a 403.
+      CAPS = caps;
       if (can('production')) HOME = { view: 'team', waitFor: 'teamNavBtn', group: 'ov' };
       else if (can('disputes')) HOME = { view: 'disputes', waitFor: 'disputesNavBtn', group: 'cl' };
       else HOME = { view: 'team', waitFor: 'teamNavBtn', group: 'ov' };

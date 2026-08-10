@@ -50,9 +50,12 @@ test('the nav filter waits for the home that actually applies', () => {
 });
 
 test("a disputer's only nav button survives the filter", () => {
-  const ids = role.split('var ALLOWED_IDS = {')[1].split('};')[0];
-  assert.ok(/disputesNavBtn/.test(ids),
-    'hiding it would remove the one button their whole job runs through');
+  // The flat ALLOWED_IDS list is gone -- nav items now map to the capability
+  // that reaches their data (see tests/nav-caps.test.js). The guarantee is
+  // unchanged: hiding this would remove the one button their job runs through.
+  const map = role.split('var NAV_CAPS = ')[1].split('};')[0];
+  assert.ok(/disputesNavBtn: 'disputes'/.test(map),
+    'the round queue must be reachable by anyone holding the disputes capability');
 });
 
 test('every role still has somewhere to land', () => {
