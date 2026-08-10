@@ -247,6 +247,38 @@ accounts, then user-scoped stores, then the Commas seed.
 - Item 2 (tier-2 Postgres durability) and item 3 (users migration) are
   **done**, above.
 
+### Fixed in the KPI/income pass (Aug 10)
+
+- **The "$0" income tile.** Three separate causes, all real. The four Admina
+  KPI tiles are iframes that each fetched `/api/dashboard` themselves, on top
+  of the parent's own call -- five concurrent copies of the app's most
+  expensive request. Measured live: 1.3s alone, 6.5s for four together, and
+  on a cold start they starved each other enough that a sibling request
+  returned 502. The parent now hands its payload down by postMessage.
+- **`$0` was the pending value in markup**, which reads as a real sales
+  figure. Pending is now a dimmed dash and failed fetches say so instead of
+  being swallowed by an empty `catch`.
+- **Three drifted copies of the same numbers.** `admina-dashboard.html` still
+  rendered 1,493 enrolled / 736 actives / 420 upgraded. `revenue.js` still
+  summed MFSN through June, so every Total income it produced was short
+  July's $18,113.84 -- and its `CO_MONTHLY` was never monthly revenue at all
+  (it opened at $543,648 for January, the lifetime figure, and decayed), so
+  the Sales trend showed the business shrinking through 2026 when the
+  transaction records show it growing from $14,148 to $21,348. All of it now
+  comes from `/api/mfsn-summary`.
+- **The four KPI sparklines were invented arrays.** Total income is now a
+  real stacked 12-month Commas/MFSN bar. The three member tiles have no real
+  history behind them (MFSN reports the book as a snapshot, not a series), so
+  they show the real ratio their caption already states rather than a
+  fabricated trend line.
+- **Sessions no longer die with the container.** They were the last store
+  living only in a file on Render's ephemeral disk, so every deploy and every
+  ~15-minute idle spin-down logged everyone out. A logged-out browser looks
+  exactly like a broken app -- fetches 401, page renders empty -- so this was
+  plausibly part of "nothing is showing up". Now mirrored to Postgres and
+  restored at boot, through an expiry check so a restart can't revive a
+  lapsed token.
+
 ### Genuinely still open
 1. **The GHL token.** Client-count cards stay empty until it's fixed --
    Settings -> Test GHL connection names the exact error. Per README the
@@ -256,7 +288,10 @@ accounts, then user-scoped stores, then the Commas seed.
    Repoint to `https://tiffany-app-new.onrender.com/webhooks/...` with
    `?secret=` from Settings. Until then new sales arrive only in the backfill,
    which is a point-in-time export.
-3. **August MFSN payout** posts in early September and needs adding to both
-   `MFSN_MONTHLY_INCOME` and `public/mfsn.js` -- `tests/mfsn-frontend-sync.test.js`
-   fails loudly if they drift apart. Worth automating off the portal export.
+3. **August MFSN payout** posts in early September. It now only needs adding
+   to `MFSN_MONTHLY_INCOME` in server.js -- `/api/mfsn-summary` feeds the KPI
+   tiles and the Revenue page from there, so those can no longer drift.
+   `public/mfsn.js` still keeps its own copy (covered by
+   `tests/mfsn-frontend-sync.test.js`) and is the next thing worth moving
+   onto the endpoint. Worth automating off the portal export either way.
 4. `mfsn_old_status` remains a manual audit with no re-audit mechanism.
