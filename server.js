@@ -9,7 +9,6 @@ const store = require('./lib/store');
 const dealProd = require('./lib/production'); // Deal Production, Postgres-primary -- see that file's header comment
 const auth = require('./lib/auth');
 const disputes = require('./lib/disputes');
-const actions = require('./lib/actions'); // the Today queue -- see that file's header
 const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
@@ -2115,62 +2114,6 @@ app.get('/api/mfsn-summary', (req, res) => {
       mfsn: Math.round(Object.values(MFSN_MONTHLY_INCOME).reduce((a, b) => a + b, 0))
     }
   });
-});
-
-// The Today queue. Sources are the same two the dashboard already computes --
-// the MyFreeScoreNow gap and the dispute round queue -- so this can never
-// disagree with the cards above it.
-app.get('/api/actions', async (req, res) => {
-  try {
-    const caps = Array.from(req.capabilities || []);
-    const canSeeMoney = caps.includes('revenue') || caps.includes('admin');
-
-    // Only pay for the roster when the caller can actually be shown enrolments.
-    // A disputer asking for their queue shouldn't trigger a GoHighLevel fetch.
-    let notOnMfsn = [];
-    if (canSeeMoney) {
-      const clients = await getClients().catch(() => []);
-      const synced = store.getMfsnMembers();
-      if (synced.length) {
-        const gap = affiliate.affiliateGap(clients, synced, store.getAffiliateOverrides());
-        notOnMfsn = gap.notOnMfsn || [];
-      }
-    }
-
-    let rounds = [];
-    if (caps.includes('disputes') || caps.includes('admin')) {
-      const prod = await readProd().catch(() => []);
-      // buildQueue() returns the array itself; it is /api/disputes/queue that
-      // wraps it in { queue }. Unwrapping a .queue here silently produced an
-      // empty round list against real data while every unit test passed.
-      rounds = disputes.buildQueue(prod) || [];
-    }
-
-    const cfg = store.getConfig() || {};
-    const q = actions.buildQueue({ notOnMfsn: notOnMfsn, rounds: rounds }, {
-      capabilities: caps,
-      done: cfg.actionsDone || {},
-      limit: Math.min(Number(req.query.limit) || 25, 200)
-    });
-    res.json(q);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Marking something done. Stored in config, which is Postgres-primary, so a
-// morning's work is not undone by the next spin-down.
-app.post('/api/actions/done', async (req, res) => {
-  try {
-    const key = String((req.body && req.body.key) || '');
-    if (!/^(enroll|round):[\w.-]{1,80}$/.test(key)) {
-      return res.status(400).json({ error: 'bad key' });
-    }
-    const cfg = store.getConfig() || {};
-    const done = Object.assign({}, cfg.actionsDone || {});
-    if (req.body && req.body.undo) delete done[key];
-    else done[key] = new Date().toISOString();
-    await store.setConfigPrimary({ actionsDone: done });
-    res.json({ ok: true, done: !!done[key] });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/mfsn-gap', async (req, res) => {
