@@ -826,14 +826,45 @@ function liveMode() {
   return Boolean(cfg.ghlToken && cfg.ghlLocationId);
 }
 
+// How old a persisted roster may be before we insist on waiting for a live
+// fetch instead. A day is generous, but the alternative to a day-old roster
+// is a blank page for seventeen seconds, and client records don't churn fast
+// enough for that trade to be close. Without a bound we would eventually
+// serve last month's roster and never notice.
+const SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+let refreshingClients = null;
+
+// Fetches from GoHighLevel and persists the result. Shared so the cold path
+// and the background refresh can't drift apart.
+async function fetchAndCacheClients() {
+  const cfg = store.getConfig();
+  const fresh = await store.cached('clients', 10 * 60 * 1000, () => ghl.fetchAllContacts(cfg));
+  store.saveClientsSnapshot(fresh).catch(() => {});
+  return fresh;
+}
+
 async function getClients() {
-  let clients;
-  if (!liveMode()) clients = demoData().clients;
-  else {
-    const cfg = store.getConfig();
-    clients = await store.cached('clients', 10 * 60 * 1000, () => ghl.fetchAllContacts(cfg));
+  if (!liveMode()) return decorateClients(demoData().clients);
+
+  // Warm in-memory cache: nothing to decide.
+  if (store.peekCached('clients', 10 * 60 * 1000)) {
+    return decorateClients(await fetchAndCacheClients());
   }
-  return decorateClients(clients);
+
+  // Cold. Rather than making the page wait ~17s on 5,504 contacts, serve the
+  // snapshot that outlived the container and refresh behind the request.
+  const snap = await store.getClientsSnapshot().catch(() => null);
+  if (snap && (Date.now() - new Date(snap.savedAt).getTime()) < SNAPSHOT_MAX_AGE_MS) {
+    if (!refreshingClients) {
+      refreshingClients = fetchAndCacheClients()
+        .catch(e => { console.error('Background roster refresh failed:', e.message); })
+        .finally(() => { refreshingClients = null; });
+    }
+    return decorateClients(snap.clients);
+  }
+
+  // No snapshot, or one too old to trust. Wait for the real thing.
+  return decorateClients(await fetchAndCacheClients());
 }
 
 // ---- active status computed from what each client PAID FOR ----
