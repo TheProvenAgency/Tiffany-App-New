@@ -264,10 +264,16 @@ function readSessions() {
 }
 const sessions = auth.createSessions(readSessions());
 function persistSessions() {
+  const snapshot = sessions.serialize();
   try {
     fs.mkdirSync(path.dirname(SESSION_FILE), { recursive: true });
-    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessions.serialize()));
+    fs.writeFileSync(SESSION_FILE, JSON.stringify(snapshot));
   } catch (e) { /* sessions survive in memory even if the disk is read-only */ }
+  // The file above is on Render's ephemeral disk -- destroyed on every deploy
+  // and every ~15-minute idle spin-down, which is why everyone kept getting
+  // logged out. Postgres is the copy that outlives the container. Not awaited:
+  // a database blip must never be able to fail a login.
+  store.mirrorSessions(snapshot).catch(() => {});
 }
 
 function cookieToken(req) {
@@ -2421,7 +2427,15 @@ async function bootstrap() {
     ]))
     .catch(e => console.error('User-scoped hydration failed:', e.message));
 
-  // 4. Top the event log up with the real Commas sale history (idempotent by
+  // 4. Put logins back. Without this every deploy and every idle spin-down
+  //    signs everyone out, and a logged-out browser looks exactly like a
+  //    broken app: the dashboard's fetches 401 and the page renders empty.
+  try {
+    const restored = await store.hydrateSessionsFromPostgres();
+    for (const [token, s] of Object.entries(restored || {})) sessions.restore(token, s);
+  } catch (e) { console.error('Session restore failed:', e.message); }
+
+  // 5. Top the event log up with the real Commas sale history (idempotent by
   //    payment id -- see store.seedCommasPayments).
   try { store.seedCommasPayments(); } catch (e) { console.error('Commas seed failed:', e.message); }
 }
