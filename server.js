@@ -2226,7 +2226,12 @@ if (require.main === module) {
   Promise.all([
     store.hydrateConfigFromPostgres(),
     store.hydrateMfsnFromPostgres(),
-    store.hydrateEventsFromPostgres()
+    store.hydrateEventsFromPostgres(),
+    store.hydrateTasksFromPostgres(),
+    store.hydrateTaskNotesFromPostgres(),
+    store.hydrateNotesFromPostgres(),
+    store.hydrateWorkedFromPostgres(),
+    store.hydrateAffiliateOverridesFromPostgres()
   ]).catch(() => {}).finally(() => {
     app.listen(PORT, () => console.log(`MSFS Command Center running on port ${PORT} (${liveMode() ? 'LIVE' : 'DEMO'} mode)`));
   });
