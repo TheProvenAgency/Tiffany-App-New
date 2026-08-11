@@ -93,14 +93,24 @@ test('each row carries what you need to act, and no money', () => {
   assert.ok(!/999/.test(JSON.stringify(row)), 'onboarding is desk work; money has no place on it');
 });
 
-test('the wait is measured from the first purchase, not the last payment', () => {
-  // A client who bought in January and paid again in April has been waiting
-  // since January. Measuring from the last payment understates every wait --
-  // which is the whole reason lib/purchases.js exists.
+test('buying again restarts the clock', () => {
+  // Buying more rounds is a new engagement with its own onboarding to
+  // complete. Measuring from the first purchase would leave a returning client
+  // permanently late for onboarding they finished a year ago.
   const q = onboarding.buildQueue([
-    c({ id: 'repeat', firstPaid: daysAgo(120), lastPaid: daysAgo(10) })
+    c({ id: 'repeat', firstPaid: daysAgo(400), lastPaid: daysAgo(2) })
   ], { now: NOW });
-  assert.equal(q.items[0].waitingDays, 120, 'should count from the first purchase');
+  assert.equal(q.items[0].waitingDays, 2, 'should count from the most recent purchase');
+  assert.equal(q.items[0].flagged, false, 'they bought two days ago; nothing is overdue');
+  assert.equal(q.items[0].firstPaidAt, daysAgo(400),
+    'the client-since date is still carried, just not measured from');
+});
+
+test('a client who never bought again is measured from their only purchase', () => {
+  const q = onboarding.buildQueue([
+    c({ id: 'once', firstPaid: daysAgo(90), lastPaid: daysAgo(90) })
+  ], { now: NOW });
+  assert.equal(q.items[0].waitingDays, 90);
   assert.equal(q.items[0].flagged, true);
 });
 

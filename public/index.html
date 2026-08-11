@@ -967,7 +967,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="onboarding" gs-x="0" gs-y="17" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-user-follow-line"></i></span> New clients waiting</h3>
-          <div class="cardsub">Paid and not yet onboarded. Flagged past <span id="onbSla">5</span> days.</div>
+          <div class="cardsub">Since their most recent purchase &mdash; buying again restarts the clock. Flagged past <span id="onbSla">5</span> days.</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
             <div><div class="l">Waiting</div><div class="v" id="onbTotal">—</div></div>
             <div class="tone-red"><div class="l">Over <span id="onbSla2">5</span> days</div><div class="v" id="onbFlagged">—</div></div>
@@ -1747,12 +1747,16 @@ async function renderOnboarding(){
         ? '<span class="cardsub" title="No purchase date on file, so the wait cannot be measured">no date</span>'
         : '<b style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+i.waitingDays+'d</b>';
       const docs=i.docsTotal?(i.docsOnFile+'/'+i.docsTotal+' docs'):'no doc list';
+      // A returning client reads very differently from a brand-new one, so say
+      // which this is rather than showing a bare wait.
+      const since=(i.firstPaidAt&&i.firstPaidAt!==i.paidAt)
+        ? ' · <span title="First bought '+String(i.firstPaidAt).slice(0,10)+'">returning</span>' : '';
       return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">'
         +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'
         +(i.flagged?'<span title="Waiting longer than the SLA" style="color:var(--red)">\u25cf </span>':'')
         +escUser(i.name)+'</div>'
         +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(i.pkg||'—')+' · '+docs
-        +(i.mfsn==='needs'?' · <span style="color:var(--gold)">needs MFSN</span>':'')+'</div></div>'
+        +since+(i.mfsn==='needs'?' · <span style="color:var(--gold)">needs MFSN</span>':'')+'</div></div>'
         +'<div style="text-align:right;white-space:nowrap">'+wait+'</div></div>';
     }).join('')+'</div>'
     +(t.undated?'<div class="cardsub" style="margin-top:8px">'+t.undated+' have no purchase date on file, so their wait cannot be measured.</div>':'');
