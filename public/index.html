@@ -976,6 +976,23 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
           <div id="onbList" style="margin-top:10px"></div>
         </div>
       </div></div>
+      <!-- Clients still waiting on a reply. The only operational SLA in the app
+           with a clock that can be trusted end to end: every conversation
+           carries a real lastAt and lastDirection. Counts describe the most
+           recent conversations, not all history -- the feed is capped -- and
+           the card says so rather than implying a full search. -->
+      <div class="grid-stack-item" gs-id="replies-due" gs-x="6" gs-y="17" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
+        <div class="card">
+          <h3 class="cardtitle"><span class="cico" style="--ic:#00B8F2"><i class="ri-chat-unread-line"></i></span> Waiting on a reply</h3>
+          <div class="cardsub">They messaged last and nobody answered. Flagged past <span id="rpSla">2</span> days.</div>
+          <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
+            <div><div class="l">Waiting</div><div class="v" id="rpTotal">—</div></div>
+            <div class="tone-red"><div class="l">Over <span id="rpSla2">2</span> days</div><div class="v" id="rpFlagged">—</div></div>
+            <div class="tone-gold"><div class="l">Longest wait</div><div class="v" id="rpLongest">—</div></div>
+          </div>
+          <div id="rpList" style="margin-top:10px"></div>
+        </div>
+      </div></div>
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
@@ -1684,6 +1701,36 @@ window.addEventListener('message', ev=>{
 // New clients waiting to be onboarded. Its own fetch rather than part of the
 // dashboard payload: it reads Deal Production, not the money feed, so it also
 // works for a VA -- who is the person actually running onboarding.
+// Clients still waiting on a reply. Own fetch, same reasoning as
+// renderOnboarding: it reads the conversation feed rather than the money feed,
+// so a VA -- who answers these -- gets it too.
+async function renderRepliesDue(){
+  const el=$('rpList'); if(!el)return;
+  try{
+    const r=await fetch('/api/replies-due?limit=12');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json(), t=d.totals||{};
+    ['rpSla','rpSla2'].forEach(id=>{const e=$(id); if(e)e.textContent=t.slaDays;});
+    $('rpTotal').textContent=(t.waiting||0).toLocaleString();
+    $('rpFlagged').textContent=(t.flagged||0).toLocaleString();
+    const lh=t.longestWaitHours;
+    $('rpLongest').textContent=lh==null?'—':(lh<48?(lh+'h'):(Math.floor(lh/24)+'d'));
+    if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Everyone has been answered.</div>'; return; }
+    el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(i=>{
+      const h=i.waitingHours;
+      const wait=h==null?'<span class="cardsub">no date</span>'
+        :'<b style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+(h<48?(h+'h'):(Math.floor(h/24)+'d'))+'</b>';
+      return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">'
+        +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'
+        +(i.flagged?'<span title="Waiting longer than the SLA" style="color:var(--red)">\u25cf </span>':'')
+        +escUser(i.name)+' <span class="cardsub" style="font-weight:600">'+escUser(i.channel||'')+'</span></div>'
+        +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(i.lastBody||'')+'</div></div>'
+        +'<div style="text-align:right;white-space:nowrap">'+wait+'</div></div>';
+    }).join('')+'</div>'
+    +'<div class="cardsub" style="margin-top:8px">Across the '+(t.scanned||0).toLocaleString()+' most recent conversations.</div>';
+  }catch(e){ el.innerHTML='<div class="cardsub">Could not load the reply queue.</div>'; }
+}
+
 async function renderOnboarding(){
   const el=$('onbList'); if(!el)return;
   try{
@@ -1715,6 +1762,7 @@ async function renderOnboarding(){
 async function loadDashboard(){
   renderAffiliateGap();
   renderOnboarding();
+  renderRepliesDue();
   const qs=new URLSearchParams({granularity});if(from)qs.set('from',from);if(to)qs.set('to',to);
   const r=await fetch('/api/dashboard?'+qs);if(r.status===401){location.href='/login.html';return;}
   const d=await r.json();const k=d.kpis;

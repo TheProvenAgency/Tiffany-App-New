@@ -9,6 +9,7 @@ const store = require('./lib/store');
 const dealProd = require('./lib/production'); // Deal Production, Postgres-primary -- see that file's header comment
 const auth = require('./lib/auth');
 const disputes = require('./lib/disputes');
+const replies = require('./lib/replies'); // unanswered-conversation SLA -- see that file's header
 const onboarding = require('./lib/onboarding'); // new-client SLA queue -- see that file's header
 const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
@@ -2157,6 +2158,23 @@ app.get('/api/onboarding', async (req, res) => {
   try {
     const list = await withLastPaid(withMfsnTags(await readProd()));
     res.json(onboarding.buildQueue(list, {
+      slaDays: Number(req.query.sla) || undefined,
+      limit: Math.min(Number(req.query.limit) || 12, 200)
+    }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Conversations the client spoke last in that nobody has answered. Reads the
+// same cached conversation feed /api/messages does, so the two cannot disagree.
+app.get('/api/replies-due', async (req, res) => {
+  try {
+    let list;
+    if (!liveMode()) list = demoData().messages;
+    else {
+      const cfg = store.getConfig();
+      list = await store.cached('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 }));
+    }
+    res.json(replies.buildQueue(list, {
       slaDays: Number(req.query.sla) || undefined,
       limit: Math.min(Number(req.query.limit) || 12, 200)
     }));
