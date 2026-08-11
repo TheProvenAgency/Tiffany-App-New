@@ -1002,7 +1002,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
           <div class="cardsub">Used every round they paid for.</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
             <div class="tone-green"><div class="l">Finished</div><div class="v" id="upFinished">&mdash;</div></div>
-            <div><div class="l">Unlimited</div><div class="v" id="upUnlimited">&mdash;</div></div>
+            <div><div class="l">Until repaired</div><div class="v" id="upUnlimited">&mdash;</div></div>
             <div class="tone-gold"><div class="l">Package unclear</div><div class="v" id="upUnknown">&mdash;</div></div>
           </div>
           <div id="upList" style="margin-top:10px"></div>
@@ -1727,14 +1727,21 @@ async function renderUpsell(){
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json(), t=d.totals||{};
     $('upFinished').textContent=(t.finished||0).toLocaleString();
-    $('upUnlimited').textContent=(t.unlimited||0).toLocaleString();
+    // "Until repaired" covers both the unlimited packages and the outcome-based
+    // ones -- neither has a round count, and the distinction is not worth a
+    // separate tile on the card.
+    $('upUnlimited').textContent=((t.unlimited||0)+(t.outcomeBased||0)).toLocaleString();
     $('upUnknown').textContent=(t.unknownAllowance||0).toLocaleString();
     if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Nobody has finished their rounds yet.</div>'; return; }
     el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(function(i){
       return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">'
       +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'+escUser(i.name)+'</div>'
       +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(i.pkg||'-')+'</div></div>'
-      +'<div style="text-align:right;white-space:nowrap"><b>'+i.roundsUsed+'</b><span class="cardsub">/'+i.roundsIncluded+' used</span></div></div>';
+      +'<div style="text-align:right;white-space:nowrap">'
+      +(i.finishedBy==='stage'
+         ? '<span class="cardsub" title="Marked completed in the pipeline">completed</span>'
+         : '<b>'+i.roundsUsed+'</b><span class="cardsub">/'+i.roundsIncluded+' used</span>')
+      +'</div></div>';
     }).join('')+'</div>'
     +(t.unknownAllowance?'<div class="cardsub" style="margin-top:8px">'+t.unknownAllowance.toLocaleString()+' more have a package that does not say how many rounds it includes, so they are left out rather than guessed at.</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the upsell list.</div>'; }

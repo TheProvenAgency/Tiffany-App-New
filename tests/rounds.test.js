@@ -43,14 +43,44 @@ test('a week is not a round', () => {
 });
 
 test('an unreadable package is unknown, not zero', () => {
-  // "Full Expedited Credit Repair" is 519 clients and its allowance cannot be
-  // read from the name. Calling it 0 would report every one of them finished.
-  for (const pkg of ['Full Expedited Credit Repair', '(HLP)', 'mentorship', '']) {
+  // Calling an unreadable allowance 0 would report every one of those clients
+  // finished. They stay unknown and finish only on the pipeline stage.
+  for (const pkg of ['(HLP)', 'mentorship', 'Strong Method', '']) {
     assert.equal(rounds.roundsIncluded(pkg), null, `${pkg} should be unknown`);
   }
-  const r = rounds.forClient(c('Full Expedited Credit Repair', 3, 3, 3));
-  assert.equal(r.finished, false, 'an unknown allowance can never be finished');
+  const r = rounds.forClient(c('(HLP)', 3, 3, 3));
+  assert.equal(r.finished, false, 'an unknown allowance cannot finish on a count');
   assert.equal(r.roundsLeft, null);
+});
+
+test('"Full" packages are sold on the outcome, not a round count', () => {
+  // "Full Expedited Credit Repair" means the credit gets repaired, however
+  // many rounds that takes -- 519 clients, running to whatever they need
+  // rather than stopping at a number. Not a fixed allowance and not unknown.
+  for (const pkg of ['Full Expedited Credit Repair', 'Full Credit Repair + 2 Credit Cards',
+                     '3B Expedited FULL CREDIT REPAIR']) {
+    assert.equal(rounds.roundsIncluded(pkg), rounds.OUTCOME, `${pkg} should be outcome-based`);
+  }
+  const r = rounds.forClient(c('Full Expedited Credit Repair', 4, 4, 4));
+  assert.equal(r.roundsLeft, null, 'there is no remaining count to show');
+});
+
+test('an outcome package finishes when the work is done, not when a count runs out', () => {
+  const mid = rounds.forClient(Object.assign(c('Full Expedited Credit Repair', 4, 4, 4), { stage: 'In rounds' }));
+  assert.equal(mid.finished, false, 'still being worked');
+
+  const done = rounds.forClient(Object.assign(c('Full Expedited Credit Repair', 4, 4, 4), { stage: 'Completed' }));
+  assert.equal(done.finished, true);
+  assert.equal(done.finishedBy, 'stage');
+});
+
+test('a completed client is finished whatever the round maths says', () => {
+  // The pipeline is the authority on whether the work is done. A client marked
+  // Completed one round into a three-round package is still finished.
+  const r = rounds.forClient(Object.assign(c('3 Month Expedited', 1, 0, 0), { stage: 'Completed' }));
+  assert.equal(r.finished, true);
+  assert.equal(r.finishedBy, 'stage');
+  assert.equal(r.roundsLeft, 2, 'the remaining count is still reported honestly');
 });
 
 test('a repeat purchase adds allowance, because the package field accumulates', () => {
@@ -92,16 +122,19 @@ test('rounds left never goes negative', () => {
 });
 
 test('the upsell list is only people you can honestly say are done', () => {
+  const inRounds = (x) => Object.assign(x, { stage: 'In rounds' });
   const q = rounds.upsellQueue([
-    c('3 Month Expedited', 3, 3, 3),             // finished
-    c('3 Month Expedited', 1, 1, 1),             // mid-package
-    c('Unlimited Credit Repair Package', 9, 9, 9), // never finished
-    c('Full Expedited Credit Repair', 5, 5, 5)   // unknown allowance
+    inRounds(c('3 Month Expedited', 3, 3, 3)),               // out of rounds
+    inRounds(c('3 Month Expedited', 1, 1, 1)),               // mid-package
+    inRounds(c('Unlimited Credit Repair Package', 9, 9, 9)), // unlimited, still working
+    inRounds(c('Full Expedited Credit Repair', 5, 5, 5)),    // outcome, not done yet
+    Object.assign(c('Full Expedited Credit Repair', 3, 3, 3), { stage: 'Completed' })
   ]);
-  assert.equal(q.items.length, 1);
-  assert.equal(q.totals.finished, 1);
+  assert.equal(q.totals.finished, 2, 'one out of rounds, one completed');
+  assert.equal(q.totals.byRounds, 1);
+  assert.equal(q.totals.byStage, 1);
   assert.equal(q.totals.unlimited, 1);
-  assert.equal(q.totals.unknownAllowance, 1);
+  assert.equal(q.totals.outcomeBased, 2);
 });
 
 test('against the real roster, most clients get a readable allowance', () => {
@@ -112,7 +145,7 @@ test('against the real roster, most clients get a readable allowance', () => {
   const cs = Array.isArray(raw) ? raw : (raw.clients || []);
   const out = rounds.attach(cs);
   const readable = out.filter(x => x.roundsIncluded !== null).length;
-  assert.ok(readable > cs.length * 0.7,
+  assert.ok(readable > cs.length * 0.85,
     `only ${readable} of ${cs.length} packages were readable`);
   assert.ok(out.filter(x => x.finished).length > 0, 'somebody should be finished');
   assert.ok(out.every(x => x.roundsLeft === null || x.roundsLeft >= 0),
@@ -135,4 +168,15 @@ test('an unreadable package shows a dash, never a zero, in the table', () => {
   const fn = prod.split('function roundsCell(c){')[1].split('\n}')[0];
   assert.ok(/roundsIncluded==null\)return .*-/.test(fn), 'unknown should render a dash');
   assert.ok(/roundsIncluded==='unlimited'/.test(fn), 'unlimited needs its own label');
+});
+
+test('a named unlimited package is recognised without the word "unlimited"', () => {
+  // "Diamond" is 46 clients. It was falling through to unknown because the
+  // segment parser skips named-unlimited entries, assuming the /unlimited/
+  // regex already caught them -- which it cannot for a package that never says
+  // the word.
+  assert.equal(rounds.roundsIncluded('Diamond'), rounds.UNLIMITED);
+  assert.equal(rounds.roundsIncluded('Diamond Package'), rounds.UNLIMITED);
+  const r = rounds.forClient(Object.assign(c('Diamond', 5, 5, 5), { stage: 'In rounds' }));
+  assert.equal(r.finished, false, 'unlimited finishes on the stage, not a count');
 });

@@ -206,6 +206,9 @@ var curSort='paid', sortDir=-1;
 // "Full Expedited Credit Repair" would mark every one of them finished.
 function roundsCell(c){
   if(c.roundsIncluded==='unlimited')return '<span class="pv-mfsn mfsn-yes" title="Unlimited package">unltd</span>';
+  // Sold on the result, not a count -- "Full Expedited Credit Repair" runs
+  // until the credit is repaired, so there is no remainder to show.
+  if(c.roundsIncluded==='outcome')return '<span class="pv-mfsn mfsn-yes" title="Until the credit is repaired -- no fixed round count">full</span>';
   if(c.roundsIncluded==null)return '<span class="pv-days" title="Package does not say how many rounds">-</span>';
   var left=c.roundsLeft, tot=c.roundsIncluded;
   var approx=c.allowanceExact===false?'\u2265':'';
@@ -227,7 +230,7 @@ function sortVal(c,key){
     case 'docs': return docCount(c);
     case 'rounds': {
       // Finished first when sorting descending -- that is the upsell list.
-      if(c.roundsIncluded==='unlimited')return -2;
+      if(c.roundsIncluded==='unlimited'||c.roundsIncluded==='outcome')return -2;
       if(c.roundsIncluded==null)return -1;
       return c.roundsLeft===0?1000:(1000-c.roundsLeft);
     }
