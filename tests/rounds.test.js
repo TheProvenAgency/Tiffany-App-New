@@ -45,10 +45,10 @@ test('a week is not a round', () => {
 test('an unreadable package is unknown, not zero', () => {
   // Calling an unreadable allowance 0 would report every one of those clients
   // finished. They stay unknown and finish only on the pipeline stage.
-  for (const pkg of ['(HLP)', 'mentorship', 'Strong Method', '']) {
+  for (const pkg of ['mentorship', 'Strong Method', 'Late to Positive', '']) {
     assert.equal(rounds.roundsIncluded(pkg), null, `${pkg} should be unknown`);
   }
-  const r = rounds.forClient(c('(HLP)', 3, 3, 3));
+  const r = rounds.forClient(c('Strong Method', 3, 3, 3));
   assert.equal(r.finished, false, 'an unknown allowance cannot finish on a count');
   assert.equal(r.roundsLeft, null);
 });
@@ -94,12 +94,13 @@ test('a repeat purchase adds allowance, because the package field accumulates', 
 });
 
 test('a package with an unreadable half gives a floor, and refuses to call it finished', () => {
-  // "Experian Expedited Removal, 3 Month Expedited" is at least 3 rounds, but
-  // the first half is unreadable so the real allowance may be higher. Claiming
-  // finished here is a refund conversation, not an upsell.
-  const inc = rounds.roundsIncluded('Experian Expedited Removal, 3 Month Expedited');
+  // "Strong Method, 3 Month Expedited" is at least 3 rounds, but the first half
+  // is unreadable so the real allowance may be higher. Claiming finished here
+  // is a refund conversation, not an upsell. (A sweep in that position is
+  // different -- that is a known zero, covered separately.)
+  const inc = rounds.roundsIncluded('Strong Method, 3 Month Expedited');
   assert.deepEqual(inc, { atLeast: 3 });
-  const r = rounds.forClient(c('Experian Expedited Removal, 3 Month Expedited', 3, 3, 3));
+  const r = rounds.forClient(c('Strong Method, 3 Month Expedited', 3, 3, 3));
   assert.equal(r.roundsIncluded, 3);
   assert.equal(r.allowanceExact, false);
   assert.equal(r.finished, false, 'not exact, so not claimed as finished');
@@ -179,4 +180,62 @@ test('a named unlimited package is recognised without the word "unlimited"', () 
   assert.equal(rounds.roundsIncluded('Diamond Package'), rounds.UNLIMITED);
   const r = rounds.forClient(Object.assign(c('Diamond', 5, 5, 5), { stage: 'In rounds' }));
   assert.equal(r.finished, false, 'unlimited finishes on the stage, not a count');
+});
+
+test('a sweep or removal is targeted work, not a round allowance', () => {
+  // 72 clients hold one of these and 68 hold nothing else, so calling their
+  // allowance "unknown" was wrong twice over: it is not unknown, there simply
+  // isn't one. The job is the job, and it finishes when the pipeline says so.
+  for (const pkg of ['Transunion Sweep', 'Experian Expedited Removal', 'Inquiry Removal',
+                     'EX SWEEP', '3 Bureau Expedited Removal']) {
+    assert.equal(rounds.roundsIncluded(pkg), rounds.ADDON, `${pkg} should be add-on work`);
+  }
+  const mid = rounds.forClient(Object.assign(c('Transunion Sweep', 2, 0, 0), { stage: 'In rounds' }));
+  assert.equal(mid.finished, false);
+  assert.equal(mid.roundsLeft, null, 'there is no remainder to show');
+  const done = rounds.forClient(Object.assign(c('Transunion Sweep', 2, 0, 0), { stage: 'Completed' }));
+  assert.equal(done.finished, true);
+});
+
+test('an add-on bought alongside a package still leaves the package exact', () => {
+  // An add-on segment contributes a known zero, not an unreadable one. Without
+  // that, "Experian Removal, 3 Month Expedited" reads as "at least 3" and can
+  // never qualify as finished.
+  assert.equal(rounds.roundsIncluded('Experian&Equifax Expedited Removal, 3 Month Expedited'), 3);
+  const r = rounds.forClient(Object.assign(
+    c('Experian&Equifax Expedited Removal, 3 Month Expedited', 3, 3, 3), { stage: 'In rounds' }));
+  assert.equal(r.allowanceExact, true);
+  assert.equal(r.finished, true);
+});
+
+test('several add-ons together are still add-on work, not zero rounds bought', () => {
+  assert.equal(rounds.roundsIncluded('Experian Sweep, Transunion Sweep'), rounds.ADDON);
+});
+
+test('a refunded sale is not a client to upsell', () => {
+  assert.equal(rounds.roundsIncluded('REFUNDED'), rounds.REFUND);
+  const r = rounds.forClient(Object.assign(c('REFUNDED', 3, 3, 3), { stage: 'Completed' }));
+  assert.equal(r.finished, false, 'a refund must never reach the upsell list');
+  const q = rounds.upsellQueue([Object.assign(c('REFUNDED', 3, 3, 3), { stage: 'Completed' })]);
+  assert.equal(q.totals.finished, 0);
+  assert.equal(q.totals.refunded, 1);
+});
+
+test('(HLP) is the abbreviation for Help me fix it', () => {
+  // 31 clients, the largest single unreadable package. The priced version of
+  // the same name is $50, which is exactly one round at the $50-a-round rate
+  // every readable package in the book charges.
+  assert.equal(rounds.roundsIncluded('(HLP)'), 1);
+  assert.equal(rounds.roundsIncluded('Help me fix it'), 1);
+});
+
+test('the unreadable tail is now small enough to be worth asking about', () => {
+  const fs3 = require('fs');
+  const path3 = require('path');
+  const raw = JSON.parse(fs3.readFileSync(
+    path3.join(__dirname, '..', 'seed', 'production-seed.json'), 'utf8'));
+  const cs = Array.isArray(raw) ? raw : (raw.clients || []);
+  const unknown = rounds.attach(cs).filter(x => x.roundsIncluded === null);
+  assert.ok(unknown.length < cs.length * 0.03,
+    `${unknown.length} of ${cs.length} still unreadable -- that is a category being missed, not a tail`);
 });
