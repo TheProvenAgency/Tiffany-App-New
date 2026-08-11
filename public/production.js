@@ -134,6 +134,7 @@ var sectionHTML=''+
    '<th data-s="name">Client</th><th data-s="pkg">Package</th><th data-s="stage">Stage</th><th data-s="days">In stage</th>'+
    '<th data-s="paid">Purchased</th>'+
    '<th class="ctr">TransUnion</th><th class="ctr">Equifax</th><th class="ctr">Experian</th>'+
+   '<th class="ctr" data-s="rounds">Rounds</th>'+
    '<th class="ctr" data-s="docs">Docs</th><th data-s="va">Assigned</th><th data-s="mfsn">MFSN</th><th>Next action</th>'+
    '</tr></thead><tbody id="pvBody"></tbody></table></div><div class="pv-pager" id="pvPager"></div></div>'+
  '<div id="pvBoardView" style="display:none"><div class="pv-board" id="pvBoard"></div></div>'+
@@ -200,6 +201,18 @@ function fmt(n){return n.toLocaleString();}
 // the onboarding queue in -- it is how the spreadsheet this replaces is kept
 // -- so opening on anything else would mean re-sorting every time.
 var curSort='paid', sortDir=-1;
+// Rounds left, and whether that number can be trusted. An unreadable package
+// shows a dash rather than a zero: reporting 0 left for the 519 clients on
+// "Full Expedited Credit Repair" would mark every one of them finished.
+function roundsCell(c){
+  if(c.roundsIncluded==='unlimited')return '<span class="pv-mfsn mfsn-yes" title="Unlimited package">unltd</span>';
+  if(c.roundsIncluded==null)return '<span class="pv-days" title="Package does not say how many rounds">-</span>';
+  var left=c.roundsLeft, tot=c.roundsIncluded;
+  var approx=c.allowanceExact===false?'\u2265':'';
+  var title=approx?('At least '+tot+' rounds; part of this package could not be read'):('Used '+c.roundsUsed+' of '+tot);
+  if(left===0)return '<span class="pv-mfsn mfsn-no" title="'+title+'">done</span>';
+  return '<span class="pv-days" title="'+title+'"><b>'+left+'</b>/'+approx+tot+'</span>';
+}
 function paidCell(d){
   if(!d)return '<span style="opacity:.35">—</span>';
   var t=new Date(d); if(isNaN(t))return '<span style="opacity:.35">—</span>';
@@ -212,6 +225,12 @@ function sortVal(c,key){
     case 'paid': return c.lastPaid?new Date(c.lastPaid).getTime():-Infinity;
     case 'days': return c.days==null?-Infinity:c.days;
     case 'docs': return docCount(c);
+    case 'rounds': {
+      // Finished first when sorting descending -- that is the upsell list.
+      if(c.roundsIncluded==='unlimited')return -2;
+      if(c.roundsIncluded==null)return -1;
+      return c.roundsLeft===0?1000:(1000-c.roundsLeft);
+    }
     case 'mfsn': return c.mfsn==='affiliate'?2:(c.mfsn==='needs'?1:0);
     default: return String(c[key]==null?'':c[key]).toLowerCase();
   }
@@ -432,8 +451,9 @@ function drawWork(){
       '<td class="pv-name">'+esc(c.name)+'</td><td class="pv-pkg">'+esc(c.pkg)+'</td><td>'+stagePill(c.stage)+'</td><td class="pv-days">'+(c.days||0)+'d</td>'+
       '<td class="pv-days">'+paidCell(c.lastPaid)+'</td>'+
       '<td class="ctr">'+bpill(c.tu)+'</td><td class="ctr">'+bpill(c.eq)+'</td><td class="ctr">'+bpill(c.ex)+'</td>'+
+      '<td class="ctr">'+roundsCell(c)+'</td>'+
       '<td class="ctr">'+docCell(c)+'</td><td>'+esc(c.va||'—')+'</td><td>'+mfsnPill(c)+'</td><td class="pv-next'+(na.a?' attn':'')+'">'+na.t+'</td></tr>';
-    }).join(''):'<tr><td colspan="12" style="padding:30px;text-align:center;color:var(--muted)">No clients in this queue.</td></tr>';
+    }).join(''):'<tr><td colspan="13" style="padding:30px;text-align:center;color:var(--muted)">No clients in this queue.</td></tr>';
     var from=rows.length?((curPage-1)*PAGE+1):0, to=Math.min(curPage*PAGE,rows.length);
     document.getElementById('pvPager').innerHTML='<button id="pvPrev"'+(curPage<=1?' disabled':'')+'>‹ Prev</button><span>'+fmt(from)+'–'+fmt(to)+' of '+fmt(rows.length)+'</span><button id="pvNext"'+(curPage>=pages?' disabled':'')+'>Next ›</button>';
     var pv=document.getElementById('pvPrev'),nx=document.getElementById('pvNext');

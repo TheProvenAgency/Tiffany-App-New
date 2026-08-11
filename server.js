@@ -10,7 +10,8 @@ const dealProd = require('./lib/production'); // Deal Production, Postgres-prima
 const auth = require('./lib/auth');
 const disputes = require('./lib/disputes');
 const replies = require('./lib/replies');
-const purchases = require('./lib/purchases'); // real per-client purchase history -- see that file's header // unanswered-conversation SLA -- see that file's header
+const purchases = require('./lib/purchases');
+const rounds = require('./lib/rounds'); // rounds bought vs used -- see that file's header // real per-client purchase history -- see that file's header // unanswered-conversation SLA -- see that file's header
 const onboarding = require('./lib/onboarding'); // new-client SLA queue -- see that file's header
 const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
@@ -2182,6 +2183,18 @@ app.get('/api/replies-due', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Clients who have used every round they paid for. The upsell list -- and
+// deliberately only people whose allowance can be read exactly, so nobody is
+// pitched more rounds while they are still owed some.
+app.get('/api/upsell', async (req, res) => {
+  try {
+    const list = await readProd();
+    res.json(rounds.upsellQueue(list, {
+      limit: Math.min(Number(req.query.limit) || 12, 200)
+    }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/mfsn-gap', async (req, res) => {
   try {
     const clients = await readProd() || [];
@@ -2241,7 +2254,7 @@ async function withLastPaid(clients) {
 app.get('/api/production', async (req, res) => {
   try {
     res.json({
-      clients: await withLastPaid(withMfsnTags(await readProd())),
+      clients: rounds.attach(await withLastPaid(withMfsnTags(await readProd()))),
       mode: liveMode() ? 'live' : 'demo'
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
