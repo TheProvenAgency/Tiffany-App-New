@@ -9,6 +9,7 @@ const store = require('./lib/store');
 const dealProd = require('./lib/production'); // Deal Production, Postgres-primary -- see that file's header comment
 const auth = require('./lib/auth');
 const disputes = require('./lib/disputes');
+const onboarding = require('./lib/onboarding'); // new-client SLA queue -- see that file's header
 const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
@@ -2147,6 +2148,19 @@ app.get('/api/mfsn-summary', (req, res) => {
       mfsn: Math.round(Object.values(MFSN_MONTHLY_INCOME).reduce((a, b) => a + b, 0))
     }
   });
+});
+
+// New clients waiting to be onboarded, and which have waited past the SLA.
+// Reads the same Deal Production feed the tracker does, so the card and the
+// queue can never disagree about who is waiting.
+app.get('/api/onboarding', async (req, res) => {
+  try {
+    const list = await withLastPaid(withMfsnTags(await readProd()));
+    res.json(onboarding.buildQueue(list, {
+      slaDays: Number(req.query.sla) || undefined,
+      limit: Math.min(Number(req.query.limit) || 12, 200)
+    }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/mfsn-gap', async (req, res) => {
