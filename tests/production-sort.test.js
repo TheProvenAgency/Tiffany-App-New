@@ -20,10 +20,17 @@ test('the purchase date is joined on from the roster, not invented', () => {
     'email should be tried before the coarser name match');
 });
 
-test('a roster failure leaves the rows alone rather than blanking the column', () => {
-  const fn = src.split('async function withLastPaid(')[1].split('\n}')[0];
-  assert.ok(/catch \(e\) \{ return clients; \}/.test(fn),
-    'no date is better than a wrong one');
+test('a roster failure still leaves real purchase dates in place', () => {
+  // The roster is now only the FALLBACK -- the payment events are the primary
+  // source and do not depend on it. So a GoHighLevel failure must degrade to
+  // "events only" rather than blanking the column, which is what the earlier
+  // version of this test was guarding when the roster was the only source.
+  const fn = src.split('async function withLastPaid(')[1].split('\n}\n')[0];
+  assert.ok(/getPaymentEvents\(\)/.test(fn), 'events are the primary source');
+  assert.ok(/catch \(e\) \{ \/\* no roster is fine/.test(fn),
+    'a roster failure should be survivable, not fatal');
+  const rosterUse = fn.split('try {')[1].split('catch')[0];
+  assert.ok(/getClients\(\)/.test(rosterUse), 'the roster is read inside the try');
 });
 
 test('the queue opens on newest purchase first', () => {

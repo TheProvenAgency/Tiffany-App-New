@@ -92,3 +92,23 @@ test('each row carries what you need to act, and no money', () => {
   assert.equal(row.mfsn, 'needs');
   assert.ok(!/999/.test(JSON.stringify(row)), 'onboarding is desk work; money has no place on it');
 });
+
+test('the wait is measured from the first purchase, not the last payment', () => {
+  // A client who bought in January and paid again in April has been waiting
+  // since January. Measuring from the last payment understates every wait --
+  // which is the whole reason lib/purchases.js exists.
+  const q = onboarding.buildQueue([
+    c({ id: 'repeat', firstPaid: daysAgo(120), lastPaid: daysAgo(10) })
+  ], { now: NOW });
+  assert.equal(q.items[0].waitingDays, 120, 'should count from the first purchase');
+  assert.equal(q.items[0].flagged, true);
+});
+
+test('a last-payment stand-in is still used, and still labelled', () => {
+  const q = onboarding.buildQueue([
+    c({ id: 'fb', firstPaid: null, lastPaid: daysAgo(30), paidSource: 'ghl:last-payment' })
+  ], { now: NOW });
+  assert.equal(q.items[0].waitingDays, 30);
+  assert.equal(q.items[0].paidSource, 'ghl:last-payment',
+    'the caller must be able to tell a real first purchase from a stand-in');
+});

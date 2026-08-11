@@ -9,7 +9,8 @@ const store = require('./lib/store');
 const dealProd = require('./lib/production'); // Deal Production, Postgres-primary -- see that file's header comment
 const auth = require('./lib/auth');
 const disputes = require('./lib/disputes');
-const replies = require('./lib/replies'); // unanswered-conversation SLA -- see that file's header
+const replies = require('./lib/replies');
+const purchases = require('./lib/purchases'); // real per-client purchase history -- see that file's header // unanswered-conversation SLA -- see that file's header
 const onboarding = require('./lib/onboarding'); // new-client SLA queue -- see that file's header
 const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
@@ -2213,21 +2214,27 @@ function withMfsnTags(clients) {
 // tag matches here too rather than the two disagreeing about who is who.
 async function withLastPaid(clients) {
   if (!Array.isArray(clients) || !clients.length) return clients;
-  let roster = [];
-  try { roster = await getClients(); } catch (e) { return clients; } // no date is better than a wrong one
-  const byEmail = new Map(), byName = new Map();
-  for (const r of roster) {
-    if (!r.lastPaymentDate) continue;
-    const e = affiliate.normEmail(r.email);
-    if (e && !byEmail.has(e)) byEmail.set(e, r.lastPaymentDate);
-    const n = affiliate.normName(r.name);
-    if (n && !byName.has(n)) byName.set(n, r.lastPaymentDate);
-  }
-  return clients.map(c => {
-    const e = affiliate.normEmail(c.email);
-    let paid = e ? byEmail.get(e) : null;
-    if (!paid) { const n = affiliate.normName(c.name); if (n) paid = byName.get(n); }
-    return { ...c, lastPaid: paid || null };
+
+  // The payment events are the real record: 5,133 of them carrying a name,
+  // an email, an amount and a date. They give a FIRST purchase, which is the
+  // honest clock for how long somebody has been waiting -- GoHighLevel only
+  // carries the last payment, so a client who bought in January and paid again
+  // in April looked four months newer than they were.
+  const events = getPaymentEvents();
+
+  // GHL's last_payment_date stays as the fallback for anyone with no matching
+  // event. It is flagged as a stand-in rather than passed off as a first
+  // purchase (see paidSource), so a caller can tell the two apart.
+  let byId = new Map();
+  try {
+    const roster = await getClients();
+    for (const r of roster) {
+      if (r.lastPaymentDate) byId.set(affiliate.normEmail(r.email) || affiliate.normName(r.name), r.lastPaymentDate);
+    }
+  } catch (e) { /* no roster is fine; the events carry most of it */ }
+
+  return purchases.attach(clients, events, {
+    fallback: c => byId.get(affiliate.normEmail(c.email) || affiliate.normName(c.name)) || null
   });
 }
 
