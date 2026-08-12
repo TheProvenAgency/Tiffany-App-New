@@ -73,12 +73,13 @@ test('an employee can change stage', async () => {
 
 test('a patch mixing allowed and forbidden fields is rejected wholesale', async () => {
   // Partial application would be worse than refusing: the caller would think
-  // the whole edit saved. `pkg` stands in for the forbidden half here -- `va`
-  // used to, but the employee preset now carries the assign capability, so it
-  // is no longer refused. (`notes` would not work: the route strips it before
-  // the capability check, so it never reaches the deny path at all.)
+  // the whole edit saved. `name` stands in for the forbidden half here. It has
+  // moved twice: `va` became editable when the assign capability arrived, and
+  // `pkg` became editable so a misread package could be corrected in the app.
+  // (`notes` would not work either: the route strips it before the capability
+  // check, so it never reaches the deny path at all.)
   const r = await req('/api/production/C1', {
-    method: 'PATCH', cookie: employeeCookie, body: { docs: { DL: true }, pkg: 'Something Else' }
+    method: 'PATCH', cookie: employeeCookie, body: { docs: { DL: true }, name: 'Someone Else' }
   });
   assert.equal(r.status, 403);
   assert.equal((await lead('C1')).docs.DL, false, 'nothing should have been applied');

@@ -1008,6 +1008,26 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
           <div id="upList" style="margin-top:10px"></div>
         </div>
       </div></div>
+      <!-- Admin operations. "Never had a first round" is the state that matters
+           most: they have paid and received nothing, and unlike a stalled
+           mid-package client there is no partial delivery to point at. It is
+           invisible everywhere else -- they sit in Onboarding or Ready looking
+           like ordinary work. -->
+      <div class="grid-stack-item" gs-id="ops" gs-x="6" gs-y="27" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
+        <div class="card">
+          <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-pulse-line"></i></span> Operations</h3>
+          <div class="cardsub">Where the book stands, and who has paid but never been started.</div>
+          <div class="dstat" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:10px">
+            <div class="tone-green"><div class="l">Completed</div><div class="v" id="opsDone">&mdash;</div></div>
+            <div><div class="l">In rounds</div><div class="v" id="opsRounds">&mdash;</div></div>
+            <div><div class="l">New (30d)</div><div class="v" id="opsNew">&mdash;</div></div>
+            <div class="tone-red"><div class="l">Never started</div><div class="v" id="opsNever">&mdash;</div></div>
+          </div>
+          <div id="opsOwners" style="margin-top:12px"></div>
+          <div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin:14px 0 6px">Paid, never started &mdash; longest first</div>
+          <div id="opsList"></div>
+        </div>
+      </div></div>
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
@@ -1720,6 +1740,48 @@ window.addEventListener('message', ev=>{
 // renderOnboarding: it reads the conversation feed rather than the money feed,
 // so a VA -- who answers these -- gets it too.
 // Clients who have used everything they bought.
+// Admin operations view.
+async function renderOps(){
+  const el=$('opsList'); if(!el)return;
+  try{
+    const r=await fetch('/api/ops?limit=10');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json(), sn=d.snapshot||{}, fr=d.firstRound||{}, t=fr.totals||{};
+    $('opsDone').textContent=(sn.completed||0).toLocaleString();
+    $('opsRounds').textContent=((sn.byStage||{})['In rounds']||0).toLocaleString();
+    $('opsNew').textContent=(sn.newClients||0).toLocaleString();
+    $('opsNever').textContent=(t.flagged||0).toLocaleString();
+
+    // Ownership, not throughput. Nothing in the data records who advanced a
+    // stage or filed a round, so this says who holds what and is labelled so.
+    const own=$('opsOwners');
+    if(own){
+      const rows=(sn.owners||[]).slice(0,5);
+      own.innerHTML=rows.length
+        ? '<div class="cardsub" style="margin-bottom:5px">Who holds the work &mdash; assigned clients, not activity</div>'
+          +rows.map(o=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12.5px">'
+            +'<span style="font-weight:700">'+escUser(o.owner)+'</span>'
+            +'<span class="cardsub">'+o.total+' held &middot; '+o.completed+' done &middot; '+o.notStarted+' not started</span></div>').join('')
+        : '<div class="cardsub">Nobody is assigned to any client yet, so there is no ownership to show.</div>';
+    }
+
+    if(!(fr.items||[]).length){ el.innerHTML='<div class="cardsub">Everyone who has paid has had a round filed.</div>'; return; }
+    el.innerHTML='<div style="max-height:190px;overflow:auto">'+fr.items.map(function(i){
+      const w=i.waitingDays==null?'<span class="cardsub">no date</span>'
+        :'<b style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+i.waitingDays+'d</b>';
+      return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)">'
+        +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'
+        +(i.flagged?'<span style="color:var(--red)">\u25cf </span>':'')+escUser(i.name)+'</div>'
+        +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+        +escUser(i.stage||'')+' &middot; '+escUser(i.pkg||'-')+'</div></div>'
+        +'<div style="text-align:right;white-space:nowrap">'+w+'</div></div>';
+    }).join('')+'</div>'
+    +'<div class="cardsub" style="margin-top:8px">'+(t.neverStarted||0).toLocaleString()+' have paid with no round filed; '
+    +(t.flagged||0).toLocaleString()+' past '+t.slaDays+' days'
+    +(t.undated?', and '+t.undated+' have no purchase date to measure from':'')+'.</div>';
+  }catch(e){ el.innerHTML='<div class="cardsub">Could not load the operations view.</div>'; }
+}
+
 async function renderUpsell(){
   const el=$('upList'); if(!el)return;
   try{
@@ -1811,6 +1873,7 @@ async function loadDashboard(){
   renderOnboarding();
   renderRepliesDue();
   renderUpsell();
+  renderOps();
   const qs=new URLSearchParams({granularity});if(from)qs.set('from',from);if(to)qs.set('to',to);
   const r=await fetch('/api/dashboard?'+qs);if(r.status===401){location.href='/login.html';return;}
   const d=await r.json();const k=d.kpis;

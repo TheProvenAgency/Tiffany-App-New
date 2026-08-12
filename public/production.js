@@ -586,9 +586,56 @@ function drawerBody(c){
   var brow=function(key,label){var b=c[key];return '<div class="brow"><b>'+label+'</b><input type="number" min="0" max="9" value="'+b.r+'" data-b="'+key+'"><select data-b="'+key+'" data-k="st"><option value="none"'+(b.st==='none'?' selected':'')+'>— not started</option><option value="ready"'+(b.st==='ready'?' selected':'')+'>Ready</option><option value="done"'+(b.st==='done'?' selected':'')+'>Round done</option><option value="login"'+(b.st==='login'?' selected':'')+'>⛔ Login issue</option></select></div>';};
   var docsHtml=DOCS.map(function(d){return '<label><input type="checkbox" data-doc="'+d+'"'+((c.docs&&c.docs[d])?' checked':'')+'> '+d+'</label>';}).join('');
   var notesHtml=(c.notes&&c.notes.length)?c.notes.map(function(n){return '<div class="note"><div class="m">'+esc(n.when)+' · '+esc(n.who)+'</div><div class="t">'+esc(n.text)+'</div></div>';}).join(''):'<div class="pv-days">No notes yet.</div>';
+  // Everything known about this client, gathered in one place. Most of it was
+  // already computed for the table and thrown away at the drawer boundary.
+  var money=function(n){return '$'+Math.round(n||0).toLocaleString();};
+  var when=function(d){ if(!d)return '—'; var t=new Date(d); return isNaN(t)?'—':t.toISOString().slice(0,10); };
+  var since=function(d){ if(!d)return null; var t=new Date(d); if(isNaN(t))return null;
+    return Math.floor((Date.now()-t)/86400000); };
+
+  var allowance = c.roundsIncluded==='unlimited' ? 'Unlimited'
+    : c.roundsIncluded==='outcome' ? 'Until repaired'
+    : c.roundsIncluded==='addon' ? 'Add-on work (no round count)'
+    : c.roundsIncluded==='refunded' ? 'Refunded'
+    : c.roundsIncluded==null ? 'Not readable from the package name'
+    : ((c.allowanceExact===false?'at least ':'')+c.roundsIncluded+' rounds');
+  var leftTxt = typeof c.roundsLeft==='number'
+    ? (c.roundsLeft===0?'<b style="color:var(--red)">none left</b>':'<b>'+c.roundsLeft+'</b> left')
+    : '—';
+
+  var paidDays=since(c.lastPaid||c.firstPaid);
+  var repeat=(c.firstPaid&&c.lastPaid&&c.firstPaid!==c.lastPaid);
+  var srcLabel={ 'commas:email':'matched by email', 'commas:name':'matched by name',
+                 'commas:initial':'matched by first name + last initial',
+                 'ghl:last-payment':'GoHighLevel last payment (not a first purchase)',
+                 'ambiguous':'name matched more than one buyer — not trusted' }[c.paidSource]||'no purchase record';
+
+  var factRow=function(k,v){ return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px">'
+    +'<span class="pv-days">'+k+'</span><span style="text-align:right">'+v+'</span></div>'; };
+
   return '<div class="sec">Status</div>'+
    '<div class="fld"><label>Stage</label><select id="dStage">'+opts(STAGES,c.stage)+'</select></div>'+
    '<div class="fld"><label>Assigned</label><select id="dVa">'+opts(VAS,c.va||'—')+'</select></div>'+
+   // Editable, because the package decides the round allowance and 49 clients
+   // carry one the parser cannot read. Without this the only fix was editing
+   // the sheet the records were seeded from.
+   '<div class="fld"><label>Package</label><input id="dPkg" value="'+esc(c.pkg||'')+'" placeholder="e.g. 3 Month Expedited"></div>'+
+   '<div class="pv-days" style="margin:-4px 0 10px;font-size:11.5px">Reads as: <b>'+esc(allowance)+'</b>'
+     +(typeof c.roundsLeft==='number'?(' · '+leftTxt):'')+'</div>'+
+
+   '<div class="sec">This client</div>'+
+   factRow('Rounds used', String(c.roundsUsed||0))+
+   factRow('Allowance', esc(allowance))+
+   factRow('Purchased', when(c.lastPaid||c.firstPaid)+(paidDays!=null?(' <span class="pv-days">('+paidDays+'d ago)</span>'):''))+
+   (repeat?factRow('First bought', when(c.firstPaid)+' <span class="pv-days">(returning client)</span>'):'')+
+   (c.paymentCount?factRow('Purchases on record', String(c.paymentCount)):'')+
+   factRow('Purchase source', '<span class="pv-days">'+esc(srcLabel)+'</span>')+
+   factRow('Days in stage', (c.days==null?'—':c.days+'d'))+
+   factRow('MyFreeScoreNow', c.mfsn==='affiliate'?'<span class="pv-mfsn mfsn-yes">Affiliate</span>'
+        :(c.mfsn==='needs'?'<span class="pv-mfsn mfsn-no">Needs enrolling</span>':'<span class="pv-days">unknown</span>'))+
+   (c.email?factRow('Email','<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>'):'')+
+   (c.phone?factRow('Phone','<a href="tel:'+esc(String(c.phone).replace(/[^0-9+]/g,''))+'">'+esc(c.phone)+'</a>'):'')+
+
    '<div class="sec">Dispute rounds by bureau</div>'+brow('tu','TransUnion')+brow('eq','Equifax')+brow('ex','Experian')+
    cfpbHTML(c)+
    '<div class="sec">Documents ('+docCount(c)+'/'+DOCS.length+')</div><div class="docs">'+docsHtml+'</div>'+
@@ -603,6 +650,27 @@ function bindDrawer(c){
   function commit(patch){save(c,patch);if(curView==='overview')renderOverview();else drawWork();document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();}
   document.getElementById('dStage').onchange=function(e){if(c.stage!==e.target.value){c.stage=e.target.value;c.days=0;}commit({stage:c.stage,days:c.days});document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
   document.getElementById('dVa').onchange=function(e){c.va=e.target.value;commit({va:c.va});};
+  // Saved on blur rather than per keystroke: the allowance is recomputed from
+  // it and a half-typed package would flash a wrong round count.
+  var pk=document.getElementById('dPkg');
+  if(pk)pk.onchange=function(e){
+    var v=e.target.value.trim();
+    if(v===(c.pkg||''))return;
+    c.pkg=v;
+    // Sent directly rather than through the debounce, and the response is used
+    // to refresh: the allowance is recomputed server-side from the new name and
+    // the drawer cannot work it out on its own.
+    patchLead(c,{pkg:v}).then(function(r){return r.json();}).then(function(d){
+      if(d&&d.client){
+        ['roundsIncluded','roundsLeft','roundsUsed','allowanceExact','finished','finishedBy']
+          .forEach(function(k){ c[k]=d.client[k]; });
+      }
+      document.getElementById('dBody').innerHTML=drawerBody(c); bindDrawer(c);
+      drawWork();
+    }).catch(function(){
+      document.getElementById('dBody').innerHTML=drawerBody(c); bindDrawer(c);
+    });
+  };
   var cfpbToggle=document.getElementById('dCfpbToggle');
   if(cfpbToggle)cfpbToggle.onclick=function(){cfpbRevealed=!cfpbRevealed;document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
   body.querySelectorAll('input[data-b]').forEach(function(el){el.onchange=function(){var k=el.getAttribute('data-b');c[k].r=parseInt(el.value||'0',10);var p={};p[k]={r:c[k].r};commit(p);};});

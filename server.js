@@ -11,7 +11,8 @@ const auth = require('./lib/auth');
 const disputes = require('./lib/disputes');
 const replies = require('./lib/replies');
 const purchases = require('./lib/purchases');
-const rounds = require('./lib/rounds'); // rounds bought vs used -- see that file's header // real per-client purchase history -- see that file's header // unanswered-conversation SLA -- see that file's header
+const rounds = require('./lib/rounds');
+const ops = require('./lib/ops'); // admin operations view -- see that file's header // rounds bought vs used -- see that file's header // real per-client purchase history -- see that file's header // unanswered-conversation SLA -- see that file's header
 const onboarding = require('./lib/onboarding'); // new-client SLA queue -- see that file's header
 const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
@@ -2195,6 +2196,21 @@ app.get('/api/upsell', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Admin operations view: the state of the book, plus the clients who have paid
+// and never had a first round filed.
+app.get('/api/ops', async (req, res) => {
+  try {
+    const list = rounds.attach(await withLastPaid(withMfsnTags(await readProd())));
+    res.json({
+      snapshot: ops.snapshot(list, { newWithinDays: Number(req.query.newDays) || undefined }),
+      firstRound: ops.firstRoundOverdue(list, {
+        slaDays: Number(req.query.sla) || undefined,
+        limit: Math.min(Number(req.query.limit) || 12, 200)
+      })
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/mfsn-gap', async (req, res) => {
   try {
     const clients = await readProd() || [];
@@ -2616,7 +2632,9 @@ app.patch('/api/production/:id', async (req, res) => {
   // then the same deep-merge into the JSON backup both PATCH routes share.
   await dealProd.patchProdRecord(req.params.id, { ...allowed }, who);
   const lead = await applyProdPatchToJson(req.params.id, allowed, who);
-  res.json({ ok: true, client: lead });
+  // Rounds attached on the way out: changing the package changes the round
+  // allowance, and the drawer has no way to recompute that itself.
+  res.json({ ok: true, client: lead ? rounds.attach([lead])[0] : lead });
 });
 
 // Only listen when run directly, so tests can mount the app on a free port.
