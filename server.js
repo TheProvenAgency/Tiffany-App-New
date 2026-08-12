@@ -12,7 +12,8 @@ const disputes = require('./lib/disputes');
 const replies = require('./lib/replies');
 const purchases = require('./lib/purchases');
 const rounds = require('./lib/rounds');
-const ops = require('./lib/ops'); // admin operations view -- see that file's header // rounds bought vs used -- see that file's header // real per-client purchase history -- see that file's header // unanswered-conversation SLA -- see that file's header
+const ops = require('./lib/ops');
+const audit = require('./lib/audit'); // who did what -- see that file's header // admin operations view -- see that file's header // rounds bought vs used -- see that file's header // real per-client purchase history -- see that file's header // unanswered-conversation SLA -- see that file's header
 const onboarding = require('./lib/onboarding'); // new-client SLA queue -- see that file's header
 const migrate = require('./lib/migrate'); // additive, idempotent schema catch-up at boot // dispute desk projection over Deal Production
 const ghl = require('./lib/ghl');
@@ -2211,6 +2212,14 @@ app.get('/api/ops', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/team-activity', (req, res) => {
+  try {
+    res.json(audit.throughput(store.getAuditLog(), {
+      days: Math.min(Number(req.query.days) || 30, 365)
+    }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/mfsn-gap', async (req, res) => {
   try {
     const clients = await readProd() || [];
@@ -2327,6 +2336,9 @@ app.patch('/api/disputes/:id', async (req, res) => {
     // by an end-to-end check, not a unit test: the route answered 200 with
     // the unmodified record).
     const lead = await applyProdPatchToJson(req.params.id, allowed, who);
+    try {
+      store.appendAudit(audit.entriesFor(allowed, existing, { who, clientId: req.params.id }));
+    } catch (e) { console.error('Audit write failed (the edit still saved):', e.message); }
     res.json(disputes.toDisputeRecord(lead || await dealProd.readOneProdRecord(req.params.id)));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2630,8 +2642,16 @@ app.patch('/api/production/:id', async (req, res) => {
   // Postgres first, per the "webhooks/APIs store to Supabase first, then
   // JSON" requirement -- a targeted update to just the affected tables --
   // then the same deep-merge into the JSON backup both PATCH routes share.
+  // Snapshot before the write, so the log can say what actually changed rather
+  // than just what was submitted.
+  const before = await dealProd.readOneProdRecord(req.params.id).catch(() => null);
+
   await dealProd.patchProdRecord(req.params.id, { ...allowed }, who);
   const lead = await applyProdPatchToJson(req.params.id, allowed, who);
+
+  try {
+    store.appendAudit(audit.entriesFor(allowed, before, { who, clientId: req.params.id }));
+  } catch (e) { console.error('Audit write failed (the edit still saved):', e.message); }
   // Rounds attached on the way out: changing the package changes the round
   // allowance, and the drawer has no way to recompute that itself.
   res.json({ ok: true, client: lead ? rounds.attach([lead])[0] : lead });
@@ -2666,7 +2686,8 @@ async function bootstrap() {
     store.hydrateTaskNotesFromPostgres(),
     store.hydrateNotesFromPostgres(),
     store.hydrateWorkedFromPostgres(),
-    store.hydrateAffiliateOverridesFromPostgres()
+    store.hydrateAffiliateOverridesFromPostgres(),
+    store.hydrateAuditFromPostgres()
   ]).catch(e => console.error('Postgres hydration failed:', e.message));
 
   // 3. Accounts, then the three stores that key off a real users.id. Ordered

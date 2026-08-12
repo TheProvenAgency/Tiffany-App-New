@@ -1,7 +1,28 @@
 /* MSFS Deal Production — client work desk (Overview charts + Queue + Pipeline), server-shared, all real clients. */
 (function(){
 var DOCS=['SSC','DL','POA','FTC','Data breach','Affidavit','Perm. purpose','Experian letter'];
-var VAS=['Antoinette','Bri','Jasmine','Tori','—'];
+// Who a client can be assigned to. This was four names hardcoded from the old
+// spreadsheet, which meant assignment pointed at people who hold no account --
+// so the disputer "Mine" tab (which matches on the signed-in name) could never
+// match anything, and the operations view had nobody to report on.
+//
+// Real accounts now, with any legacy name already sitting on a record kept in
+// the list so existing assignments are not silently orphaned.
+var VAS=['—'];
+function loadAssignees(){
+  return fetch('/api/users').then(function(r){return r.ok?r.json():[];}).then(function(us){
+    var people=(us||[]).filter(function(u){
+      if(u.disabled)return false;
+      var caps=u.capabilities||null;
+      // No stored override means the account follows its role preset.
+      if(!caps)return u.role==='va'||u.role==='employee'||u.role==='disputer'||u.role==='admin';
+      return caps.indexOf('production')>=0||caps.indexOf('disputes')>=0;
+    }).map(function(u){return u.name||u.username;});
+    var legacy=CLIENTS.map(function(c){return c.va;})
+      .filter(function(v){return v&&v!=='—'&&people.indexOf(v)<0;});
+    VAS=people.concat([...new Set(legacy)]).concat(['—']);
+  }).catch(function(){});
+}
 var STAGES=['Onboarding','Ready','In rounds','Completed'];
 var C={blue:'#3b82f6',green:'#45B369',gold:'#FF9F29',red:'#EF4A00',gray:'#D1D5DB',slate:'#6B7280'};
 var CLIENTS=[], loaded=false, saveT=null, charts={};
@@ -282,7 +303,10 @@ function save(c,patch){
 }
 function loadThen(cb){
   fetch('/api/production').then(function(r){return r.json();}).then(function(d){
-    CLIENTS=(d&&Array.isArray(d.clients))?d.clients:[]; loaded=true; cb();
+    CLIENTS=(d&&Array.isArray(d.clients))?d.clients:[]; loaded=true;
+    // After the clients, because the assignee list keeps any legacy name
+    // already sitting on a record so existing assignments are not orphaned.
+    loadAssignees().then(cb);
   }).catch(function(){ CLIENTS=[]; loaded=true; cb(); });
 }
 
