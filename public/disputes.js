@@ -109,14 +109,14 @@ var sectionHTML=''+
  '<div class="dq-kpi blocked"><div class="l">Blocked on login</div><div class="v" id="dqKBlocked">—</div><div class="s">client must reconnect</div></div>'+
  '<div class="dq-kpi"><div class="l">Mine</div><div class="v" id="dqKMine">—</div><div class="s">assigned to you</div></div>'+
 '</div>'+
-'<div class="dq-tabs">'+
+'<div class="dq-tabs" style="margin-bottom:12px">'+
  '<button data-f="workable" class="on">Can file now</button>'+
  '<button data-f="docs">Waiting on docs</button>'+
  '<button data-f="blocked">Blocked</button>'+
  '<button data-f="mine">Mine</button>'+
  '<button data-f="all">All</button>'+
 '</div>'+
-'<input id="dqSearch" placeholder="Search a client\u2026" style="width:100%;max-width:320px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:var(--card);color:var(--ink)">'+
+'<div style="margin:0 0 14px"><input id="dqSearch" type="search" name="dq-client-search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search a client\u2026" style="width:100%;max-width:320px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:var(--card);color:var(--ink)"></div>'+
 '<div class="dq-wrap"><div id="dqBody"><div class="empty">Loading…</div></div></div>';
 
 var drawerHTML=''+
@@ -153,7 +153,11 @@ function visible(){
 // Missing paperwork is the usual reason a round that reads "ready" can't
 // actually go out. null means nothing is recorded for this client, which is
 // not the same as nothing missing, so it stays blank rather than showing 0.
-function docCell(n){
+function docCell(n,tracked){
+  // Nobody has ever ticked a document box in this system, so "8 missing" on
+  // every row is an empty field being rendered as a blocker. Say it is not
+  // tracked rather than implying somebody failed to collect anything.
+  if(tracked===false)return '<span style="opacity:.35" title="Document checklist is not being used yet">not tracked</span>';
   if(n===null||n===undefined)return '<span style="opacity:.35">—</span>';
   if(n===0)return '<span class="chip done">all in</span>';
   return '<span class="chip login">'+n+' missing</span>';
@@ -167,6 +171,11 @@ function render(){
   var host=document.getElementById('dqBody');if(!host)return;
   var workable=state.queue.filter(function(r){return r.workableNow;}).length;
   var docsWait=state.queue.filter(function(r){return r.status==='ready'&&!r.workableNow;}).length;
+  var tracked=state.queue.some(function(r){return r.docsTracked;});
+  var docsTab=document.querySelector('.dq-tabs button[data-f="docs"]');
+  if(docsTab)docsTab.style.display=tracked?'':'none';
+  var docsKpi=document.getElementById('dqKDocs');
+  if(docsKpi&&docsKpi.closest('.dq-kpi'))docsKpi.closest('.dq-kpi').style.display=tracked?'':'none';
   var blocked=state.queue.filter(function(r){return r.status==='blocked';}).length;
   var mine=state.me?state.queue.filter(function(r){return r.assignedTo===state.me;}).length:0;
   var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
@@ -200,7 +209,7 @@ function render(){
       '<td>'+chip(stAt('tu'))+'</td>'+
       '<td>'+chip(stAt('eq'))+'</td>'+
       '<td>'+chip(stAt('ex'))+'</td>'+
-      '<td>'+docCell(r.docsMissing)+'</td>'+
+      '<td>'+docCell(r.docsMissing,r.docsTracked)+'</td>'+
       '<td>'+(r.assignedTo?esc(r.assignedTo):'<span style="opacity:.45">—</span>')+'</td>'+
     '</tr>';
   });

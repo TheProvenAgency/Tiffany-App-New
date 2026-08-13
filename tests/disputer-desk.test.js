@@ -33,11 +33,17 @@ test('blocked on a login is never workable, whatever the docs say', () => {
   assert.equal(r.workableNow, false);
 });
 
-test('a client with no document record is not assumed ready', () => {
+test('with tracking in use, a client with no document record is not assumed ready', () => {
   // countMissingDocs returns null when nothing is recorded, which is not zero.
-  const [r] = disputes.buildQueue([rec({ docs: undefined })]);
-  assert.equal(r.docsMissing, null);
-  assert.equal(r.workableNow, false);
+  // The gate only bites once somebody is actually using the checklist -- hence
+  // the second client here, who is.
+  const q = disputes.buildQueue([
+    rec({ id: 'unknown', docs: undefined }),
+    rec({ id: 'tracked', docs: { SSC: true } })
+  ]);
+  const unknown = q.find(r => r.id === 'unknown');
+  assert.equal(unknown.docsMissing, null);
+  assert.equal(unknown.workableNow, false, 'an unknown checklist is not a complete one');
 });
 
 test('workable files sort above everything else', () => {
@@ -72,4 +78,33 @@ test('the dead days-in-stage column is gone from the desk', () => {
   const ui = fs.readFileSync(path.join(__dirname, '..', 'public', 'disputes.js'), 'utf8');
   assert.ok(!/<th>Waiting<\/th>/.test(ui));
   assert.ok(!/dqKOld/.test(ui), 'the longest-wait KPI had no value to show');
+});
+
+test('an unused document checklist is not treated as a blocker', () => {
+  // On the live book all 3,891 clients have all 8 boxes false and not one
+  // document is ticked anywhere. The checklist exists and has never been used.
+  // Gating on it made "can file now" read 0 of 1,231 -- technically true, and
+  // a desk telling a disputer there is nothing to do all day.
+  const unused = [rec({ docs: { SSC: false, DL: false } })];
+  assert.equal(disputes.docsTrackingInUse(unused), false);
+  const [r] = disputes.buildQueue(unused);
+  assert.equal(r.workableNow, true, 'docs should not gate what nobody is tracking');
+  assert.equal(r.docsTracked, false);
+});
+
+test('once anyone uses it, the gate applies to everyone', () => {
+  const used = [
+    rec({ id: 'empty', docs: { SSC: false, DL: false } }),
+    rec({ id: 'full', docs: { SSC: true, DL: true } })
+  ];
+  assert.equal(disputes.docsTrackingInUse(used), true);
+  const q = disputes.buildQueue(used);
+  assert.equal(q.find(r => r.id === 'full').workableNow, true);
+  assert.equal(q.find(r => r.id === 'empty').workableNow, false);
+});
+
+test('the desk says "not tracked" rather than inventing a shortfall', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'public', 'disputes.js'), 'utf8');
+  assert.ok(/not tracked/.test(ui));
+  assert.ok(/docCell\(r\.docsMissing,r\.docsTracked\)/.test(ui));
 });
