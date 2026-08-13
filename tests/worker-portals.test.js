@@ -49,3 +49,14 @@ test('a VA is not pointed at a view they cannot open', () => {
   assert.ok(!/more — see Pipeline/.test(team));
   assert.ok(/more in Deal Production/.test(team));
 });
+
+test('Deal Production unlocks itself when entered by its own nav button', () => {
+  // The New Clients shortcut sets lockedFilter and nothing ever cleared it, so
+  // a VA who visited New Clients once got the stripped-down locked view -- no
+  // tabs, no chips, only new clients -- on Deal Production for the rest of the
+  // session, and reasonably concluded their page was missing what admin's had.
+  const prod = read('production.js');
+  const enter = prod.split("if(id==='production'){")[1].split('renderProduction();')[0];
+  assert.ok(/lockedFilter=false/.test(enter),
+    'entering Deal Production must clear the New Clients lock');
+});
