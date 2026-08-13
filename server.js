@@ -550,6 +550,17 @@ function saveUsers(users) {
   return users;
 }
 
+// The awaited variant, for writes where the caller needs to KNOW the account
+// is durable -- creating one, above all. Same JSON write; the difference is
+// the mirror result comes back instead of disappearing into a log.
+async function saveUsersDurable(users) {
+  store.setConfig({ users });
+  let mirrored = false;
+  try { mirrored = await store.mirrorUsers(users); }
+  catch (e) { console.error('User mirror failed:', e.message); }
+  return mirrored;
+}
+
 // Roles are presets of capabilities (lib/auth.js). A user may also carry an
 // explicit `capabilities` array that overrides the preset entirely.
 const ROLE_NAMES = Object.keys(auth.ROLE_CAPS);
@@ -578,7 +589,7 @@ app.get('/api/users', (req, res) => {
 // mustSetPassword:true plus a returned one-time setupLink instead, so the
 // admin never has to invent (and relay) a temporary password. Still accepts
 // an explicit password too, for anyone who'd rather just set one directly.
-app.post('/api/users', (req, res) => {
+app.post('/api/users', async (req, res) => {
   const { username, name, role, password, capabilities } = req.body || {};
   if (!username) return res.status(400).json({ error: 'username required' });
   if (!ROLE_NAMES.includes(role)) {
@@ -592,8 +603,13 @@ app.post('/api/users', (req, res) => {
   // Only persist an override when one was actually asked for -- otherwise the
   // account follows its role preset and keeps following it as presets evolve.
   if (caps) user.capabilities = caps;
-  saveUsers(list.concat([user]));
-  const resp = { ok: true, id: user.id, username, role };
+  const mirrored = await saveUsersDurable(list.concat([user]));
+  const resp = { ok: true, id: user.id, username, role, durable: mirrored };
+  if (!mirrored) {
+    // Say it to the person creating the account, not to a server log: this
+    // login works right now and will NOT survive the next restart.
+    resp.warning = 'Saved locally but not yet backed up to the database — this account may not survive a restart. Try again in a minute.';
+  }
   if (user.mustSetPassword) resp.setupLink = setupLinkFor(user.id);
   res.json(resp);
 });

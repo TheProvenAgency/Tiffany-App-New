@@ -52,3 +52,21 @@ test('a restored record still authenticates', () => {
   assert.ok(ok, 'the credential must survive the mirror round trip');
   assert.ok(!auth.authenticate([restored], 'trip', 'wrong'), 'and still reject a wrong password');
 });
+
+test('creating an account reports whether it is actually durable', async () => {
+  // The mirror was fire-and-forget, so a failed write meant the login worked
+  // NOW and evaporated on the next restart, with the only evidence in a
+  // server log nobody reads. The creator gets told, in the response.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const route = src.split("app.post('/api/users'")[1].split('\n});')[0];
+  assert.ok(/await saveUsersDurable/.test(route), 'creation must await the mirror');
+  assert.ok(/durable: mirrored/.test(route), 'and report the result');
+  assert.ok(/may not survive a restart/.test(route), 'in words, when it failed');
+});
+
+test('mirrorUsers reports success honestly', async () => {
+  // Without Postgres configured there is nothing durable about the write, and
+  // saying otherwise would just move the lie.
+  const ok = await store.mirrorUsers([{ id: 'x', username: 'y' }]);
+  assert.equal(ok, false, 'no database means not mirrored, which is false, not undefined');
+});
