@@ -1029,7 +1029,7 @@ app.get('/api/dashboard', async (req, res) => {
     // call store.clearCache(), which drops these keys too) while making the
     // repeat asks free.
     const cacheKey = `dash:${granularity}:${from || ''}:${to || ''}`;
-    const cachedBody = await store.cached(cacheKey, 30 * 1000, async () => {
+    const cachedBody = await store.cachedSWR(cacheKey, 30 * 1000, async () => {
       return await buildDashboardPayload({ from, to, granularity });
     });
     return res.json(cachedBody);
@@ -1392,7 +1392,7 @@ app.get('/api/clients/:id', async (req, res) => {
     // drawer open -- measured at 5.5s live. The roster itself is already
     // cached; this caches the affiliate pass over it on the same short TTL, so
     // opening several clients in a row pays for it once.
-    const clients = await store.cached('clients:tagged', 60 * 1000,
+    const clients = await store.cachedSWR('clients:tagged', 60 * 1000,
       async () => withAffiliateTags(await getClients()));
     const c = clients.find(x => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: 'not found' });
@@ -2303,7 +2303,7 @@ function withMfsnTags(clients) {
 // also collapses concurrent callers onto one in-flight build, so the four
 // requests now share a single computation.
 function composedRoster() {
-  return store.cached('roster:composed', 60 * 1000, async () =>
+  return store.cachedSWR('roster:composed', 60 * 1000, async () =>
     rounds.attach(await withLastPaid(withMfsnTags(await readProd()))));
 }
 
@@ -2775,7 +2775,16 @@ async function bootstrap() {
     for (const [token, s] of Object.entries(restored || {})) sessions.restore(token, s);
   } catch (e) { console.error('Session restore failed:', e.message); }
 
-  // 5. Top the event log up with the real Commas sale history (idempotent by
+  // 5. Warm the expensive caches now and keep them warm. Between this and
+  //    SWR above, a running instance answers every roster/dashboard request
+  //    from memory -- the only cold path left is the platform's own container
+  //    spin-up, which no code here can remove. 50s beats the 60s TTL so the
+  //    background refresh, not a visitor, is always the one paying.
+  const warm = () => { composedRoster().catch(() => {}); getClients().catch(() => {}); };
+  setTimeout(warm, 3000); // after boot settles, not during it
+  setInterval(warm, 50 * 1000).unref?.();
+
+  // 6. Top the event log up with the real Commas sale history (idempotent by
   //    payment id -- see store.seedCommasPayments).
   try { store.seedCommasPayments(); } catch (e) { console.error('Commas seed failed:', e.message); }
 }

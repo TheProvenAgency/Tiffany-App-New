@@ -13,8 +13,8 @@ const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
 
 test('the four roster endpoints share one cached composition', () => {
   assert.ok(/function composedRoster\(\)/.test(src));
-  assert.ok(/store\.cached\('roster:composed'/.test(src),
-    'cached() also collapses concurrent callers onto one in-flight build');
+  assert.ok(/store\.cachedSWR\('roster:composed'/.test(src),
+    'SWR collapses concurrent callers AND never makes anyone wait on a rebuild');
   for (const route of ["app.get('/api/production'", "app.get('/api/ops'",
                        "app.get('/api/onboarding'", "app.get('/api/upsell'"]) {
     const body = src.split(route)[1].split('\n});')[0];
@@ -61,7 +61,7 @@ test('the dashboard payload is cached per range, and webhooks drop it', () => {
   // ~2s of bucketing per call, and the same range is asked for repeatedly --
   // a reload, the KPI-tile handshake, a preset clicked back and forth.
   const route = src2().split("app.get('/api/dashboard'")[1].split('\n});')[0];
-  assert.ok(route.includes('store.cached(cacheKey') && route.includes('`dash:${granularity}'),
+  assert.ok(route.includes('store.cachedSWR(cacheKey') && route.includes('`dash:${granularity}'),
     'keyed by range, or one range would serve another');
   // Webhook writes call store.clearCache(), which clears every key including
   // these -- that is the freshness guarantee.

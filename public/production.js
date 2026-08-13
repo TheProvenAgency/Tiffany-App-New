@@ -189,7 +189,16 @@ var FILTERS=[
 // signed up, nothing worked yet, or already cleared for their first round.
 // Not one of the regular chips (renderChips filters it out below) except
 // for an employee/preview session, where it's the one this view opens on.
-{id:'newclients',label:'New clients',dot:C.blue,f:function(c){return c.stage==='Onboarding'||(!anyLogin(c)&&(c.stage==='Ready'||!!anyReady(c)));}}
+// New clients means RECENT clients -- bought in the last 30 days. The old
+// filter was "anyone in Onboarding or ready with no login issue", which is
+// the same backlog Deal Production already shows, 485-day-old entries
+// included; a VA opening "New Clients" and seeing the identical list twice
+// reasonably asked what the button was for.
+{id:'newclients',label:'New clients',dot:C.blue,f:function(c){
+  var d=c.lastPaid||c.firstPaid; if(!d)return false;
+  var t=new Date(d).getTime(); if(!isFinite(t))return false;
+  return (Date.now()-t) <= 30*86400000;
+}}
 ];
 /* c.mfsn is computed server-side (see /api/production in server.js) by
    matching name against the synced MyFreeScoreNow roster -- 'affiliate' (paying
@@ -442,7 +451,7 @@ function renderChips(){
   // Locked mode (the Employee "New Clients" nav item, see pvGoNewClients) --
   // no chip picking, just a static label naming the fixed filter.
   if(lockedFilter){
-    chips.innerHTML='<div class="pv-sub" style="margin:0 0 4px">Just onboarded or ready to dispute</div>';
+    chips.innerHTML='<div class="pv-sub" style="margin:0 0 4px">Bought in the last 30 days, newest first</div>';
     return;
   }
   // 'newclients' backs that locked view and isn't a chip anyone picks by
@@ -531,6 +540,7 @@ window.pvSetPV=function(v){
 // renderProduction above) so it reads as one fixed worklist.
 window.pvGoNewClients=function(){
   lockedFilter=true; curFilter='newclients'; curPage=1;
+  curSort='paid'; sortDir=-1; // newest arrival on top -- that is the point of the view
   showView('production'); pvSetPV('queue');
   // showView('production') always highlights pvNavBtn ("Deal Production")
   // as the active nav item -- point the highlight at New Clients instead
