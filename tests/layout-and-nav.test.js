@@ -73,3 +73,34 @@ test('the account menu exists to hold what left the sidebar', () => {
       item + ' must still be reachable');
   }
 });
+
+test('the two work cards own the top row, above the KPI tiles', () => {
+  const page = read('index.html');
+  const y = id => Number(page.match(new RegExp('gs-id="' + id + '" gs-x="\\d+" gs-y="(\\d+)"'))[1]);
+  assert.equal(y('onboarding'), 0);
+  assert.equal(y('ops'), 0);
+  for (const below of ['kpi-total-income', 'kpi-enrolled', 'clientbase']) {
+    assert.ok(y(below) > 0, below + ' is context, not the job — it sits under the queues');
+  }
+});
+
+test('work-card rows open the client they name', () => {
+  // A list of client names that cannot be clicked is a report, not a tool.
+  const page = read('index.html');
+  assert.ok(/wl-row" data-cid=/.test(page.match(/async function renderOnboarding[\s\S]*?\n\}/)[0]),
+    'onboarding rows must carry the client id');
+  assert.ok(/wl-row" data-cid=/.test(page.match(/async function renderOps[\s\S]*?\n\}/)[0]),
+    'ops rows must carry the client id');
+  assert.ok(/__wlClickWired/.test(page), 'one delegated handler, bound once');
+  assert.ok(/window\.pvOpenClient\)window\.pvOpenClient\(id\)/.test(page),
+    'checked at click time, since production.js may load later');
+});
+
+test('the simplified cards lead with the one number that matters', () => {
+  const page = read('index.html');
+  const onb = page.split('gs-id="onboarding"')[1].split('</div></div>')[0];
+  assert.ok(/id="onbFlagged"[^>]*font-size:26px/.test(onb),
+    'overdue count is the headline, not one of three equal tiles');
+  const ops = page.split('gs-id="ops"')[1].split('</div></div>')[0];
+  assert.ok(/id="opsNever"[^>]*font-size:26px/.test(ops));
+});

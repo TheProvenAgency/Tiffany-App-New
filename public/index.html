@@ -957,19 +957,19 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            admina-dashboard.html document, reused 4x via ?card=; each load
            only shows/activates its one tile. -->
 
-      <div class="grid-stack-item" gs-id="kpi-total-income" gs-x="0" gs-y="0" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="kpi-total-income" gs-x="0" gs-y="10" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
         <iframe src="/admina-dashboard.html?card=total-income" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="Total income"></iframe>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="kpi-enrolled" gs-x="3" gs-y="0" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="kpi-enrolled" gs-x="3" gs-y="10" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
         <iframe src="/admina-dashboard.html?card=enrolled" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="Enrolled members"></iframe>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="kpi-actives" gs-x="0" gs-y="4" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="kpi-actives" gs-x="0" gs-y="14" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
         <iframe src="/admina-dashboard.html?card=actives" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="New portal actives"></iframe>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="kpi-upgraded" gs-x="3" gs-y="4" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="kpi-upgraded" gs-x="3" gs-y="14" gs-w="3" gs-h="4"><div class="grid-stack-item-content">
         <iframe src="/admina-dashboard.html?card=upgraded" style="width:100%;height:100%;border:0;border-radius:8px;display:block" title="Upgraded"></iframe>
       </div></div>
 
@@ -991,16 +991,14 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            PAID, not days-in-stage: on the live roster days-in-stage is null or
            0-5 for every onboarding client, so flagging on it would surface
            nobody while a real backlog sat behind it. -->
-      <div class="grid-stack-item" gs-id="onboarding" gs-x="0" gs-y="8" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="onboarding" gs-x="0" gs-y="0" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-user-follow-line"></i></span> Waiting to onboard</h3>
-          <div class="cardsub">Overdue past <span id="onbSla">5</span> days</div>
-          <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
-            <div><div class="l">Waiting</div><div class="v" id="onbTotal">—</div></div>
-            <div class="tone-red"><div class="l">Over <span id="onbSla2">5</span> days</div><div class="v" id="onbFlagged">—</div></div>
-            <div class="tone-gold"><div class="l">Longest wait</div><div class="v" id="onbLongest">—</div></div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-user-follow-line"></i></span> Waiting to onboard</h3>
+            <div><span id="onbFlagged" style="font-size:26px;font-weight:800;color:var(--red)">&mdash;</span>
+            <span class="cardsub"> of <span id="onbTotal">&mdash;</span> overdue</span></div>
           </div>
-          <div id="onbList" style="margin-top:10px"></div>
+          <div id="onbList" style="margin-top:8px"></div>
         </div>
       </div></div>
       <!-- Clients still waiting on a reply. The only operational SLA in the app
@@ -1040,20 +1038,21 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            mid-package client there is no partial delivery to point at. It is
            invisible everywhere else -- they sit in Onboarding or Ready looking
            like ordinary work. -->
-      <div class="grid-stack-item" gs-id="ops" gs-x="6" gs-y="8" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="ops" gs-x="6" gs-y="0" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-pulse-line"></i></span> Operations</h3>
-          <div class="cardsub">Book status</div>
-          <div class="dstat" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:10px">
-            <div class="tone-green"><div class="l">Completed</div><div class="v" id="opsDone">&mdash;</div></div>
-            <div><div class="l">In rounds</div><div class="v" id="opsRounds">&mdash;</div></div>
-            <div><div class="l">New (30d)</div><div class="v" id="opsNew">&mdash;</div></div>
-            <div class="tone-red"><div class="l">Never started</div><div class="v" id="opsNever">&mdash;</div></div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-pulse-line"></i></span> Never started</h3>
+            <div><span id="opsNever" style="font-size:26px;font-weight:800;color:var(--red)">&mdash;</span>
+            <span class="cardsub"> paid, no round filed</span></div>
           </div>
-          <div id="opsActivity" style="margin-top:12px"></div>
-          <div id="opsOwners" style="margin-top:12px"></div>
-          <div class="sec" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin:14px 0 6px">Paid, never started &mdash; longest first</div>
-          <div id="opsList"></div>
+          <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin:8px 0 2px">
+            <div><div class="l">Completed</div><div class="v" id="opsDone" style="font-size:18px">&mdash;</div></div>
+            <div><div class="l">In rounds</div><div class="v" id="opsRounds" style="font-size:18px">&mdash;</div></div>
+            <div><div class="l">New 30d</div><div class="v" id="opsNew" style="font-size:18px">&mdash;</div></div>
+          </div>
+          <div id="opsActivity"></div>
+          <div id="opsOwners" style="display:none"></div>
+          <div id="opsList" style="margin-top:6px"></div>
         </div>
       </div></div>
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="34" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
@@ -1102,7 +1101,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       </div></div>
 
 
-      <div class="grid-stack-item" gs-id="clientbase" gs-x="6" gs-y="0" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="clientbase" gs-x="6" gs-y="10" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#7F27FF"><i class="ri-team-line"></i></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
           <div class="cardsub">By status</div>
@@ -1217,7 +1216,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            underlying metric is retention-rate, not new-customer count.
            See drawReturning() in this file's own script block for how
            it's filled in. -->
-      <div class="grid-stack-item" gs-id="dash-newcust" gs-x="0" gs-y="64" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="dash-newcust" gs-x="9" gs-y="10" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead noline">
             <div class="adm-cicon" style="--ic:#EF4444"><i class="ri-group-line"></i></div>
@@ -1772,7 +1771,7 @@ window.addEventListener('message', ev=>{
 async function renderOps(){
   const el=$('opsList'); if(!el)return;
   try{
-    const r=await fetch('/api/ops?limit=10');
+    const r=await fetch('/api/ops?limit=30');
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json(), sn=d.snapshot||{}, fr=d.firstRound||{}, t=fr.totals||{};
     $('opsDone').textContent=(sn.completed||0).toLocaleString();
@@ -1780,66 +1779,33 @@ async function renderOps(){
     $('opsNew').textContent=(sn.newClients||0).toLocaleString();
     $('opsNever').textContent=(t.flagged||0).toLocaleString();
 
-    // Real activity, from the audit log. Ownership is shown separately below --
-    // holding fifty clients and touching none of them is not the same thing.
+    // Per-person activity only once there is any -- an empty table of zeroes
+    // is noise on the one card that has to stay readable.
     try{
       const ar=await fetch('/api/team-activity?days=30');
       if(ar.ok){
-        const a=await ar.json(), at=a.totals||{};
-        const act=$('opsActivity');
-        if(act){
-          if(!(a.people||[]).length){
-            // An empty log and a quiet month look identical unless you say
-            // when logging started.
-            act.innerHTML='<div class="cardsub">No activity logged'+(at.oldestEntry?' since '+String(at.oldestEntry).slice(0,10):' yet')+'</div>';
-          } else {
-            // Per person, in the columns that describe the job: rounds filed,
-            // messages sent, stages moved, clients touched.
-            act.innerHTML='<div class="cardsub" style="margin-bottom:6px">Last '+at.days+' days</div>'
-              +'<div style="display:grid;grid-template-columns:1fr repeat(4,44px);gap:4px;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.03em">'
-              +'<div></div><div style="text-align:right">RNDS</div><div style="text-align:right">MSGS</div>'
-              +'<div style="text-align:right">MOVED</div><div style="text-align:right">DONE</div></div>'
-              +a.people.slice(0,6).map(function(p){
-                return '<div style="display:grid;grid-template-columns:1fr repeat(4,44px);gap:4px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px">'
-                  +'<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(p.who)+'</div>'
-                  +'<div style="text-align:right">'+p.roundsFiled+'</div>'
-                  +'<div style="text-align:right">'+p.messages+'</div>'
-                  +'<div style="text-align:right">'+p.stageMoves+'</div>'
-                  +'<div style="text-align:right">'+p.completed+'</div></div>';
-              }).join('');
-          }
-        }
+        const a=await ar.json(); const act=$('opsActivity');
+        if(act) act.innerHTML=(a.people||[]).length
+          ? a.people.slice(0,3).map(function(p){
+              return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:12px">'
+                +'<b>'+escUser(p.who)+'</b><span class="cardsub">'+p.roundsFiled+' rounds \u00b7 '+p.messages+' msgs \u00b7 '+p.completed+' done</span></div>';
+            }).join('') : '';
       }
     }catch(e){}
 
-    // Ownership, not throughput. Assignment says who holds what; the activity
-    // block above says who actually did something.
-    const own=$('opsOwners');
-    if(own){
-      const rows=(sn.owners||[]).slice(0,5);
-      own.innerHTML=rows.length
-        ? '<div class="cardsub" style="margin-bottom:5px">Assigned to</div>'
-          +rows.map(o=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12.5px">'
-            +'<span style="font-weight:700">'+escUser(o.owner)+'</span>'
-            +'<span class="cardsub">'+o.total+' held &middot; '+o.completed+' done &middot; '+o.notStarted+' not started</span></div>').join('')
-        : '<div class="cardsub">Nobody assigned yet</div>';
-    }
-
     if(!(fr.items||[]).length){ el.innerHTML='<div class="cardsub">All started</div>'; return; }
-    const seenO={}, uniqO=[];
+    const seen={}, uniq=[];
     (fr.items||[]).forEach(function(i){ const k=(i.name||'').toLowerCase();
-      if(seenO[k])return; seenO[k]=1; uniqO.push(i); });
-    const SHOWO=4;
-    el.innerHTML='<div class="wl">'+uniqO.slice(0,SHOWO).map(function(i){
-      const w=i.waitingDays==null?'—':(i.waitingDays+'d');
-      return '<div class="wl-row"><div style="min-width:0">'
-        +'<div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div>'
-        +'<div class="wl-sub">'+escUser(i.stage||'')+'</div></div>'
+      if(seen[k])return; seen[k]=1; uniq.push(i); });
+    const SHOW=4;
+    el.innerHTML='<div class="wl">'+uniq.slice(0,SHOW).map(function(i){
+      const w=i.waitingDays==null?'\u2014':(i.waitingDays+'d');
+      return '<div class="wl-row" data-cid="'+escUser(i.id)+'" style="cursor:pointer">'
+        +'<div style="min-width:0"><div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div></div>'
         +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
-    +'<div class="cardsub" style="margin-top:8px">'+(t.neverStarted||0).toLocaleString()+' never started &middot; '
-    +(t.flagged||0).toLocaleString()+' past '+t.slaDays+'d</div>';
-  }catch(e){ el.innerHTML='<div class="cardsub">Could not load the operations view.</div>'; }
+    +(t.neverStarted>SHOW?'<div class="wl-more">+'+(t.neverStarted-SHOW).toLocaleString()+' more</div>':'');
+  }catch(e){ el.innerHTML='<div class="cardsub">Could not load</div>'; }
 }
 
 async function renderUpsell(){
@@ -1903,40 +1869,40 @@ async function renderRepliesDue(){
 async function renderOnboarding(){
   const el=$('onbList'); if(!el)return;
   try{
-    const r=await fetch('/api/onboarding?limit=12');
+    const r=await fetch('/api/onboarding?limit=30');
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json(), t=d.totals||{};
-    ['onbSla','onbSla2'].forEach(id=>{const e=$(id); if(e)e.textContent=t.slaDays;});
     $('onbTotal').textContent=(t.onboarding||0).toLocaleString();
     $('onbFlagged').textContent=(t.flagged||0).toLocaleString();
-    $('onbLongest').textContent=t.longestWait==null?'—':(t.longestWait+'d');
     if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Nobody waiting</div>'; return; }
-    // Deal Production has duplicate rows for some clients (Max Kyllonen twice,
-    // Hezron Henry twice). Showing the same name repeatedly makes the card look
-    // wrong even though the underlying count is right, so collapse by name here
-    // and fix the duplication at source separately.
     const seen={}, uniq=[];
     (d.items||[]).forEach(function(i){ const k=(i.name||'').toLowerCase();
       if(seen[k])return; seen[k]=1; uniq.push(i); });
-    const SHOW=4, rows=uniq.slice(0,SHOW);
-    el.innerHTML='<div class="wl">'+rows.map(function(i){
-      const w=i.waitingDays==null?'—':(i.waitingDays+'d');
-      const bits=[];
-      if(i.docsTotal)bits.push(i.docsOnFile+'/'+i.docsTotal+' docs');
-      if(i.mfsn==='needs')bits.push('needs MFSN');
-      return '<div class="wl-row"><div style="min-width:0">'
-        +'<div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div>'
-        +'<div class="wl-sub">'+escUser(bits.join(' \u00b7 '))+'</div></div>'
+    const SHOW=5;
+    el.innerHTML='<div class="wl">'+uniq.slice(0,SHOW).map(function(i){
+      const w=i.waitingDays==null?'\u2014':(i.waitingDays+'d');
+      return '<div class="wl-row" data-cid="'+escUser(i.id)+'" style="cursor:pointer">'
+        +'<div style="min-width:0"><div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div></div>'
         +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
-    +(t.onboarding>SHOW?'<div class="wl-more">+'+(t.onboarding-SHOW).toLocaleString()+' more</div>':'')
-    +(t.undated?'<div class="cardsub" style="margin-top:8px">'+t.undated+' with no purchase date</div>':'');
-  }catch(e){ el.innerHTML='<div class="cardsub">Could not load the onboarding queue.</div>'; }
+    +(t.onboarding>SHOW?'<div class="wl-more">+'+(t.onboarding-SHOW).toLocaleString()+' more in Deal Production</div>':'');
+  }catch(e){ el.innerHTML='<div class="cardsub">Could not load</div>'; }
 }
 
 async function loadDashboard(){
   renderAffiliateGap();
   renderOnboarding();
+  // Any work-list row that names a client opens that client. Delegated, and
+  // checked at click time -- production.js may load after the card renders.
+  if(!window.__wlClickWired){
+    window.__wlClickWired=true;
+    document.addEventListener('click',function(e){
+      var row=e.target.closest?e.target.closest('.wl-row[data-cid]'):null;
+      if(!row)return;
+      var id=row.getAttribute('data-cid');
+      if(window.pvOpenClient)window.pvOpenClient(id);
+    });
+  }
   renderRepliesDue();
   renderUpsell();
   renderOps();
