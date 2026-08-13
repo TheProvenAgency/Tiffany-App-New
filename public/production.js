@@ -543,7 +543,24 @@ window.pvGoNewClients=function(){
 // Dashboard rows) regardless of whether this module has loaded its own
 // CLIENTS list yet.
 window.pvOpenClient=function(id){
-  if(!loaded){ loadThen(function(){ pvOpen(id); }); } else { pvOpen(id); }
+  if(loaded){ pvOpen(id); return; }
+  // The full roster is a multi-second fetch on first use, and this used to
+  // wait for it before showing anything -- so clicking a lead on the
+  // Dashboard produced nothing for seconds, which reads as "it doesn't
+  // work". Open the drawer shell with a loading state first, exactly like
+  // the Clients drawer.
+  document.getElementById('dNm').textContent='Loading\u2026';
+  document.getElementById('dMt').textContent='';
+  document.getElementById('dBody').innerHTML='';
+  document.getElementById('pvOverlay').style.display='block';
+  document.getElementById('pvDrawer').classList.add('open');
+  loadThen(function(){
+    if(byId(id)){ pvOpen(id); }
+    else{
+      document.getElementById('dNm').textContent='Could not find this client';
+      document.getElementById('dMt').textContent='They may have been removed from Deal Production.';
+    }
+  });
 };
 
 /* ---------- drawer ---------- */

@@ -1804,7 +1804,7 @@ async function renderOps(){
         +'<div style="min-width:0"><div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div></div>'
         +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
-    +(t.neverStarted>SHOW?'<div class="wl-more">+'+(t.neverStarted-SHOW).toLocaleString()+' more</div>':'');
+    +(t.neverStarted>SHOW?'<div class="wl-more" style="cursor:pointer;color:var(--blue,#4F46E5);font-weight:600" onclick="showView&&showView(\'production\')">+'+(t.neverStarted-SHOW).toLocaleString()+' more \u2192</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load</div>'; }
 }
 
@@ -1833,7 +1833,7 @@ async function renderUpsell(){
         +'<div class="wl-sub">'+escUser(pkg||'-')+'</div></div>'
         +'<div class="wl-val" style="color:var(--muted)">'+val+'</div></div>';
     }).join('')+'</div>'
-    +(t.finished>SHOW?'<div class="wl-more">+'+(t.finished-SHOW).toLocaleString()+' more</div>':'')
+    +(t.finished>SHOW?'<div class="wl-more" style="cursor:pointer;color:var(--blue,#4F46E5);font-weight:600" onclick="showView&&showView(\'production\')">+'+(t.finished-SHOW).toLocaleString()+' more \u2192</div>':'')
     +(t.unknownAllowance?'<div class="cardsub" style="margin-top:8px">'+t.unknownAllowance.toLocaleString()+' excluded &mdash; package unclear</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the upsell list.</div>'; }
 }
@@ -1861,7 +1861,7 @@ async function renderRepliesDue(){
         +'<div class="wl-sub">'+escUser(i.channel||'')+'</div></div>'
         +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
-    +(t.waiting>SHOW?'<div class="wl-more">+'+(t.waiting-SHOW).toLocaleString()+' more</div>':'')
+    +(t.waiting>SHOW?'<div class="wl-more" style="cursor:pointer;color:var(--blue,#4F46E5);font-weight:600" onclick="showView&&showView(\'messages\')">+'+(t.waiting-SHOW).toLocaleString()+' more \u2192</div>':'')
     +'<div class="cardsub" style="margin-top:8px">Last '+(t.scanned||0).toLocaleString()+' conversations</div>';
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the reply queue.</div>'; }
 }
@@ -1885,7 +1885,7 @@ async function renderOnboarding(){
         +'<div style="min-width:0"><div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div></div>'
         +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
-    +(t.onboarding>SHOW?'<div class="wl-more">+'+(t.onboarding-SHOW).toLocaleString()+' more in Deal Production</div>':'');
+    +(t.onboarding>SHOW?'<div class="wl-more" style="cursor:pointer;color:var(--blue,#4F46E5);font-weight:600" onclick="pvGoNewClients&&pvGoNewClients()">+'+(t.onboarding-SHOW).toLocaleString()+' more \u2192</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load</div>'; }
 }
 

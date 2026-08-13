@@ -2174,7 +2174,7 @@ app.get('/api/mfsn-summary', (req, res) => {
 // queue can never disagree about who is waiting.
 app.get('/api/onboarding', async (req, res) => {
   try {
-    const list = await withLastPaid(withMfsnTags(await readProd()));
+    const list = await composedRoster();
     res.json(onboarding.buildQueue(list, {
       slaDays: Number(req.query.sla) || undefined,
       limit: Math.min(Number(req.query.limit) || 12, 200)
@@ -2204,7 +2204,7 @@ app.get('/api/replies-due', async (req, res) => {
 // pitched more rounds while they are still owed some.
 app.get('/api/upsell', async (req, res) => {
   try {
-    const list = await readProd();
+    const list = await composedRoster();
     res.json(rounds.upsellQueue(list, {
       limit: Math.min(Number(req.query.limit) || 12, 200)
     }));
@@ -2215,7 +2215,7 @@ app.get('/api/upsell', async (req, res) => {
 // and never had a first round filed.
 app.get('/api/ops', async (req, res) => {
   try {
-    const list = rounds.attach(await withLastPaid(withMfsnTags(await readProd())));
+    const list = await composedRoster();
     res.json({
       snapshot: ops.snapshot(list, { newWithinDays: Number(req.query.newDays) || undefined }),
       firstRound: ops.firstRoundOverdue(list, {
@@ -2264,6 +2264,21 @@ function withMfsnTags(clients) {
 // Matched on email first and normalised name second, the same order and the
 // same helpers lib/affiliate.js uses, so a client that matches for the MFSN
 // tag matches here too rather than the two disagreeing about who is who.
+// The fully composed roster: Deal Production + MFSN tags + purchase dates +
+// round allowances. Building it means parsing 3,891 records, reading the GHL
+// roster and matching 5,133 payment events -- about two seconds of CPU.
+//
+// Four endpoints need it (/api/production, /api/ops, /api/onboarding,
+// /api/upsell) and the dashboard fires them all at once, so each page load
+// was doing that work four times CONCURRENTLY on one small CPU -- measured
+// live at 9-14 seconds each while they starved one another. store.cached()
+// also collapses concurrent callers onto one in-flight build, so the four
+// requests now share a single computation.
+function composedRoster() {
+  return store.cached('roster:composed', 60 * 1000, async () =>
+    rounds.attach(await withLastPaid(withMfsnTags(await readProd()))));
+}
+
 async function withLastPaid(clients) {
   if (!Array.isArray(clients) || !clients.length) return clients;
 
@@ -2293,8 +2308,7 @@ async function withLastPaid(clients) {
 app.get('/api/production', async (req, res) => {
   try {
     res.json({
-      clients: auth.stripCfpbSecretsAll(
-        rounds.attach(await withLastPaid(withMfsnTags(await readProd())))),
+      clients: auth.stripCfpbSecretsAll(await composedRoster()),
       mode: liveMode() ? 'live' : 'demo'
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2354,6 +2368,7 @@ app.patch('/api/disputes/:id', async (req, res) => {
     try {
       store.appendAudit(audit.entriesFor(allowed, existing, { who, clientId: req.params.id }));
     } catch (e) { console.error('Audit write failed (the edit still saved):', e.message); }
+    store.clearCacheKey('roster:composed');
     res.json(disputes.toDisputeRecord(lead || await dealProd.readOneProdRecord(req.params.id)));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2669,6 +2684,9 @@ app.patch('/api/production/:id', async (req, res) => {
   try {
     store.appendAudit(audit.entriesFor(allowed, before, { who, clientId: req.params.id }));
   } catch (e) { console.error('Audit write failed (the edit still saved):', e.message); }
+  // The composed roster is cached for speed; an edit is exactly what makes it
+  // stale. Without this, a stage change looked ignored for up to a minute.
+  store.clearCacheKey('roster:composed');
   // Rounds attached on the way out: changing the package changes the round
   // allowance, and the drawer has no way to recompute that itself.
   res.json({ ok: true, client: lead ? rounds.attach([lead])[0] : lead });

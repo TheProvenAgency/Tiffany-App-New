@@ -157,9 +157,13 @@ test('every client row carries its remaining rounds', () => {
   // The ask was that each client shows how many are left, not just a summary
   // card, so the attach has to run on the roster the tracker reads.
   const src = fs2.readFileSync(path2.join(__dirname, '..', 'server.js'), 'utf8');
+  // The attach lives inside composedRoster() now -- the shared build all four
+  // roster endpoints read -- rather than inline in the route.
   const route = src.split("app.get('/api/production'")[1].split('\n});')[0];
-  assert.ok(/rounds\.attach\(/.test(route),
-    '/api/production should attach rounds to every row');
+  assert.ok(/composedRoster\(\)/.test(route));
+  const build = src.split('function composedRoster()')[1].split('\n}')[0];
+  assert.ok(/rounds\.attach\(/.test(build),
+    'the shared build must attach rounds to every row');
 });
 
 test('an unreadable package shows a dash, never a zero, in the table', () => {
