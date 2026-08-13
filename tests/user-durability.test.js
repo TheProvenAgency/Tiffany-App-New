@@ -60,13 +60,16 @@ test('creating an account reports whether it is actually durable', async () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const route = src.split("app.post('/api/users'")[1].split('\n});')[0];
   assert.ok(/await saveUsersDurable/.test(route), 'creation must await the mirror');
-  assert.ok(/durable: mirrored/.test(route), 'and report the result');
+  assert.ok(/durable: !!mirror\.ok/.test(route), 'and report the result');
+  assert.ok(/mirrorError/.test(route), 'with the reason when it failed');
   assert.ok(/may not survive a restart/.test(route), 'in words, when it failed');
 });
 
-test('mirrorUsers reports success honestly', async () => {
-  // Without Postgres configured there is nothing durable about the write, and
-  // saying otherwise would just move the lie.
-  const ok = await store.mirrorUsers([{ id: 'x', username: 'y' }]);
-  assert.equal(ok, false, 'no database means not mirrored, which is false, not undefined');
+test('mirrorUsers reports success honestly, with the reason on failure', async () => {
+  // This SQL only ever executes against the real schema -- the test
+  // environment has no Postgres -- so when it breaks, an error message in a
+  // response an admin can read is the only diagnostics that exist.
+  const r = await store.mirrorUsers([{ id: 'x', username: 'y' }]);
+  assert.equal(r.ok, false, 'no database means not mirrored');
+  assert.ok(typeof r.error === 'string' && r.error.length > 0, 'the reason must come back');
 });

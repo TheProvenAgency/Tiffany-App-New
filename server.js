@@ -555,10 +555,8 @@ function saveUsers(users) {
 // the mirror result comes back instead of disappearing into a log.
 async function saveUsersDurable(users) {
   store.setConfig({ users });
-  let mirrored = false;
-  try { mirrored = await store.mirrorUsers(users); }
-  catch (e) { console.error('User mirror failed:', e.message); }
-  return mirrored;
+  try { return await store.mirrorUsers(users); }
+  catch (e) { return { ok: false, error: e.message }; }
 }
 
 // Roles are presets of capabilities (lib/auth.js). A user may also carry an
@@ -603,9 +601,10 @@ app.post('/api/users', async (req, res) => {
   // Only persist an override when one was actually asked for -- otherwise the
   // account follows its role preset and keeps following it as presets evolve.
   if (caps) user.capabilities = caps;
-  const mirrored = await saveUsersDurable(list.concat([user]));
-  const resp = { ok: true, id: user.id, username, role, durable: mirrored };
-  if (!mirrored) {
+  const mirror = await saveUsersDurable(list.concat([user]));
+  const resp = { ok: true, id: user.id, username, role, durable: !!mirror.ok };
+  if (!mirror.ok) {
+    resp.mirrorError = mirror.error || null;
     // Say it to the person creating the account, not to a server log: this
     // login works right now and will NOT survive the next restart.
     resp.warning = 'Saved locally but not yet backed up to the database — this account may not survive a restart. Try again in a minute.';
