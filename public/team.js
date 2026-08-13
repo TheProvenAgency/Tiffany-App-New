@@ -55,11 +55,11 @@ function list(items,limit,renderRow,emptyText){
 
 /* ---------- markup ---------- */
 var sectionHTML=''+
-'<div class="tm-sub"><b>Your daily worklist.</b> New signups to onboard, active clients moving through rounds, and files that need a note or a document before they can move — pulled live from Deal Production. No dollar figures live on this page.</div>'+
+'<div class="tm-sub">Your worklist, live from Deal Production.</div>'+
 '<div class="tm-grid">'+
- '<div class="tm-card"><h3>New Clients <span class="n" id="tmNewCount">0</span></h3><p class="tm-cap">Just enrolled, awaiting documents, or cleared for Round 1.</p><div id="tmNewBody"></div></div>'+
- '<div class="tm-card"><h3>Active Clients <span class="n" id="tmActiveCount">0</span></h3><p class="tm-cap">In rounds — due to submit next, or waiting on the bureau.</p><div id="tmActiveBody"></div></div>'+
- '<div class="tm-card"><h3>Compliance <span class="n" id="tmComplianceCount">0</span></h3><p class="tm-cap">Files missing a document or a note.</p><div id="tmComplianceBody">'+
+ '<div class="tm-card"><h3>New Clients <span class="n" id="tmNewCount">0</span></h3><p class="tm-cap">New signups</p><div id="tmNewBody"></div></div>'+
+ '<div class="tm-card"><h3>Active Clients <span class="n" id="tmActiveCount">0</span></h3><p class="tm-cap">In rounds</p><div id="tmActiveBody"></div></div>'+
+ '<div class="tm-card"><h3>Compliance <span class="n" id="tmComplianceCount">0</span></h3><p class="tm-cap">Missing docs or notes</p><div id="tmComplianceBody">'+
    '<div class="tm-note">Missing-dispute-copy tracking isn\'t built into Deal Production yet — this card can only check for missing documents and missing notes today.</div>'+
  '</div></div>'+
 '</div>';

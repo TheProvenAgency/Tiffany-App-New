@@ -442,7 +442,7 @@ function renderChips(){
   // Locked mode (the Employee "New Clients" nav item, see pvGoNewClients) --
   // no chip picking, just a static label naming the fixed filter.
   if(lockedFilter){
-    chips.innerHTML='<div class="pv-sub" style="margin:0 0 4px">New clients — just onboarded or ready to dispute. Use <b>Pipeline</b> in the sidebar for the full board.</div>';
+    chips.innerHTML='<div class="pv-sub" style="margin:0 0 4px">Just onboarded or ready to dispute</div>';
     return;
   }
   // 'newclients' backs that locked view and isn't a chip anyone picks by

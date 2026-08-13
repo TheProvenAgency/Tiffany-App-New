@@ -186,3 +186,19 @@ test('caching the tagged roster does not serve a stale affiliate status', () => 
   const order = route.indexOf("clearCacheKey") < route.indexOf('withAffiliateTags');
   assert.ok(order, 'and must do so before re-reading');
 });
+
+test('card copy stays short enough to scan', () => {
+  // The dashboard had grown paragraphs where a label belongs -- explanatory
+  // subtitles and footnotes on nearly every card, which is my caveating habit
+  // leaking into the UI. A subtitle is a label, not a sentence.
+  const fs = require('fs');
+  const path = require('path');
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  // Markup only. Subtitles built inside <script> are assembled from live
+  // numbers, so their source length says nothing about what renders.
+  const markup = page.replace(/<script[\s\S]*?<\/script>/g, '');
+  const subs = [...markup.matchAll(/class="cardsub"[^>]*>([^<${]{2,})</g)].map(m => m[1].trim());
+  const long = subs.filter(t => t.length > 45);
+  assert.deepEqual(long, [],
+    'these read as prose rather than a label: ' + JSON.stringify(long));
+});

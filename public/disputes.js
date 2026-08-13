@@ -107,9 +107,9 @@ var sectionHTML=''+
 '<b>Blocked</b> means credit monitoring is disconnected, so nothing can be filed until the client reconnects it.</div>'+
 '<div class="dq-kpis">'+
  '<div class="dq-kpi ready"><div class="l">Ready to file</div><div class="v" id="dqKReady">—</div><div class="s">can be worked today</div></div>'+
- '<div class="dq-kpi blocked"><div class="l">Blocked on login</div><div class="v" id="dqKBlocked">—</div><div class="s">needs monitoring reconnected</div></div>'+
- '<div class="dq-kpi"><div class="l">In the queue</div><div class="v" id="dqKTotal">—</div><div class="s">across all active files</div></div>'+
- '<div class="dq-kpi"><div class="l">Longest wait</div><div class="v" id="dqKOld">—</div><div class="s">days in current stage</div></div>'+
+ '<div class="dq-kpi blocked"><div class="l">Blocked on login</div><div class="v" id="dqKBlocked">—</div><div class="s">login blocked</div></div>'+
+ '<div class="dq-kpi"><div class="l">In the queue</div><div class="v" id="dqKTotal">—</div><div class="s">all active files</div></div>'+
+ '<div class="dq-kpi"><div class="l">Longest wait</div><div class="v" id="dqKOld">—</div><div class="s">days</div></div>'+
 '</div>'+
 '<div class="dq-tabs">'+
  '<button data-f="mine">Mine</button>'+

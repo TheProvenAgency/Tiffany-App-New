@@ -879,7 +879,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
   <section class="view on" id="view-dash">
     <div class="dashbar">
       <button class="chip" id="layoutEditBtn" onclick="toggleLayoutEdit()">⠿ Customize layout</button>
-      <span class="cardsub" id="layoutHint" style="display:none">Drag anywhere to move · drag an edge/corner to resize · other cards move out of the way · saved automatically</span>
+      <span class="cardsub" id="layoutHint" style="display:none">Drag to move or resize</span>
       <button class="linklike" id="layoutResetBtn" style="display:none" onclick="resetLayout()">Reset to default</button>
       <!-- Admin-only: promotes whatever's currently on screen to be the
            layout everyone else starts from -- someone who's already
@@ -955,19 +955,19 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="what-changed" gs-x="6" gs-y="28" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
-            <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#F59E0B"><i class="ri-line-chart-line"></i></span>What changed</h3><div class="cap" style="margin:0">Peak month against the latest, split by where the money comes from.</div></div>
+            <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#F59E0B"><i class="ri-line-chart-line"></i></span>What changed</h3><div class="cap" style="margin:0">Peak vs latest</div></div>
           </div>
           <div id="whatChanged" style="padding:4px 2px"><div class="cardsub">Loading…</div></div>
         </div>
       </div></div>
-      <!-- New clients waiting to be onboarded. The clock is days since they
+      <!-- Waiting to onboard to be onboarded. The clock is days since they
            PAID, not days-in-stage: on the live roster days-in-stage is null or
            0-5 for every onboarding client, so flagging on it would surface
            nobody while a real backlog sat behind it. -->
       <div class="grid-stack-item" gs-id="onboarding" gs-x="0" gs-y="8" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-user-follow-line"></i></span> New clients waiting</h3>
-          <div class="cardsub">Since their most recent purchase &mdash; buying again restarts the clock. Flagged past <span id="onbSla">5</span> days.</div>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-user-follow-line"></i></span> Waiting to onboard</h3>
+          <div class="cardsub">Overdue past <span id="onbSla">5</span> days</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
             <div><div class="l">Waiting</div><div class="v" id="onbTotal">—</div></div>
             <div class="tone-red"><div class="l">Over <span id="onbSla2">5</span> days</div><div class="v" id="onbFlagged">—</div></div>
@@ -984,7 +984,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="replies-due" gs-x="0" gs-y="18" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#00B8F2"><i class="ri-chat-unread-line"></i></span> Waiting on a reply</h3>
-          <div class="cardsub">They messaged last and nobody answered. Flagged past <span id="rpSla">2</span> days.</div>
+          <div class="cardsub">Overdue past <span id="rpSla">2</span> days</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
             <div><div class="l">Waiting</div><div class="v" id="rpTotal">—</div></div>
             <div class="tone-red"><div class="l">Over <span id="rpSla2">2</span> days</div><div class="v" id="rpFlagged">—</div></div>
@@ -998,8 +998,8 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            rounds while they are still owed some. -->
       <div class="grid-stack-item" gs-id="upsell" gs-x="6" gs-y="18" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
         <div class="card">
-          <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-refresh-line"></i></span> Finished &mdash; ready to upsell</h3>
-          <div class="cardsub">Used every round they paid for.</div>
+          <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-refresh-line"></i></span> Ready to upsell</h3>
+          <div class="cardsub">Rounds all used</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
             <div class="tone-green"><div class="l">Finished</div><div class="v" id="upFinished">&mdash;</div></div>
             <div><div class="l">Until repaired</div><div class="v" id="upUnlimited">&mdash;</div></div>
@@ -1016,7 +1016,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="ops" gs-x="6" gs-y="8" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-pulse-line"></i></span> Operations</h3>
-          <div class="cardsub">Where the book stands, and who has paid but never been started.</div>
+          <div class="cardsub">Book status</div>
           <div class="dstat" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-top:10px">
             <div class="tone-green"><div class="l">Completed</div><div class="v" id="opsDone">&mdash;</div></div>
             <div><div class="l">In rounds</div><div class="v" id="opsRounds">&mdash;</div></div>
@@ -1032,7 +1032,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="28" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
-            <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#45B369"><i class="ri-price-tag-3-line"></i></span>Sales trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>
+            <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#45B369"><i class="ri-price-tag-3-line"></i></span>Sales trend</h3><div class="cap" style="margin:0">Gross collected</div></div>
             <div class="rv-tabs" id="rvGranDash">
               <button data-g="daily">Daily</button>
               <button data-g="weekly">Weekly</button>
@@ -1078,7 +1078,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="clientbase" gs-x="6" gs-y="0" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#7F27FF"><i class="ri-team-line"></i></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
-          <div class="cardsub">Where every client sits right now</div>
+          <div class="cardsub">By status</div>
           <div class="cb-wrap" style="position:relative;margin-top:10px">
             <div class="segbar" id="segbar"></div>
             <div class="statlist" id="tiles"></div>
@@ -1090,7 +1090,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="attention" gs-x="3" gs-y="45" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-alert-line"></i></span> Needs attention</h3>
-          <div class="cardsub">Fix these before trusting the numbers</div>
+          <div class="cardsub">Needs a look</div>
           <div id="attention" style="margin-top:6px"></div>
         </div>
       </div></div>
@@ -1098,7 +1098,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="conversations" gs-x="0" gs-y="34" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#144BD6"><i class="ri-message-3-line"></i></span> Conversations <button class="linklike" onclick="showView('messages')">Open inbox →</button></h3>
-          <div class="cardsub">SMS volume · inbound above the line, outbound below</div>
+          <div class="cardsub">SMS in and out</div>
           <div class="convtotals">
             <div><b id="convIn">0</b><span class="rep" id="convRatio"></span><span>Inbound texts</span></div>
             <div><b id="convOut" style="color:var(--red)">0</b><span>Outbound texts</span></div>
@@ -1127,7 +1127,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="rounds" gs-x="6" gs-y="16" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-refresh-line"></i></span> Customer lifecycle</h3>
-          <div class="cardsub">Onboarding through completion, real pipeline counts</div>
+          <div class="cardsub">By stage</div>
           <div class="lc-wrap">
             <div class="cwrap2 lc-ring"><canvas id="chLifecycle"></canvas></div>
             <ul class="lc-legend" id="lcLegend"></ul>
@@ -1146,7 +1146,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="churn" gs-x="6" gs-y="33" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-refresh-line"></i></span> Churn recency</h3>
-          <div class="cardsub">How long ago inactive clients lapsed</div>
+          <div class="cardsub">Time since last payment</div>
           <div class="cwrap2"><canvas id="chChurn"></canvas></div>
         </div>
       </div></div>
@@ -1161,7 +1161,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         <div class="rv-card">
           <div class="adm-chead">
             <div class="adm-cicon" style="--ic:#F4941E"><i class="ri-bank-card-2-line"></i></div>
-            <div class="adm-ctext"><h3>Payment methods</h3><div class="cap">Customer's most used payment options, all-time.</div></div>
+            <div class="adm-ctext"><h3>Payment methods</h3><div class="cap">All-time</div></div>
             <!-- Decorative, matching the real Admina template itself --
                  its own Weekly/Monthly/Yearly <select> on this exact card
                  isn't wired to change the chart either (no onchange
@@ -1217,7 +1217,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         <div class="rv-card">
           <div class="adm-chead noline">
             <div class="adm-cicon" style="--ic:#45B369"><i class="ri-arrow-up-circle-line"></i></div>
-            <div class="adm-ctext"><h3>Member upgrade progress</h3><div class="cap">Migrating the book to the new platform.</div></div>
+            <div class="adm-ctext"><h3>Member upgrade progress</h3><div class="cap">Migration progress</div></div>
           </div>
           <div class="rv-wrap sm"><canvas id="dashUpgradeChart"></canvas></div>
           <ul class="adm-legend">
@@ -1231,7 +1231,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="social-snapshot" gs-x="0" gs-y="40" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#F86624"><i class="ri-sparkling-2-line"></i></span> Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
-          <div class="cardsub">Static numbers · public profiles, Jul 14 2026</div>
+          <div class="cardsub">Jul 14 2026</div>
           <div class="dstat" style="margin-top:12px">
             <div class="tone-pink"><div class="l">IG followers</div><div class="v">3,656</div></div>
             <div class="tone-pink"><div class="l">IG posts</div><div class="v">59</div></div>
@@ -1243,7 +1243,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="top-content" gs-x="3" gs-y="40" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-trophy-line"></i></span> Top performing content</h3>
-          <div class="cardsub">Public engagement · read Jul 14, 2026</div>
+          <div class="cardsub">Jul 14 2026</div>
           <div id="topPostsMini" style="margin-top:6px"></div>
         </div>
       </div></div>
@@ -1369,7 +1369,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="card">
         <h3 class="cardtitle"><span class="cico" style="--ic:#F86624"><i class="ri-camera-line"></i></span> Instagram <span class="badge-soft badge-ok" title="Verified account">✔ VERIFIED</span>
           <a class="linklike" href="https://www.instagram.com/msfinancialsolutions_/" target="_blank">@msfinancialsolutions_ ↗</a></h3>
-        <div class="cardsub">Static numbers · as seen on profile Jul 14, 2026</div>
+        <div class="cardsub">Jul 14 2026</div>
         <div class="dstat" style="margin-top:14px">
           <div class="tone-pink"><div class="l">Followers</div><div class="v">3,656</div></div>
           <div class="tone-pink"><div class="l">Posts</div><div class="v">59</div></div>
@@ -1379,7 +1379,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="card">
         <h3 class="cardtitle"><span class="cico" style="--ic:#144BD6"><i class="ri-team-line"></i></span> Facebook group
           <a class="linklike" href="https://www.facebook.com/groups/302248546068656/" target="_blank">open group ↗</a></h3>
-        <div class="cardsub">Her community group — join link for clients</div>
+        <div class="cardsub">Join link</div>
         <div class="dstat" style="margin-top:14px;grid-template-columns:1fr">
           <div class="tone-blue"><div class="l">Group</div><div class="v" style="font-size:13px;word-break:break-all">facebook.com/groups/302248546068656</div></div>
         </div>
@@ -1387,7 +1387,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     </div>
     <div class="card" style="margin-top:14px">
       <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-trophy-line"></i></span> Top performing content</h3>
-      <div class="cardsub">Real public engagement, read Jul 14 2026 — connect Meta in Settings for automatic ranking</div>
+      <div class="cardsub">Read Jul 14 2026</div>
       <div id="topPostsFull" style="margin-top:6px"></div>
     </div>
     <div class="card" style="margin-top:14px">
@@ -1415,7 +1415,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
   <section class="view" id="view-tickets">
     <div class="card">
       <h3 class="cardtitle"><span class="cico" style="--ic:#9CA3AF"><i class="ri-coupon-3-line"></i></span> Support Ticket Requests</h3>
-      <div class="cardsub">Everything submitted to The Proven Agency from this dashboard, and their replies.</div>
+      <div class="cardsub">Submitted tickets</div>
       <div id="ticketList" style="margin-top:10px"></div>
     </div>
   </section>
@@ -1685,7 +1685,7 @@ async function renderAffiliateGap(){
     const d=await(await fetch('/api/affiliate-gap')).json();
     if(!d||!d.counts){el.innerHTML='<div class="cardsub">Unavailable.</div>';return;}
     if(!d.syncedAt){
-      el.innerHTML='<div class="cardsub">No members synced yet. Point an n8n workflow (schedule → MyFreeScoreNow member-list → POST) at <code>/webhooks/mfsn</code> — see ⚙ Settings for the URL and secret.</div>';
+      el.innerHTML='<div class="cardsub">Not synced yet. Point a workflow at <code>/webhooks/mfsn</code> — see ⚙ Settings for the URL and secret.</div>';
       return;
     }
     const c=d.counts;
@@ -1705,7 +1705,7 @@ async function renderAffiliateGap(){
     const enrolledColor=enrolledPct>=enrolledGoal?'var(--green)':'var(--red)';
     el.innerHTML=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
         <div class="ring" style="--pct:${enrolledPct};--ring-c:${enrolledColor}"><div class="hole"><b style="color:${enrolledColor}">${enrolledPct}%</b><span>enrolled</span></div></div>
-        <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} clients are enrolled under her affiliate link and generating commission. The rest below are the gap.</div>
+        <div class="cardsub" style="margin:0">${c.affiliate.toLocaleString()} of ${c.total.toLocaleString()} enrolled</div>
       </div>
       <div class="dstat" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
         <div class="tone-gold" style="cursor:pointer" onclick="goClientsAffiliate('affiliate')"><div class="l">Affiliate (getting paid)</div><div class="v" style="font-size:20px;color:var(--ink)">${c.affiliate.toLocaleString()}</div><div class="cardsub moneychip" style="margin-top:4px">${fmtMoney(rev.affiliate)}</div></div>
@@ -1715,7 +1715,7 @@ async function renderAffiliateGap(){
         <div class="tone-red"><div class="l">Still on Smart Credit (active)</div><div class="v">${o.active.toLocaleString()}</div><div class="cardsub" style="color:var(--red);font-weight:700">of ${o.activeTotal.toLocaleString()} active · ~${fmtMoney(o.active*13.3)} at risk</div></div>
         <div class="tone-gold"><div class="l">Still on Smart Credit (paused/closed)</div><div class="v">${o.paused.toLocaleString()}</div><div class="cardsub">dormant · lower priority</div></div>
       </div>
-      <div class="cardsub" style="margin-top:8px;font-style:italic">Smart Credit audit as of ${new Date(o.auditedAt).toLocaleDateString()} — pulled by hand from MyFreeScoreNow's Member List (Member Type = Old); MFSN's sync feed doesn't carry that flag yet, so this refreshes only when the audit is re-run.</div>`:''}`;
+      <div class="cardsub" style="margin-top:8px;font-style:italic">Manual audit, ${new Date(o.auditedAt).toLocaleDateString()}</div>`:''}`;
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load.</div>'; }
 }
 // The last dashboard payload we fetched, kept so a KPI frame that finishes
@@ -1734,7 +1734,7 @@ window.addEventListener('message', ev=>{
   if(ev.origin!==location.origin||!ev.data||ev.data.type!=='msfs-range-request')return;
   broadcastRangeToKpiFrames();
 });
-// New clients waiting to be onboarded. Its own fetch rather than part of the
+// Waiting to onboard to be onboarded. Its own fetch rather than part of the
 // dashboard payload: it reads Deal Production, not the money feed, so it also
 // works for a VA -- who is the person actually running onboarding.
 // Clients still waiting on a reply. Own fetch, same reasoning as
@@ -1764,12 +1764,9 @@ async function renderOps(){
           if(!(a.people||[]).length){
             // An empty log and a quiet month look identical unless you say
             // when logging started.
-            act.innerHTML='<div class="cardsub">No recorded activity yet'
-              +(at.oldestEntry?' since '+String(at.oldestEntry).slice(0,10):' — edits started being logged from this release')
-              +'.</div>';
+            act.innerHTML='<div class="cardsub">No activity logged'+(at.oldestEntry?' since '+String(at.oldestEntry).slice(0,10):' yet')+'</div>';
           } else {
-            act.innerHTML='<div class="cardsub" style="margin-bottom:5px">Work done in the last '+at.days+' days &mdash; '
-              +at.roundsFiled+' rounds filed, '+at.completed+' clients completed</div>'
+            act.innerHTML='<div class="cardsub" style="margin-bottom:5px">Last '+at.days+'d &middot; '+at.roundsFiled+' rounds &middot; '+at.completed+' completed</div>'
               +a.people.slice(0,5).map(function(p){
                 return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12.5px">'
                   +'<span style="font-weight:700">'+escUser(p.who)+'</span>'
@@ -1787,14 +1784,14 @@ async function renderOps(){
     if(own){
       const rows=(sn.owners||[]).slice(0,5);
       own.innerHTML=rows.length
-        ? '<div class="cardsub" style="margin-bottom:5px">Who holds the work &mdash; assigned clients, not activity</div>'
+        ? '<div class="cardsub" style="margin-bottom:5px">Assigned to</div>'
           +rows.map(o=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12.5px">'
             +'<span style="font-weight:700">'+escUser(o.owner)+'</span>'
             +'<span class="cardsub">'+o.total+' held &middot; '+o.completed+' done &middot; '+o.notStarted+' not started</span></div>').join('')
-        : '<div class="cardsub">Nobody is assigned to any client yet, so there is no ownership to show.</div>';
+        : '<div class="cardsub">Nobody assigned yet</div>';
     }
 
-    if(!(fr.items||[]).length){ el.innerHTML='<div class="cardsub">Everyone who has paid has had a round filed.</div>'; return; }
+    if(!(fr.items||[]).length){ el.innerHTML='<div class="cardsub">All started</div>'; return; }
     el.innerHTML='<div style="max-height:190px;overflow:auto">'+fr.items.map(function(i){
       const w=i.waitingDays==null?'<span class="cardsub">no date</span>'
         :'<b style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+i.waitingDays+'d</b>';
@@ -1805,9 +1802,8 @@ async function renderOps(){
         +escUser(i.stage||'')+' &middot; '+escUser(i.pkg||'-')+'</div></div>'
         +'<div style="text-align:right;white-space:nowrap">'+w+'</div></div>';
     }).join('')+'</div>'
-    +'<div class="cardsub" style="margin-top:8px">'+(t.neverStarted||0).toLocaleString()+' have paid with no round filed; '
-    +(t.flagged||0).toLocaleString()+' past '+t.slaDays+' days'
-    +(t.undated?', and '+t.undated+' have no purchase date to measure from':'')+'.</div>';
+    +'<div class="cardsub" style="margin-top:8px">'+(t.neverStarted||0).toLocaleString()+' never started &middot; '
+    +(t.flagged||0).toLocaleString()+' past '+t.slaDays+'d</div>';
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the operations view.</div>'; }
 }
 
@@ -1823,7 +1819,7 @@ async function renderUpsell(){
     // separate tile on the card.
     $('upUnlimited').textContent=((t.unlimited||0)+(t.outcomeBased||0)).toLocaleString();
     $('upUnknown').textContent=(t.unknownAllowance||0).toLocaleString();
-    if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Nobody has finished their rounds yet.</div>'; return; }
+    if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">None finished yet</div>'; return; }
     el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(function(i){
       return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">'
       +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'+escUser(i.name)+'</div>'
@@ -1834,7 +1830,7 @@ async function renderUpsell(){
          : '<b>'+i.roundsUsed+'</b><span class="cardsub">/'+i.roundsIncluded+' used</span>')
       +'</div></div>';
     }).join('')+'</div>'
-    +(t.unknownAllowance?'<div class="cardsub" style="margin-top:8px">'+t.unknownAllowance.toLocaleString()+' more have a package that does not say how many rounds it includes, so they are left out rather than guessed at.</div>':'');
+    +(t.unknownAllowance?'<div class="cardsub" style="margin-top:8px">'+t.unknownAllowance.toLocaleString()+' excluded &mdash; package unclear</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the upsell list.</div>'; }
 }
 
@@ -1849,7 +1845,7 @@ async function renderRepliesDue(){
     $('rpFlagged').textContent=(t.flagged||0).toLocaleString();
     const lh=t.longestWaitHours;
     $('rpLongest').textContent=lh==null?'—':(lh<48?(lh+'h'):(Math.floor(lh/24)+'d'));
-    if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Everyone has been answered.</div>'; return; }
+    if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">All answered</div>'; return; }
     el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(i=>{
       const h=i.waitingHours;
       const wait=h==null?'<span class="cardsub">no date</span>'
@@ -1861,7 +1857,7 @@ async function renderRepliesDue(){
         +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(i.lastBody||'')+'</div></div>'
         +'<div style="text-align:right;white-space:nowrap">'+wait+'</div></div>';
     }).join('')+'</div>'
-    +'<div class="cardsub" style="margin-top:8px">Across the '+(t.scanned||0).toLocaleString()+' most recent conversations.</div>';
+    +'<div class="cardsub" style="margin-top:8px">Last '+(t.scanned||0).toLocaleString()+' conversations</div>';
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the reply queue.</div>'; }
 }
 
@@ -1875,7 +1871,7 @@ async function renderOnboarding(){
     $('onbTotal').textContent=(t.onboarding||0).toLocaleString();
     $('onbFlagged').textContent=(t.flagged||0).toLocaleString();
     $('onbLongest').textContent=t.longestWait==null?'—':(t.longestWait+'d');
-    if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Nobody is waiting. That is the good outcome.</div>'; return; }
+    if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Nobody waiting</div>'; return; }
     el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(i=>{
       const wait=i.waitingDays==null
         ? '<span class="cardsub" title="No purchase date on file, so the wait cannot be measured">no date</span>'
@@ -1893,7 +1889,7 @@ async function renderOnboarding(){
         +since+(i.mfsn==='needs'?' · <span style="color:var(--gold)">needs MFSN</span>':'')+'</div></div>'
         +'<div style="text-align:right;white-space:nowrap">'+wait+'</div></div>';
     }).join('')+'</div>'
-    +(t.undated?'<div class="cardsub" style="margin-top:8px">'+t.undated+' have no purchase date on file, so their wait cannot be measured.</div>':'');
+    +(t.undated?'<div class="cardsub" style="margin-top:8px">'+t.undated+' with no purchase date</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the onboarding queue.</div>'; }
 }
 
@@ -2816,7 +2812,7 @@ async function openProductionOnlyClient(id){
   document.querySelectorAll('.drawer .employeeHide, .drawer .ghlOnly').forEach(el=>el.style.display='none');
   $('drawer').classList.add('open');requestAnimationFrame(updatePipeScroll);
   $('dName').textContent=p.name;
-  $('dMeta').innerHTML=`${p.pkg?'package: <b>'+escUser(p.pkg)+'</b>':''}<br><span class="cardsub">No GoHighLevel contact matched yet — showing Deal Production only.</span>`;
+  $('dMeta').innerHTML=`${p.pkg?'package: <b>'+escUser(p.pkg)+'</b>':''}<br><span class="cardsub">Deal Production only</span>`;
   $('dStats').innerHTML='';
   $('dActions').innerHTML='';
   $('dAffiliate').innerHTML='';
@@ -3231,7 +3227,7 @@ function renderNotifList(){
       ${escUser(notifText(n))}
       <div class="mut">${new Date(n.createdAt).toLocaleString()}${n.read?'':' · <b>new</b>'}</div>
     </div>`).join('')
-    : '<div class="cardsub">Nothing yet — @mention someone in a note or assign them a task and it shows up here.</div>';
+    : '<div class="cardsub">Nothing yet</div>';
 }
 async function openNotifications(){
   await loadNotifications();
