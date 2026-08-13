@@ -541,6 +541,7 @@ window.pvSetPV=function(v){
 window.pvGoNewClients=function(){
   lockedFilter=true; curFilter='newclients'; curPage=1;
   curSort='paid'; sortDir=-1; // newest arrival on top -- that is the point of the view
+  window.__pvEnteringLocked=true; // tell the showView wrapper this lock is deliberate
   showView('production'); pvSetPV('queue');
   // showView('production') always highlights pvNavBtn ("Deal Production")
   // as the active nav item -- point the highlight at New Clients instead
@@ -801,10 +802,12 @@ function initProd(){
         // Entering by the Deal Production nav always unlocks. The New Clients
         // shortcut sets lockedFilter=true and nothing ever cleared it -- so a
         // VA who visited New Clients once got the stripped-down locked view
-        // (no tabs, no chips, only new clients) on Deal Production for the
-        // rest of their session, and concluded their page was missing what
-        // the admin's had.
-        if(lockedFilter){ lockedFilter=false; curFilter='all'; curPage=1; }
+        // on Deal Production for the rest of their session. BUT the shortcut
+        // itself also routes through showView('production'), so this clear
+        // must skip that one call or New Clients undoes its own filter the
+        // instant it applies it (which made it identical to Deal Production).
+        if(lockedFilter&&!window.__pvEnteringLocked){ lockedFilter=false; curFilter='all'; curPage=1; }
+        window.__pvEnteringLocked=false;
         // hide standard views via their class (never leave inline display:none on them — it breaks the app's .view.on toggle)
         var sv=document.querySelectorAll('.view');for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
         var pl=document.getElementById('view-personal');if(pl)pl.style.display='none';

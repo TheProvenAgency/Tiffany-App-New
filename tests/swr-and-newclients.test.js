@@ -81,3 +81,18 @@ test('the warm loop also covers the default dashboard range and conversations', 
     'using the same UTC to-minus-29-days math as presetRange in index.html');
   assert.ok(/cachedSWR\('messages'/.test(warm), 'conversations stay hot for Messages and reply SLAs');
 });
+
+test('New Clients does not undo its own filter on the way in', () => {
+  // pvGoNewClients sets the locked newclients filter, then routes through
+  // showView('production') -- whose wrapper unconditionally cleared any
+  // locked filter (that clear exists so the Deal Production nav button
+  // unlocks). Net effect: New Clients applied its filter and wiped it in the
+  // same call, rendering the full roster -- identical to Deal Production.
+  const prod = fs.readFileSync(path.join(__dirname, '..', 'public', 'production.js'), 'utf8');
+  assert.ok(/__pvEnteringLocked=true/.test(prod), 'the shortcut marks its entry as deliberate');
+  assert.ok(/lockedFilter&&!window\.__pvEnteringLocked/.test(prod),
+    'and the wrapper only clears locks that were NOT just set on purpose');
+  const wrapper = prod.split('window.__pvWrap=true')[1];
+  assert.ok(/__pvEnteringLocked=false/.test(wrapper),
+    'the guard is one-shot, so the nav button still unlocks next time');
+});
