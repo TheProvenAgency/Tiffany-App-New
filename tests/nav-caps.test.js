@@ -17,10 +17,14 @@ const role = fs.readFileSync(path.join(__dirname, '..', 'public', 'role.js'), 'u
 const NAV_CAPS = eval('(' + role.split('var NAV_CAPS = ')[1].split('};')[0] + '})');
 const GROUP_OF = eval('(' + role.split('var GROUP_OF = ')[1].split('};')[0] + '})');
 
+// Three kinds of entry: a capability name, null for "anyone signed in", and
+// false for account chores, which moved to the avatar menu and stay in the
+// sidebar only for an admin.
 const navFor = (roleName) => {
   const caps = auth.ROLE_CAPS[roleName];
   return Object.keys(NAV_CAPS).filter(id => {
     const need = NAV_CAPS[id];
+    if (need === false) return caps.includes('admin');
     return need === null || caps.includes(need);
   });
 };
@@ -44,7 +48,8 @@ test('a disputer gets their queue and nothing else but the account items', () =>
   assert.ok(!nav.includes('pvNavBtn'), 'no Deal Production');
   assert.ok(!nav.includes('msgNavBtn'), 'no inbox');
   assert.ok(!nav.includes('rvNavBtn'), 'no money');
-  assert.deepEqual(nav.filter(id => NAV_CAPS[id] !== null), ['disputesNavBtn']);
+  assert.deepEqual(nav.filter(id => NAV_CAPS[id] !== null && NAV_CAPS[id] !== false),
+    ['disputesNavBtn']);
 });
 
 test('an admin reaches everything', () => {
@@ -55,7 +60,7 @@ test('an admin reaches everything', () => {
 test('every nav item names a capability the server actually knows', () => {
   // A typo here would silently hide a button forever.
   for (const [id, cap] of Object.entries(NAV_CAPS)) {
-    if (cap === null) continue;
+    if (cap === null || cap === false) continue;
     assert.ok(auth.CAPABILITIES.includes(cap), `${id} maps to unknown capability "${cap}"`);
   }
 });

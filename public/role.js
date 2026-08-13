@@ -73,8 +73,11 @@
     rvNavBtn: 'revenue',
     mfNavBtn: 'revenue',           // MyFreeScoreNow commission is money
     lmNavBtn: 'revenue',
-    changePwNavBtn: null,
-    signOutNavBtn: null
+    // Account chores live in the avatar menu, not the sidebar. A disputer has
+    // exactly one work destination; giving a third of their nav to "Change
+    // password" made settings look like half the job.
+    changePwNavBtn: false,
+    signOutNavBtn: false
   };
   // A group heading is worth showing when anything under it is.
   var GROUP_OF = {
@@ -87,6 +90,11 @@
   function navAllowed(id) {
     if (!(id in NAV_CAPS)) return false; // unknown buttons stay hidden by default
     var need = NAV_CAPS[id];
+    // false = account chores. They live in the avatar menu; only an admin,
+    // whose sidebar is long enough that one more row costs nothing, keeps
+    // them there too. Keyed off the capability rather than the flat-nav class
+    // because the class is not set until after this filter has run.
+    if (need === false) return CAPS.indexOf('admin') >= 0;
     return need === null || CAPS.indexOf(need) >= 0;
   }
   function gateNav() {

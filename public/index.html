@@ -881,7 +881,17 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div>
     </div>
-    <div class="avatar">MS</div>
+    <div class="hdr-dd" id="hdrAcctDd">
+      <div class="avatar" id="hdrAvatar" style="cursor:pointer" onclick="toggleHdrDd('hdrAcctDd')">MS</div>
+      <div class="hdr-ddpanel" style="width:240px">
+        <div class="hdr-ddhead" id="hdrAcctName">Account</div>
+        <div class="hdr-ddlist">
+          <div class="hdr-ddrow" onclick="openChangePw();closeHdrDd()">Change password</div>
+          <div class="hdr-ddrow" onclick="openSupportTicket();closeHdrDd()">Submit a support ticket</div>
+          <div class="hdr-ddrow" onclick="fetch('/api/logout',{method:'POST'}).then(function(){location.reload();})">Sign out</div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <div class="filters">
@@ -969,7 +979,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            in server.js), so any "which package stopped selling and when"
            breakdown built from them would be the same mistake that once made
            this business look like it was growing. -->
-      <div class="grid-stack-item" gs-id="what-changed" gs-x="6" gs-y="28" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="what-changed" gs-x="6" gs-y="34" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
             <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#F59E0B"><i class="ri-line-chart-line"></i></span>What changed</h3><div class="cap" style="margin:0">Peak vs latest</div></div>
@@ -1046,7 +1056,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
           <div id="opsList"></div>
         </div>
       </div></div>
-      <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="28" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="34" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
             <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#45B369"><i class="ri-price-tag-3-line"></i></span>Sales trend</h3><div class="cap" style="margin:0">Gross collected</div></div>
@@ -1084,7 +1094,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="mfsn" gs-x="0" gs-y="38" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mfsn" gs-x="0" gs-y="69" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
         <div class="card moneycard">
           <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:26px;width:26px;border-radius:6px;vertical-align:-6px;margin-right:6px">MyFreeScoreNow — Affiliate Report</h3>
           <div id="affiliateGap" style="margin-top:10px"></div>
@@ -1104,7 +1114,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="attention" gs-x="3" gs-y="45" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="attention" gs-x="0" gs-y="28" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-alert-line"></i></span> Needs attention</h3>
           <div class="cardsub">Needs a look</div>
@@ -1112,7 +1122,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="conversations" gs-x="0" gs-y="34" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="conversations" gs-x="6" gs-y="53" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#144BD6"><i class="ri-message-3-line"></i></span> Conversations <button class="linklike" onclick="showView('messages')">Open inbox →</button></h3>
           <div class="cardsub">SMS in and out</div>
@@ -1124,7 +1134,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="revenue-package" gs-x="9" gs-y="9" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="revenue-package" gs-x="6" gs-y="44" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-vip-diamond-line"></i></span> Revenue by package</h3>
           <div class="cardsub" id="dealsSub">All-time · Commas + Fanbasis sales</div>
@@ -1133,7 +1143,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="mentorship" gs-x="0" gs-y="29" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mentorship" gs-x="0" gs-y="59" gs-w="6" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-graduation-cap-line"></i></span> Mentorship program</h3>
           <div class="cardsub">All-time mentorship sales</div>
@@ -1141,7 +1151,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="rounds" gs-x="6" gs-y="16" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rounds" gs-x="6" gs-y="28" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-refresh-line"></i></span> Customer lifecycle</h3>
           <div class="cardsub">By stage</div>
@@ -1152,7 +1162,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="social-growth" gs-x="0" gs-y="45" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="social-growth" gs-x="6" gs-y="82" gs-w="3" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#F86624"><i class="ri-sparkling-2-line"></i></span> Social growth</h3>
           <div class="cardsub" id="socialSub">Instagram & Facebook followers</div>
@@ -1160,7 +1170,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="churn" gs-x="6" gs-y="33" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="churn" gs-x="0" gs-y="53" gs-w="6" gs-h="6"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-refresh-line"></i></span> Churn recency</h3>
           <div class="cardsub">Time since last payment</div>
@@ -1174,7 +1184,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            chart (id="dashMethods"/"dashCust") so both pages can have a
            live instance at once -- see drawMethods()/drawCust() in
            revenue.js, same pattern as the Sales trend card above. -->
-      <div class="grid-stack-item" gs-id="dash-methods" gs-x="6" gs-y="25" gs-w="6" gs-h="8"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="dash-methods" gs-x="6" gs-y="59" gs-w="6" gs-h="8"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead">
             <div class="adm-cicon" style="--ic:#F4941E"><i class="ri-bank-card-2-line"></i></div>
@@ -1207,7 +1217,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            underlying metric is retention-rate, not new-customer count.
            See drawReturning() in this file's own script block for how
            it's filled in. -->
-      <div class="grid-stack-item" gs-id="dash-newcust" gs-x="9" gs-y="0" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="dash-newcust" gs-x="0" gs-y="64" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead noline">
             <div class="adm-cicon" style="--ic:#EF4444"><i class="ri-group-line"></i></div>
@@ -1230,7 +1240,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            so this is an honest 2-segment donut rather than inventing a
            3rd category just to match Admina's 3-slice example. See
            drawUpgradeChart() in revenue.js. -->
-      <div class="grid-stack-item" gs-id="dash-upgrade" gs-x="6" gs-y="7" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="dash-upgrade" gs-x="0" gs-y="44" gs-w="3" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="adm-chead noline">
             <div class="adm-cicon" style="--ic:#45B369"><i class="ri-arrow-up-circle-line"></i></div>
@@ -1245,7 +1255,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="social-snapshot" gs-x="0" gs-y="40" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="social-snapshot" gs-x="0" gs-y="82" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#F86624"><i class="ri-sparkling-2-line"></i></span> Social snapshot <button class="linklike" onclick="showView('social')">Social →</button></h3>
           <div class="cardsub">Jul 14 2026</div>
@@ -1257,7 +1267,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="top-content" gs-x="3" gs-y="40" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="top-content" gs-x="3" gs-y="82" gs-w="3" gs-h="5"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#F4941E"><i class="ri-trophy-line"></i></span> Top performing content</h3>
           <div class="cardsub">Jul 14 2026</div>
@@ -1273,7 +1283,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            Amount/Date. Unlike the Payment methods card's decorative tabs,
            this <select> is wired to a real client-side filter over each
            item's real timestamp -- see loadFeed() in the script below. -->
-      <div class="grid-stack-item" gs-id="activity" gs-x="6" gs-y="39" gs-w="6" gs-h="13"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="activity" gs-x="6" gs-y="69" gs-w="6" gs-h="13"><div class="grid-stack-item-content">
         <div class="card">
           <div class="adm-chead">
             <div class="adm-cicon" style="--ic:#DE3ACE"><i class="ri-shopping-bag-3-line"></i></div>
