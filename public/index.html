@@ -146,6 +146,9 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
    gating. (role.js still explicitly hides individual headings/buttons for
    the employee role by setting inline display:none, which overrides this.) */
 .navgroup{display:block}
+/* flat worker nav: no group headings, so the sections need their own spacing */
+body.flatnav .navgroup+.navgroup{margin-top:2px}
+body.flatnav .navrail{display:none}
 .sec[data-g]{display:block}
 /* Admina reference: one consistent brand accent for the active row (a
    solid, fully-rounded pill, white icon+label), not a different rainbow
@@ -2326,6 +2329,11 @@ const VIEW_GROUP={dash:'ov',pipeline:'cl',clients:'cl',react:'cl',tasks:'pr',soc
 // so whichever view is now active is always the one visible in the panel.
 function setNavGroup(g,expand){
   if(expand===undefined)expand=true;
+  // A worker's nav is flattened into one always-open list (see flattenNav in
+  // role.js). Every view switch calls this to open "its" group, which would
+  // collapse the other three straight back down and hide most of what they can
+  // reach -- so in flat mode this only handles the expand.
+  if(document.body.classList.contains('flatnav')){ if(expand)setNavCollapsed(false); return; }
   try{localStorage.setItem('navGroup',g);}catch(e){}
   document.querySelectorAll('.sec[data-g]').forEach(function(el){el.style.display=(el.dataset.g===g?'':'none');});
   document.querySelectorAll('.navgroup[data-g]').forEach(function(el){el.style.display=(el.dataset.g===g?'':'none');});

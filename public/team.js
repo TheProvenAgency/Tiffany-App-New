@@ -43,14 +43,18 @@ function docCount(c){var n=0;for(var d=0;d<DOCS.length;d++)if(c.docs&&c.docs[DOC
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(ch){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
 function fmt(n){return n.toLocaleString();}
 function row(c,tagHtml,sub){
-  return '<div class="tm-row" onclick="'+(window.pvOpenClient?"pvOpenClient('"+c.id+"')":'')+'">'+
+  // Bound unconditionally. This used to check window.pvOpenClient at RENDER
+  // time -- if production.js had not finished loading, the row was drawn with
+  // no handler and stayed dead for the rest of the session. The check belongs
+  // at click time, when the answer is known.
+  return '<div class="tm-row" data-cid="'+esc(c.id)+'">'+
     '<div><div class="tm-nm">'+esc(c.name)+'</div><div class="tm-pkg">'+esc(c.pkg||'—')+(sub?' · '+sub:'')+'</div></div>'+
     tagHtml+'</div>';
 }
 function list(items,limit,renderRow,emptyText){
   if(!items.length)return '<div class="tm-empty">'+emptyText+'</div>';
   var shown=items.slice(0,limit);
-  return shown.map(renderRow).join('')+(items.length>limit?'<div class="tm-more">+'+fmt(items.length-limit)+' more — see Pipeline</div>':'');
+  return shown.map(renderRow).join('')+(items.length>limit?'<div class="tm-more">+'+fmt(items.length-limit)+' more in Deal Production</div>':'');
 }
 
 /* ---------- markup ---------- */
@@ -82,7 +86,12 @@ function render(){
     var tag=ready?'<span class="tm-tag tag-green">Ready R1</span>'
       :docCount(c)<DOCS.length?'<span class="tm-tag tag-gold">Awaiting docs</span>'
       :'<span class="tm-tag tag-blue">Onboarding</span>';
-    return row(c,tag,(c.days||0)+'d in onboarding');
+    // days-in-stage reads 0 for every onboarding client, so it was a column of
+    // "0d in onboarding". Documents outstanding is the thing that actually
+    // moves them along.
+    var docs=c.docs?Object.keys(c.docs).length:0;
+    var have=c.docs?Object.values(c.docs).filter(Boolean).length:0;
+    return row(c,tag,docs?(have+'/'+docs+' docs'):'');
   },'No one in onboarding right now.');
 
   var inRounds=CLIENTS.filter(function(c){return c.stage==='In rounds';});
@@ -124,6 +133,13 @@ function initTeam(){
   var sec=document.createElement('section');sec.className='view';sec.id='view-team';sec.style.display='none';
   sec.innerHTML='<h2 style="margin:0 0 3px;font-size:20px">Team Dashboard</h2>'+sectionHTML;
   if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc); else document.body.appendChild(sec);
+
+  document.addEventListener('click',function(e){
+    var row=e.target.closest?e.target.closest('#view-team .tm-row[data-cid]'):null;
+    if(!row)return;
+    var id=row.getAttribute('data-cid');
+    if(window.pvOpenClient)window.pvOpenClient(id);
+  });
 
   fetch('/api/me').then(function(r){return r.json();}).then(function(m){
     // Capability-driven, not role-name equality. This used to read

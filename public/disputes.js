@@ -10,7 +10,7 @@
 (function(){
 var BUREAU_LABEL={tu:'TransUnion',eq:'Equifax',ex:'Experian'};
 var BUREAUS=['tu','eq','ex'];
-var state={queue:[],filter:'ready',loading:false,openId:null,record:null,err:'',me:null,caps:[],canAssign:false};
+var state={queue:[],filter:'workable',search:'',loading:false,openId:null,record:null,err:'',me:null,caps:[],canAssign:false};
 // Who is signed in, so the Mine tab can mean something. Deal Production
 // records the assignee by display name, so that is what we match on.
 var DISPUTERS=[];
@@ -102,21 +102,21 @@ var css=''+
 
 var sectionHTML=''+
 '<h2 style="margin:0 0 2px;font-size:22px;letter-spacing:-.4px">Dispute Desk</h2>'+
-'<div class="dq-sub">Everyone waiting on their next round, longest wait first. '+
-'<b>Ready</b> means the report can be pulled and the round filed now. '+
-'<b>Blocked</b> means credit monitoring is disconnected, so nothing can be filed until the client reconnects it.</div>'+
+'<div class="dq-sub">Longest wait first. Files you can actually work today are at the top.</div>'+
 '<div class="dq-kpis">'+
- '<div class="dq-kpi ready"><div class="l">Ready to file</div><div class="v" id="dqKReady">—</div><div class="s">can be worked today</div></div>'+
- '<div class="dq-kpi blocked"><div class="l">Blocked on login</div><div class="v" id="dqKBlocked">—</div><div class="s">login blocked</div></div>'+
- '<div class="dq-kpi"><div class="l">In the queue</div><div class="v" id="dqKTotal">—</div><div class="s">all active files</div></div>'+
- '<div class="dq-kpi"><div class="l">Longest wait</div><div class="v" id="dqKOld">—</div><div class="s">days</div></div>'+
+ '<div class="dq-kpi ready"><div class="l">Can file now</div><div class="v" id="dqKWorkable">—</div><div class="s">bureau ready, docs complete</div></div>'+
+ '<div class="dq-kpi"><div class="l">Waiting on docs</div><div class="v" id="dqKDocs">—</div><div class="s">bureau ready, paperwork missing</div></div>'+
+ '<div class="dq-kpi blocked"><div class="l">Blocked on login</div><div class="v" id="dqKBlocked">—</div><div class="s">client must reconnect</div></div>'+
+ '<div class="dq-kpi"><div class="l">Mine</div><div class="v" id="dqKMine">—</div><div class="s">assigned to you</div></div>'+
 '</div>'+
 '<div class="dq-tabs">'+
- '<button data-f="mine">Mine</button>'+
- '<button data-f="ready" class="on">Ready</button>'+
+ '<button data-f="workable" class="on">Can file now</button>'+
+ '<button data-f="docs">Waiting on docs</button>'+
  '<button data-f="blocked">Blocked</button>'+
+ '<button data-f="mine">Mine</button>'+
  '<button data-f="all">All</button>'+
 '</div>'+
+'<input id="dqSearch" placeholder="Search a client\u2026" style="width:100%;max-width:320px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:var(--card);color:var(--ink)">'+
 '<div class="dq-wrap"><div id="dqBody"><div class="empty">Loading…</div></div></div>';
 
 var drawerHTML=''+
@@ -137,12 +137,16 @@ function loadQueue(){
 }
 
 function visible(){
-  if(state.filter==='mine'){
-    if(!state.me)return [];
-    return state.queue.filter(function(r){return r.assignedTo===state.me;});
+  var rows=state.queue;
+  if(state.filter==='mine') rows=state.me?rows.filter(function(r){return r.assignedTo===state.me;}):[];
+  else if(state.filter==='workable') rows=rows.filter(function(r){return r.workableNow;});
+  else if(state.filter==='docs') rows=rows.filter(function(r){return r.status==='ready'&&!r.workableNow;});
+  else if(state.filter==='blocked') rows=rows.filter(function(r){return r.status==='blocked';});
+  if(state.search){
+    var q=state.search.toLowerCase();
+    rows=rows.filter(function(r){return String(r.name||'').toLowerCase().indexOf(q)>=0;});
   }
-  if(state.filter==='all')return state.queue;
-  return state.queue.filter(function(r){return r.status===state.filter;});
+  return rows;
 }
 
 /* ---------- queue render ---------- */
@@ -161,24 +165,28 @@ function chip(st){
 
 function render(){
   var host=document.getElementById('dqBody');if(!host)return;
-  var ready=state.queue.filter(function(r){return r.status==='ready';}).length;
-  var blocked=state.queue.length-ready;
-  var oldest=state.queue.reduce(function(m,r){return Math.max(m,r.days||0);},0);
+  var workable=state.queue.filter(function(r){return r.workableNow;}).length;
+  var docsWait=state.queue.filter(function(r){return r.status==='ready'&&!r.workableNow;}).length;
+  var blocked=state.queue.filter(function(r){return r.status==='blocked';}).length;
+  var mine=state.me?state.queue.filter(function(r){return r.assignedTo===state.me;}).length:0;
   var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
-  set('dqKReady',ready);set('dqKBlocked',blocked);set('dqKTotal',state.queue.length);
-  set('dqKOld',oldest?oldest:'—');
+  set('dqKWorkable',workable);set('dqKDocs',docsWait);set('dqKBlocked',blocked);set('dqKMine',mine);
 
   if(state.loading){host.innerHTML='<div class="empty">Loading…</div>';return;}
   if(state.err){host.innerHTML='<div class="empty">'+esc(state.err)+'</div>';return;}
   var rows=visible();
   if(!rows.length){
-    host.innerHTML='<div class="empty">'+(state.filter==='mine'
-      ? (state.me?'Nothing is assigned to you yet.':'Could not tell who you are signed in as.')
-      : 'Nothing in this list right now.')+'</div>';
+    var msg = state.search ? 'No client matches that.'
+      : state.filter==='mine' ? (state.me?'Nothing assigned to you.':'Could not tell who you are signed in as.')
+      : state.filter==='workable' ? 'Nothing can be filed today \u2014 check Waiting on docs.'
+      : state.filter==='docs' ? 'No files are waiting on paperwork.'
+      : state.filter==='blocked' ? 'Nothing is blocked on a login.'
+      : 'Nothing in this list right now.';
+    host.innerHTML='<div class="empty">'+msg+'</div>';
     return;
   }
 
-  var h='<table><thead><tr><th>Client</th><th>Stage</th><th>Round</th><th>TransUnion</th><th>Equifax</th><th>Experian</th><th>Docs</th><th>Waiting</th><th>Assigned</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Client</th><th>Stage</th><th>Round</th><th>TransUnion</th><th>Equifax</th><th>Experian</th><th>Docs</th><th>Assigned</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var stAt=function(b){
       if(r.readyBureaus.indexOf(b)>=0)return 'ready';
@@ -193,7 +201,6 @@ function render(){
       '<td>'+chip(stAt('eq'))+'</td>'+
       '<td>'+chip(stAt('ex'))+'</td>'+
       '<td>'+docCell(r.docsMissing)+'</td>'+
-      '<td class="days'+((r.days||0)>180?' old':'')+'">'+(r.days||0)+'d</td>'+
       '<td>'+(r.assignedTo?esc(r.assignedTo):'<span style="opacity:.45">—</span>')+'</td>'+
     '</tr>';
   });
@@ -342,6 +349,8 @@ function initDQ(){
   document.getElementById('dqdCancel').onclick=closeRecord;
   document.getElementById('dqdSave').onclick=saveRecord;
 
+  var sb=sec.querySelector('#dqSearch');
+  if(sb)sb.oninput=function(){ state.search=sb.value.trim(); render(); };
   sec.querySelectorAll('.dq-tabs button').forEach(function(b){
     b.onclick=function(){
       state.filter=b.getAttribute('data-f');

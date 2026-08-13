@@ -116,9 +116,38 @@
     Array.prototype.forEach.call(document.querySelectorAll('.railbtn[data-g]'), function (rb) {
       if (!visibleGroups[rb.dataset.g]) rb.style.display = 'none';
     });
-    if (typeof window.setNavGroup === 'function') window.setNavGroup(HOME.group, false);
+    // A worker's whole day happens in three or four places, and they were
+    // spread across collapsed groups behind icon-rail clicks -- a VA landed on
+    // a sidebar showing one button and had to hunt for Deal Production. Admin
+    // keeps the grouped nav (they have twenty destinations); a worker gets one
+    // flat list of everything they can reach.
+    flattenNav(visibleGroups);
     if (typeof window.showView === 'function') window.showView(HOME.view);
     return true;
+  }
+
+  // Collapses the group structure into a single always-open list. Group
+  // headings and the icon rail stop earning their keep once there are only a
+  // handful of items, and they were actively hiding them.
+  function flattenNav(visibleGroups) {
+    var groups = document.querySelectorAll('.navgroup');
+    if (!groups.length) return;
+    var total = 0;
+    Array.prototype.forEach.call(groups, function (g) {
+      total += g.querySelectorAll('button:not([style*="display: none"])').length;
+    });
+    if (total > 9) return; // enough items that grouping still helps
+
+    Array.prototype.forEach.call(groups, function (g) {
+      g.style.display = '';
+      g.classList.add('open');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.sec[data-g]'), function (h) {
+      h.style.display = 'none';
+    });
+    var rail = document.querySelector('.navrail');
+    if (rail) rail.style.display = 'none';
+    document.body.classList.add('flatnav');
   }
 
   function retry(fn, tries) {
