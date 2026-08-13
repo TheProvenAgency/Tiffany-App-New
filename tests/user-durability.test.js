@@ -73,3 +73,15 @@ test('mirrorUsers reports success honestly, with the reason on failure', async (
   assert.equal(r.ok, false, 'no database means not mirrored');
   assert.ok(typeof r.error === 'string' && r.error.length > 0, 'the reason must come back');
 });
+
+test('legacy NOT NULLs on the users table are relaxed, not tripped over', () => {
+  // The live table predates the migration and carried password_hash NOT NULL.
+  // Our insert never fills it, so every mirror write failed on the constraint,
+  // silently, forever -- the true root cause under the vanishing accounts.
+  // Diagnosed from production via the mirrorError now returned to the admin;
+  // no local environment has this table shape.
+  const mig = require('fs').readFileSync(require('path').join(__dirname, '..', 'lib', 'migrate.js'), 'utf8');
+  assert.ok(/drop not null/.test(mig));
+  assert.ok(/column_name not in \('id', 'username'\)/.test(mig),
+    'generic on purpose: the NEXT legacy column must not repeat this');
+});
