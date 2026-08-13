@@ -141,7 +141,7 @@ function initTeam(){
     if(window.pvOpenClient)window.pvOpenClient(id);
   });
 
-  fetch('/api/me').then(function(r){return r.json();}).then(function(m){
+  window.apiMe().then(function(m){
     // Capability-driven, not role-name equality. This used to read
     // m.role!=='employee', which meant a VA -- who holds exactly the
     // capabilities this view is built from -- signed in and got no home view

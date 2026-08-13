@@ -204,8 +204,7 @@
     }
   }
 
-  fetch('/api/me')
-    .then(function (r) { return r.json(); })
+  window.apiMe()
     .then(function (me) {
       // data-role reflects the EFFECTIVE role (real, or the "View as
       // Employee" preview) -- every CSS/JS check keyed off it already

@@ -28,7 +28,7 @@ var C={blue:'#3b82f6',green:'#45B369',gold:'#FF9F29',red:'#EF4A00',gray:'#D1D5DB
 var CLIENTS=[], loaded=false, saveT=null, charts={};
 var curView='overview', curFilter='all', curSearch='', curPage=1, PAGE=60, openId=null;
 var MYNAME=null, MYROLE=null, openStamp=null, pollTimer=null, lockedFilter=false;
-fetch('/api/me').then(function(r){return r.json();}).then(function(m){
+window.apiMe().then(function(m){
   MYNAME=m&&m.name;
   MYROLE=m&&m.role;
   // Bulk re-sync rewrites the whole tracker from an external source. That is

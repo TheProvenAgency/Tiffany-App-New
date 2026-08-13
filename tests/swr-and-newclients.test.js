@@ -57,3 +57,27 @@ test('New Clients means bought in the last 30 days, not the whole backlog', () =
   assert.ok(!/stage==='Onboarding'\|\|/.test(f), 'the stage-based backlog filter is gone');
   assert.ok(/curSort='paid'; sortDir=-1/.test(prod), 'and the view opens newest first');
 });
+
+test('one /api/me round-trip per page load, shared by every module', () => {
+  // role.js, production.js, disputes.js, team.js and the drawer each asked
+  // "who am I?" separately -- four calls per load, each queueing on its own.
+  const pub = p => fs.readFileSync(path.join(__dirname, '..', 'public', p), 'utf8');
+  const html = pub('index.html');
+  assert.ok(/window\.apiMe=function/.test(html), 'the shared promise helper is defined inline');
+  assert.ok(html.indexOf('window.apiMe=') < html.indexOf('src="/production.js"'),
+    'and defined BEFORE the deferred modules that call it');
+  for (const f of ['role.js', 'production.js', 'disputes.js', 'team.js']) {
+    assert.ok(!pub(f).includes("fetch('/api/me')"), f + ' goes through the shared helper');
+    assert.ok(pub(f).includes('window.apiMe()'), f + ' actually calls it');
+  }
+});
+
+test('the warm loop also covers the default dashboard range and conversations', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const warm = src.split('const warm = ()')[1].split('};')[0];
+  assert.ok(/dash:day:\$\{from\}:\$\{to\}/.test(warm),
+    'the "last 30 days" landing view is pre-built with the exact key the browser asks for');
+  assert.ok(/29 \* 86400000/.test(warm),
+    'using the same UTC to-minus-29-days math as presetRange in index.html');
+  assert.ok(/cachedSWR\('messages'/.test(warm), 'conversations stay hot for Messages and reply SLAs');
+});

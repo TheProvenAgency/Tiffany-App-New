@@ -2218,7 +2218,7 @@ app.get('/api/replies-due', async (req, res) => {
     if (!liveMode()) list = demoData().messages;
     else {
       const cfg = store.getConfig();
-      list = await store.cached('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 }));
+      list = await store.cachedSWR('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 }));
     }
     res.json(replies.buildQueue(list, {
       slaDays: Number(req.query.sla) || undefined,
@@ -2780,7 +2780,23 @@ async function bootstrap() {
   //    from memory -- the only cold path left is the platform's own container
   //    spin-up, which no code here can remove. 50s beats the 60s TTL so the
   //    background refresh, not a visitor, is always the one paying.
-  const warm = () => { composedRoster().catch(() => {}); getClients().catch(() => {}); };
+  const warm = () => {
+    composedRoster().catch(() => {});
+    getClients().catch(() => {});
+    // The dashboard's default view is "last 30 days" -- every login lands on
+    // it. Its from/to are computed here exactly the way the browser computes
+    // them (UTC calendar days, see presetRange in index.html), so the cache
+    // key matches and the first request of the day finds the payload built.
+    const iso = d => d.toISOString().slice(0, 10);
+    const now = new Date();
+    const to = iso(now), from = iso(new Date(now.getTime() - 29 * 86400000));
+    store.cachedSWR(`dash:day:${from}:${to}`, 30 * 1000,
+      () => buildDashboardPayload({ from, to, granularity: 'day' })).catch(() => {});
+    // The conversation list backs both the Messages view and the reply-SLA
+    // queue; it is a network fetch plus a large JSON parse, so keep it hot too.
+    if (liveMode()) store.cachedSWR('messages', 45 * 1000,
+      () => ghl.fetchAllConversations(store.getConfig(), { max: 300 })).catch(() => {});
+  };
   setTimeout(warm, 3000); // after boot settles, not during it
   setInterval(warm, 50 * 1000).unref?.();
 

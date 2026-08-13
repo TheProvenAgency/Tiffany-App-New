@@ -3036,7 +3036,7 @@ async function saveSettings(){
      revokes your sessions, so we send you back to the login page. */
   const pw=$('s_appPassword').value.trim();
   if(pw){
-    const me=await(await fetch('/api/me')).json();
+    const me=await window.apiMe();
     const pr=await fetch('/api/users/'+me.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
     ok=pr.ok;
     msg=pr.ok?'Password changed — signing you back in…':'Settings saved, but the password change failed';
@@ -3449,6 +3449,12 @@ setInterval(loadDashboard,5*60*1000);
 // people who never open Ticket Requests.
 setInterval(loadTickets,20*1000);
 setInterval(loadNotifications,20*1000);
+</script>
+<script>
+/* Five different modules ask "who am I?" on every page load; before this they
+   each paid their own round-trip -- four /api/me calls per load, and on a
+   busy server each queued separately. One promise, shared by all. */
+window.apiMe=function(){return window.__meP||(window.__meP=fetch('/api/me').then(function(r){return r.json();}));};
 </script>
 <script src="/production.js" defer></script><script src="/team.js" defer></script><script src="/role.js" defer></script><script src="/mfsn.js" defer></script><script src="/revenue.js" defer></script><script src="/messages.js" defer></script><script src="/disputes.js" defer></script>
 </body>

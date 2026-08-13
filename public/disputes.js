@@ -14,7 +14,7 @@ var state={queue:[],filter:'workable',search:'',loading:false,openId:null,record
 // Who is signed in, so the Mine tab can mean something. Deal Production
 // records the assignee by display name, so that is what we match on.
 var DISPUTERS=[];
-fetch('/api/me').then(function(r){return r.json();}).then(function(m){
+window.apiMe().then(function(m){
   state.me=m&&m.name||null;
   state.caps=(m&&Array.isArray(m.capabilities))?m.capabilities:[];
   // Assigning is a desk-manager job, not a disputer one -- a disputer should
