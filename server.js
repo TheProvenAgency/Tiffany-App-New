@@ -1008,6 +1008,21 @@ function inRange(dateStr, from, to) {
 app.get('/api/dashboard', async (req, res) => {
   try {
     const { from, to, granularity = 'day' } = req.query;
+    // ~2s of bucketing and matching per call, and the same range is asked for
+    // repeatedly -- a reload, the KPI-tile handshake, a preset click back and
+    // forth. 30s per range keeps it fresh enough to feel live (webhook writes
+    // call store.clearCache(), which drops these keys too) while making the
+    // repeat asks free.
+    const cacheKey = `dash:${granularity}:${from || ''}:${to || ''}`;
+    const cachedBody = await store.cached(cacheKey, 30 * 1000, async () => {
+      return await buildDashboardPayload({ from, to, granularity });
+    });
+    return res.json(cachedBody);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+async function buildDashboardPayload({ from, to, granularity }) {
+  {
     // GoHighLevel is one source among several, not a prerequisite for the
     // page. It had been awaited bare, so a rejected token (expired, or the
     // contacts.readonly scope missing) threw before anything rendered and
@@ -1181,7 +1196,7 @@ app.get('/api/dashboard', async (req, res) => {
     // any partially-covered month.
     const mfsnIncomeEst = mfsnIncomeForRange(from, to);
 
-    res.json({
+    return {
       mode: liveMode() ? 'live' : 'demo',
       generatedAt: new Date().toISOString(),
       ghlError,
@@ -1283,11 +1298,9 @@ app.get('/api/dashboard', async (req, res) => {
           return { series: recent, rate: last.rate, deltaVsPrevMonth: Math.round((last.rate - prev.rate) * 10) / 10 };
         })()
       }
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+    };
   }
-});
+}
 
 // Annotates each client with its effective MyFreeScoreNow status --
 // mfsnStatus: 'affiliate' | 'not_affiliate' | 'not_on_mfsn', mfsnMatched:

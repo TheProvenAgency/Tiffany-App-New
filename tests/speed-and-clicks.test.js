@@ -56,3 +56,18 @@ test('every "+N more" goes somewhere', () => {
     assert.ok(/onclick=/.test(m), 'this overflow count is dead: ' + m);
   }
 });
+
+test('the dashboard payload is cached per range, and webhooks drop it', () => {
+  // ~2s of bucketing per call, and the same range is asked for repeatedly --
+  // a reload, the KPI-tile handshake, a preset clicked back and forth.
+  const route = src2().split("app.get('/api/dashboard'")[1].split('\n});')[0];
+  assert.ok(route.includes('store.cached(cacheKey') && route.includes('`dash:${granularity}'),
+    'keyed by range, or one range would serve another');
+  // Webhook writes call store.clearCache(), which clears every key including
+  // these -- that is the freshness guarantee.
+  assert.ok(/clearCache\(\)/.test(src2()));
+});
+
+function src2() {
+  return fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+}
