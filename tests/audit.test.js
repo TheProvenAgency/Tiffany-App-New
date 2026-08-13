@@ -135,3 +135,38 @@ test('the assignee list is real accounts, not names from a spreadsheet', () => {
   assert.ok(/fetch\('\/api\/users'\)/.test(code), 'it should come from the accounts');
   assert.ok(/legacy/.test(prod), 'a name already on a record must not be orphaned');
 });
+
+test('a message sent is attributed, like any other piece of work', () => {
+  // Sending was recorded as a volume event with no author, so "messages sent"
+  // could not be broken down per person -- which is half of what a VA does.
+  const e = audit.actionEntry('message_sent', { who: 'Marta', clientId: 'c1' });
+  assert.equal(e.action, 'message_sent');
+  assert.equal(e.who, 'Marta');
+  assert.equal(e.clientId, 'c1');
+});
+
+test('throughput reports the columns that describe each job', () => {
+  const t = audit.throughput([
+    { at: new Date().toISOString(), who: 'Marta', clientId: 'a', action: 'round_filed' },
+    { at: new Date().toISOString(), who: 'Marta', clientId: 'b', action: 'message_sent' },
+    { at: new Date().toISOString(), who: 'Marta', clientId: 'c', action: 'stage_moved' },
+    { at: new Date().toISOString(), who: 'Sam', clientId: 'd', action: 'client_completed' }
+  ], { days: 30 });
+  const m = t.people.find(p => p.who === 'Marta');
+  assert.equal(m.roundsFiled, 1);
+  assert.equal(m.messages, 1);
+  assert.equal(m.stageMoves, 1);
+  assert.equal(m.clientsTouched, 3);
+  assert.equal(t.totals.messages, 1);
+  assert.equal(t.totals.stageMoves, 1);
+});
+
+test('both send paths are attributed, not just one', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  for (const route of ["app.post('/api/clients/:id/sms'", "app.post('/api/messages/:id/reply'"]) {
+    const body = src.split(route)[1].split('\n});')[0];
+    assert.ok(/appendAudit/.test(body), route + ' should attribute the send');
+  }
+});

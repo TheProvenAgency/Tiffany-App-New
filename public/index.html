@@ -763,6 +763,20 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
   .rv-kpi-donut .rvkdonut-wrap{width:46px!important;height:46px!important}
 }
 </style>
+<style>
+/* Work cards: a scannable list, not a document. Four rows, no inner scroll --
+   a max-height with overflow:auto was slicing rows in half at the top and
+   bottom, which reads as broken. Anything past four is a count, not a row. */
+.wl{display:flex;flex-direction:column}
+.wl-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+        padding:9px 0;border-bottom:1px solid var(--line)}
+.wl-row:last-of-type{border-bottom:none}
+.wl-nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wl-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.wl-val{font-weight:700;font-size:13px;white-space:nowrap;text-align:right}
+.wl-more{font-size:11.5px;color:var(--muted);padding-top:9px}
+.wl-dot{color:var(--red);margin-right:3px}
+</style>
 </head>
 <body>
 
@@ -1766,12 +1780,19 @@ async function renderOps(){
             // when logging started.
             act.innerHTML='<div class="cardsub">No activity logged'+(at.oldestEntry?' since '+String(at.oldestEntry).slice(0,10):' yet')+'</div>';
           } else {
-            act.innerHTML='<div class="cardsub" style="margin-bottom:5px">Last '+at.days+'d &middot; '+at.roundsFiled+' rounds &middot; '+at.completed+' completed</div>'
-              +a.people.slice(0,5).map(function(p){
-                return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:12.5px">'
-                  +'<span style="font-weight:700">'+escUser(p.who)+'</span>'
-                  +'<span class="cardsub">'+p.roundsFiled+' rounds &middot; '+p.completed+' completed &middot; '
-                  +p.clientsTouched+' clients touched</span></div>';
+            // Per person, in the columns that describe the job: rounds filed,
+            // messages sent, stages moved, clients touched.
+            act.innerHTML='<div class="cardsub" style="margin-bottom:6px">Last '+at.days+' days</div>'
+              +'<div style="display:grid;grid-template-columns:1fr repeat(4,44px);gap:4px;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.03em">'
+              +'<div></div><div style="text-align:right">RNDS</div><div style="text-align:right">MSGS</div>'
+              +'<div style="text-align:right">MOVED</div><div style="text-align:right">DONE</div></div>'
+              +a.people.slice(0,6).map(function(p){
+                return '<div style="display:grid;grid-template-columns:1fr repeat(4,44px);gap:4px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px">'
+                  +'<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(p.who)+'</div>'
+                  +'<div style="text-align:right">'+p.roundsFiled+'</div>'
+                  +'<div style="text-align:right">'+p.messages+'</div>'
+                  +'<div style="text-align:right">'+p.stageMoves+'</div>'
+                  +'<div style="text-align:right">'+p.completed+'</div></div>';
               }).join('');
           }
         }
@@ -1792,15 +1813,16 @@ async function renderOps(){
     }
 
     if(!(fr.items||[]).length){ el.innerHTML='<div class="cardsub">All started</div>'; return; }
-    el.innerHTML='<div style="max-height:190px;overflow:auto">'+fr.items.map(function(i){
-      const w=i.waitingDays==null?'<span class="cardsub">no date</span>'
-        :'<b style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+i.waitingDays+'d</b>';
-      return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)">'
-        +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'
-        +(i.flagged?'<span style="color:var(--red)">\u25cf </span>':'')+escUser(i.name)+'</div>'
-        +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-        +escUser(i.stage||'')+' &middot; '+escUser(i.pkg||'-')+'</div></div>'
-        +'<div style="text-align:right;white-space:nowrap">'+w+'</div></div>';
+    const seenO={}, uniqO=[];
+    (fr.items||[]).forEach(function(i){ const k=(i.name||'').toLowerCase();
+      if(seenO[k])return; seenO[k]=1; uniqO.push(i); });
+    const SHOWO=4;
+    el.innerHTML='<div class="wl">'+uniqO.slice(0,SHOWO).map(function(i){
+      const w=i.waitingDays==null?'—':(i.waitingDays+'d');
+      return '<div class="wl-row"><div style="min-width:0">'
+        +'<div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div>'
+        +'<div class="wl-sub">'+escUser(i.stage||'')+'</div></div>'
+        +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
     +'<div class="cardsub" style="margin-top:8px">'+(t.neverStarted||0).toLocaleString()+' never started &middot; '
     +(t.flagged||0).toLocaleString()+' past '+t.slaDays+'d</div>';
@@ -1820,16 +1842,19 @@ async function renderUpsell(){
     $('upUnlimited').textContent=((t.unlimited||0)+(t.outcomeBased||0)).toLocaleString();
     $('upUnknown').textContent=(t.unknownAllowance||0).toLocaleString();
     if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">None finished yet</div>'; return; }
-    el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(function(i){
-      return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">'
-      +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'+escUser(i.name)+'</div>'
-      +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(i.pkg||'-')+'</div></div>'
-      +'<div style="text-align:right;white-space:nowrap">'
-      +(i.finishedBy==='stage'
-         ? '<span class="cardsub" title="Marked completed in the pipeline">completed</span>'
-         : '<b>'+i.roundsUsed+'</b><span class="cardsub">/'+i.roundsIncluded+' used</span>')
-      +'</div></div>';
+    // First package segment only. "Upgrade to Bi-weekly rounds, 8 Month
+    // Expedited, Upgrade to Unlimited" ran off the edge of the card and told
+    // you nothing the first two words did not.
+    const SHOW=4, rows=d.items.slice(0,SHOW);
+    el.innerHTML='<div class="wl">'+rows.map(function(i){
+      const pkg=String(i.pkg||'').split(',')[0].trim();
+      const val=i.finishedBy==='stage'?'done':(i.roundsUsed+'/'+i.roundsIncluded);
+      return '<div class="wl-row"><div style="min-width:0">'
+        +'<div class="wl-nm">'+escUser(i.name)+'</div>'
+        +'<div class="wl-sub">'+escUser(pkg||'-')+'</div></div>'
+        +'<div class="wl-val" style="color:var(--muted)">'+val+'</div></div>';
     }).join('')+'</div>'
+    +(t.finished>SHOW?'<div class="wl-more">+'+(t.finished-SHOW).toLocaleString()+' more</div>':'')
     +(t.unknownAllowance?'<div class="cardsub" style="margin-top:8px">'+t.unknownAllowance.toLocaleString()+' excluded &mdash; package unclear</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the upsell list.</div>'; }
 }
@@ -1846,17 +1871,18 @@ async function renderRepliesDue(){
     const lh=t.longestWaitHours;
     $('rpLongest').textContent=lh==null?'—':(lh<48?(lh+'h'):(Math.floor(lh/24)+'d'));
     if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">All answered</div>'; return; }
-    el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(i=>{
+    // Name, channel, how long. The message preview was the widest thing on the
+    // card and never the reason anyone clicks -- they click the name.
+    const SHOW=4, rows=d.items.slice(0,SHOW);
+    el.innerHTML='<div class="wl">'+rows.map(function(i){
       const h=i.waitingHours;
-      const wait=h==null?'<span class="cardsub">no date</span>'
-        :'<b style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+(h<48?(h+'h'):(Math.floor(h/24)+'d'))+'</b>';
-      return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">'
-        +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'
-        +(i.flagged?'<span title="Waiting longer than the SLA" style="color:var(--red)">\u25cf </span>':'')
-        +escUser(i.name)+' <span class="cardsub" style="font-weight:600">'+escUser(i.channel||'')+'</span></div>'
-        +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(i.lastBody||'')+'</div></div>'
-        +'<div style="text-align:right;white-space:nowrap">'+wait+'</div></div>';
+      const w=h==null?'—':(h<48?(h+'h'):(Math.floor(h/24)+'d'));
+      return '<div class="wl-row"><div style="min-width:0">'
+        +'<div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div>'
+        +'<div class="wl-sub">'+escUser(i.channel||'')+'</div></div>'
+        +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
+    +(t.waiting>SHOW?'<div class="wl-more">+'+(t.waiting-SHOW).toLocaleString()+' more</div>':'')
     +'<div class="cardsub" style="margin-top:8px">Last '+(t.scanned||0).toLocaleString()+' conversations</div>';
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the reply queue.</div>'; }
 }
@@ -1872,23 +1898,25 @@ async function renderOnboarding(){
     $('onbFlagged').textContent=(t.flagged||0).toLocaleString();
     $('onbLongest').textContent=t.longestWait==null?'—':(t.longestWait+'d');
     if(!(d.items||[]).length){ el.innerHTML='<div class="cardsub">Nobody waiting</div>'; return; }
-    el.innerHTML='<div style="max-height:230px;overflow:auto">'+d.items.map(i=>{
-      const wait=i.waitingDays==null
-        ? '<span class="cardsub" title="No purchase date on file, so the wait cannot be measured">no date</span>'
-        : '<b style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+i.waitingDays+'d</b>';
-      const docs=i.docsTotal?(i.docsOnFile+'/'+i.docsTotal+' docs'):'no doc list';
-      // A returning client reads very differently from a brand-new one, so say
-      // which this is rather than showing a bare wait.
-      const since=(i.firstPaidAt&&i.firstPaidAt!==i.paidAt)
-        ? ' · <span title="First bought '+String(i.firstPaidAt).slice(0,10)+'">returning</span>' : '';
-      return '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">'
-        +'<div style="min-width:0"><div style="font-weight:700;font-size:13px">'
-        +(i.flagged?'<span title="Waiting longer than the SLA" style="color:var(--red)">\u25cf </span>':'')
-        +escUser(i.name)+'</div>'
-        +'<div class="cardsub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escUser(i.pkg||'—')+' · '+docs
-        +since+(i.mfsn==='needs'?' · <span style="color:var(--gold)">needs MFSN</span>':'')+'</div></div>'
-        +'<div style="text-align:right;white-space:nowrap">'+wait+'</div></div>';
+    // Deal Production has duplicate rows for some clients (Max Kyllonen twice,
+    // Hezron Henry twice). Showing the same name repeatedly makes the card look
+    // wrong even though the underlying count is right, so collapse by name here
+    // and fix the duplication at source separately.
+    const seen={}, uniq=[];
+    (d.items||[]).forEach(function(i){ const k=(i.name||'').toLowerCase();
+      if(seen[k])return; seen[k]=1; uniq.push(i); });
+    const SHOW=4, rows=uniq.slice(0,SHOW);
+    el.innerHTML='<div class="wl">'+rows.map(function(i){
+      const w=i.waitingDays==null?'—':(i.waitingDays+'d');
+      const bits=[];
+      if(i.docsTotal)bits.push(i.docsOnFile+'/'+i.docsTotal+' docs');
+      if(i.mfsn==='needs')bits.push('needs MFSN');
+      return '<div class="wl-row"><div style="min-width:0">'
+        +'<div class="wl-nm">'+(i.flagged?'<span class="wl-dot">\u25cf</span>':'')+escUser(i.name)+'</div>'
+        +'<div class="wl-sub">'+escUser(bits.join(' \u00b7 '))+'</div></div>'
+        +'<div class="wl-val" style="color:'+(i.flagged?'var(--red)':'var(--muted)')+'">'+w+'</div></div>';
     }).join('')+'</div>'
+    +(t.onboarding>SHOW?'<div class="wl-more">+'+(t.onboarding-SHOW).toLocaleString()+' more</div>':'')
     +(t.undated?'<div class="cardsub" style="margin-top:8px">'+t.undated+' with no purchase date</div>':'');
   }catch(e){ el.innerHTML='<div class="cardsub">Could not load the onboarding queue.</div>'; }
 }

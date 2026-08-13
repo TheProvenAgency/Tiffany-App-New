@@ -1539,6 +1539,10 @@ app.post('/api/clients/:id/sms', async (req, res) => {
     if (!liveMode()) return res.json({ ok: true, demo: true, note: 'Demo mode — no SMS actually sent. Connect GHL to enable.' });
     const r = await ghl.sendSMS(store.getConfig(), req.params.id, message);
     store.addEvent({ type: 'sms_out', at: new Date().toISOString(), clientId: req.params.id });
+    // Attributed, so "messages sent" is a real per-person number rather than a
+    // volume nobody owns.
+    const smsWho = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+    store.appendAudit([audit.actionEntry('message_sent', { who: smsWho, clientId: req.params.id })]);
     res.json({ ok: true, id: r.messageId || r.id });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2437,6 +2441,8 @@ app.post('/api/messages/:id/reply', async (req, res) => {
     if (!liveMode()) return res.json({ ok: true, demo: true, note: 'Demo mode — no message actually sent. Connect GHL to enable.' });
     const r = await ghl.sendMessage(store.getConfig(), { contactId, conversationId: req.params.id, type, message });
     store.addEvent({ type: 'message_out', channel: type, at: new Date().toISOString(), contactId, conversationId: req.params.id });
+    const replyWho = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+    store.appendAudit([audit.actionEntry('message_sent', { who: replyWho, clientId: contactId })]);
     store.clearCache();
     res.json({ ok: true, id: r.messageId || r.id });
   } catch (e) { res.status(500).json({ error: e.message }); }
