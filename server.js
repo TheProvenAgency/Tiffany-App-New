@@ -2741,6 +2741,9 @@ async function bootstrap() {
 
   // 3. Accounts, then the three stores that key off a real users.id. Ordered
   //    rather than parallel: the mirror is what makes those ids resolvable.
+  // Users first: mirrorUsers pushes the LOCAL list to Postgres, so restoring
+  // after it would mirror the freshly-wiped list over the good copy.
+  await store.hydrateUsersFromPostgres().catch(e => console.error('User restore failed:', e.message));
   await store.mirrorUsers(getUsers())
     .then(() => Promise.all([
       store.hydrateNotificationsFromPostgres(),
