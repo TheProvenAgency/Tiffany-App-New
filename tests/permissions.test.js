@@ -80,33 +80,20 @@ test('an employee reads the top-level Pipeline identical to Admin, revenue inclu
   assert.deepEqual(await empRes.json(), await adminRes.json(), 'byte-for-byte the same as what Admin sees');
 });
 
-test('an employee reads Clients with totalSpent/numberOfPayments/mfsnStatus visible (table + Mark affiliate action), but not mfsnCommission', async () => {
-  // As of 2026-08-05: the Clients table shows Total Spent/# Pays/Affiliate
-  // to both roles, and the drawer's Mark affiliate/not action needs the
-  // real mfsnStatus to render correctly -- moneyVisible now only gates the
-  // drawer's raw dollar amounts (stat tiles, Payment history), which is
-  // purely a client-side rendering choice in openClient(), not a server
-  // redaction. mfsnCommission (a literal dollar figure) is the one field
-  // still stripped server-side either way.
-  const r = await req('/api/clients', { cookie: employeeCookie });
-  assert.equal(r.status, 200);
-  const d = await r.json();
-  assert.equal(d.moneyVisible, false);
-  assert.ok(d.clients.length > 0, 'demo data should seed at least one client');
-  for (const c of d.clients) {
-    assert.ok('totalSpent' in c, 'totalSpent now reaches an employee (table parity)');
-    assert.ok('numberOfPayments' in c, 'numberOfPayments now reaches an employee (table parity)');
-    assert.ok('mfsnStatus' in c, 'mfsnStatus now reaches an employee (Mark affiliate action)');
-    assert.ok(!('mfsnCommission' in c), 'mfsnCommission (a dollar figure) must still never reach an employee');
-  }
-
-  const detail = await req('/api/clients/' + d.clients[0].id, { cookie: employeeCookie });
-  assert.equal(detail.status, 200);
-  const dd = await detail.json();
-  assert.equal(dd.moneyVisible, false);
-  assert.ok('totalSpent' in dd.client);
-  assert.ok(!('mfsnCommission' in dd.client));
-  assert.deepEqual(dd.payments, [], 'the raw payment-history list (dollar amounts) still only comes back for a real admin');
+test('money on a client record follows the revenue capability, nobody else', async () => {
+  // History: on 2026-08-05 employees were given the money columns on the
+  // Clients table by explicit request ("admin parity"). That decision is
+  // superseded by a later, broader one: workers must see nothing about what a
+  // client pays -- the VA instruction, and an employee is the same class of
+  // session. The model is the capability, not the role name: tick Revenue for
+  // a specific person in the Team form and they get the columns back.
+  const r = await req('/api/clients?limit=5', { cookie: employeeCookie });
+  const body = await r.text();
+  assert.ok(!/totalSpent/.test(body), 'spend figures follow the revenue capability');
+  assert.ok(!/mfsnCommission/.test(body));
+  // The affiliate STATUS stays: enrolling clients on MyFreeScoreNow is desk
+  // work, and the status says whether to pitch, not what anything costs.
+  assert.ok(/mfsnStatus/.test(body));
 });
 
 test('an employee can mark a client active/inactive, mark affiliate status, and send an SMS', async () => {

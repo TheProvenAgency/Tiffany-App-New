@@ -146,6 +146,9 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
    gating. (role.js still explicitly hides individual headings/buttons for
    the employee role by setting inline display:none, which overrides this.) */
 .navgroup{display:block}
+/* Money columns exist only for sessions holding the revenue capability. The
+   server already strips the values; this stops the empty columns rendering. */
+body:not([data-caps~="revenue"]) .moneyCol{display:none}
 /* flat worker nav: no group headings, so the sections need their own spacing */
 body.flatnav .navgroup+.navgroup{margin-top:2px}
 body.flatnav .navrail{display:none}

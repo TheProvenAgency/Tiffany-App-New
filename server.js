@@ -2321,7 +2321,8 @@ async function withLastPaid(clients) {
 app.get('/api/production', async (req, res) => {
   try {
     res.json({
-      clients: auth.stripCfpbSecretsAll(await composedRoster()),
+      clients: auth.stripCfpbSecretsAll(await composedRoster())
+        .map(c => auth.redactClient(req.actor, c)),
       mode: liveMode() ? 'live' : 'demo'
     });
   } catch (e) { res.status(500).json({ error: e.message }); }

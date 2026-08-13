@@ -684,6 +684,8 @@ function drawerBody(c){
    factRow('Allowance', esc(allowance))+
    factRow('Purchased', when(c.lastPaid||c.firstPaid)+(paidDays!=null?(' <span class="pv-days">('+paidDays+'d ago)</span>'):''))+
    (repeat?factRow('First bought', when(c.firstPaid)+' <span class="pv-days">(returning client)</span>'):'')+
+   /* paymentCount is stripped server-side for sessions without the revenue
+      capability, so this row only ever renders for someone allowed to see it */
    (c.paymentCount?factRow('Purchases on record', String(c.paymentCount)):'')+
    factRow('Purchase source', '<span class="pv-days">'+esc(srcLabel)+'</span>')+
    factRow('Days in stage', (c.days==null?'—':c.days+'d'))+
