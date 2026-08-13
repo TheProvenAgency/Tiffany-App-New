@@ -1360,7 +1360,12 @@ function productionSummary(p) {
 
 app.get('/api/clients/:id', async (req, res) => {
   try {
-    const clients = withAffiliateTags(await getClients());
+    // Tagging the whole roster to read one client was costing seconds on every
+    // drawer open -- measured at 5.5s live. The roster itself is already
+    // cached; this caches the affiliate pass over it on the same short TTL, so
+    // opening several clients in a row pays for it once.
+    const clients = await store.cached('clients:tagged', 60 * 1000,
+      async () => withAffiliateTags(await getClients()));
     const c = clients.find(x => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: 'not found' });
     const email = (c.email || '').toLowerCase();
@@ -1416,6 +1421,10 @@ app.post('/api/clients/:id/affiliate', async (req, res) => {
     const valid = ['affiliate', 'not_affiliate', 'not_on_mfsn'];
     const override = valid.includes(req.body.override) ? req.body.override : null;
     store.setAffiliateOverride(req.params.id, override);
+    // The tagged roster is cached (see /api/clients/:id), and an override is
+    // exactly the input that makes it wrong. Without this the drawer showed the
+    // old affiliate status for up to a minute after changing it.
+    store.clearCacheKey('clients:tagged');
     const clients = withAffiliateTags(await getClients());
     const c = clients.find(x => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: 'not found' });
@@ -1496,6 +1505,7 @@ app.post('/api/clients/:id/tags', async (req, res) => {
 // (2026-08-05) -- Deal Production's own `stage` field got the same
 // treatment, see EMPLOYEE_FIELDS in lib/auth.js.
 app.post('/api/clients/:id/round', async (req, res) => {
+  store.clearCacheKey('clients:tagged'); // a round change alters what the drawer shows
   try {
     const round = req.body.round != null && String(req.body.round).trim() !== '' ? String(req.body.round).trim() : null;
     if (round && !/^\d+$/.test(round)) return res.status(400).json({ error: 'round must be a whole number' });

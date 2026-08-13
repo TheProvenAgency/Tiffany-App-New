@@ -952,7 +952,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            in server.js), so any "which package stopped selling and when"
            breakdown built from them would be the same mistake that once made
            this business look like it was growing. -->
-      <div class="grid-stack-item" gs-id="what-changed" gs-x="6" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="what-changed" gs-x="6" gs-y="28" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
             <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#F59E0B"><i class="ri-line-chart-line"></i></span>What changed</h3><div class="cap" style="margin:0">Peak month against the latest, split by where the money comes from.</div></div>
@@ -964,7 +964,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            PAID, not days-in-stage: on the live roster days-in-stage is null or
            0-5 for every onboarding client, so flagging on it would surface
            nobody while a real backlog sat behind it. -->
-      <div class="grid-stack-item" gs-id="onboarding" gs-x="0" gs-y="17" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="onboarding" gs-x="0" gs-y="8" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#EF4A00"><i class="ri-user-follow-line"></i></span> New clients waiting</h3>
           <div class="cardsub">Since their most recent purchase &mdash; buying again restarts the clock. Flagged past <span id="onbSla">5</span> days.</div>
@@ -981,7 +981,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            carries a real lastAt and lastDirection. Counts describe the most
            recent conversations, not all history -- the feed is capped -- and
            the card says so rather than implying a full search. -->
-      <div class="grid-stack-item" gs-id="replies-due" gs-x="6" gs-y="17" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="replies-due" gs-x="0" gs-y="18" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#00B8F2"><i class="ri-chat-unread-line"></i></span> Waiting on a reply</h3>
           <div class="cardsub">They messaged last and nobody answered. Flagged past <span id="rpSla">2</span> days.</div>
@@ -996,7 +996,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <!-- Clients who have used every round they bought. Only people whose
            allowance can be read exactly appear here, so nobody is pitched more
            rounds while they are still owed some. -->
-      <div class="grid-stack-item" gs-id="upsell" gs-x="0" gs-y="27" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="upsell" gs-x="6" gs-y="18" gs-w="6" gs-h="10"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-refresh-line"></i></span> Finished &mdash; ready to upsell</h3>
           <div class="cardsub">Used every round they paid for.</div>
@@ -1013,7 +1013,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
            mid-package client there is no partial delivery to point at. It is
            invisible everywhere else -- they sit in Onboarding or Ready looking
            like ordinary work. -->
-      <div class="grid-stack-item" gs-id="ops" gs-x="6" gs-y="27" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="ops" gs-x="6" gs-y="8" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-pulse-line"></i></span> Operations</h3>
           <div class="cardsub">Where the book stands, and who has paid but never been started.</div>
@@ -1029,7 +1029,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
           <div id="opsList"></div>
         </div>
       </div></div>
-      <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="8" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="rev-trend" gs-x="0" gs-y="28" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="rv-card">
           <div class="rv-head">
             <div><h3 class="cardtitle" style="margin-bottom:2px"><span class="cico" style="--ic:#45B369"><i class="ri-price-tag-3-line"></i></span>Sales trend</h3><div class="cap" style="margin:0">Gross collected. Switch the grain: day, week or month.</div></div>
@@ -1067,7 +1067,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
         </div>
       </div></div>
 
-      <div class="grid-stack-item" gs-id="mfsn" gs-x="0" gs-y="17" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="mfsn" gs-x="0" gs-y="38" gs-w="6" gs-h="12"><div class="grid-stack-item-content">
         <div class="card moneycard">
           <h3 class="cardtitle"><img src="/mfsn-logo.png" alt="MyFreeScoreNow" style="height:26px;width:26px;border-radius:6px;vertical-align:-6px;margin-right:6px">MyFreeScoreNow — Affiliate Report</h3>
           <div id="affiliateGap" style="margin-top:10px"></div>
@@ -2676,7 +2676,21 @@ let curProdOnly=null;
 function closeDrawer(){$('drawer').classList.remove('open');curClient=null;curProdOnly=null;requestAnimationFrame(updatePipeScroll);}
 async function openClient(id){
   curProdOnly=null;
-  const r=await fetch('/api/clients/'+id);if(!r.ok)return;
+  // Open first, then load. /api/clients/:id can take several seconds (it reads
+  // the whole roster to find one client), and this used to await it before
+  // touching the DOM -- so clicking a client did nothing at all for that long,
+  // which reads as "clicking doesn't work" rather than "it is loading".
+  $('drawer').classList.add('open');
+  $('dName').textContent='Loading…';
+  $('dMeta').innerHTML='';
+  $('dStats').innerHTML='';
+  $('dActions').innerHTML='';
+  let r;
+  try { r = await fetch('/api/clients/'+id); }
+  catch(e){ $('dName').textContent='Could not load this client'; $('dMeta').textContent='Check the connection and try again.'; return; }
+  // A silent return here was the other half of the problem: a failure looked
+  // identical to a slow success.
+  if(!r.ok){ $('dName').textContent='Could not load this client'; $('dMeta').textContent='The server returned '+r.status+'.'; return; }
   const d=await r.json();const c=d.client;curClient=c;
   // moneyVisible now only gates the raw dollar amounts (Total spent/#
   // payments stat tiles, Payment history) -- Send text, Mark active/

@@ -132,3 +132,57 @@ test('the card never claims a completion rate', () => {
   assert.ok(!/this month|per month|this week|rate/i.test(card),
     'the card must not imply a throughput it cannot measure');
 });
+
+test('the client drawer opens before the data arrives, not after', () => {
+  // /api/clients/:id measured 5.5s live because it reads the whole roster to
+  // find one client. openClient() awaited that before touching the DOM, so
+  // clicking a client did nothing at all for several seconds -- which reads as
+  // "clicking doesn't work" rather than "it is loading".
+  const fs = require('fs');
+  const path = require('path');
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const fn = page.split('async function openClient(id)')[1].split('\n}')[0];
+  const openAt = fn.indexOf("classList.add('open')");
+  const fetchAt = fn.indexOf('await fetch');
+  assert.ok(openAt > -1 && openAt < fetchAt,
+    'the drawer must open before the request, not after it resolves');
+  assert.ok(/Loading/.test(fn), 'and say that it is loading');
+});
+
+test('a failed client load says so instead of doing nothing', () => {
+  // `if(!r.ok) return;` made a failure look identical to a slow success.
+  const fs = require('fs');
+  const path = require('path');
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const fn = page.split('async function openClient(id)')[1].split('\n}')[0];
+  assert.ok(!/if\(!r\.ok\)return;/.test(fn.replace(/\s/g, '')),
+    'a silent return leaves the user staring at nothing');
+  assert.ok(/Could not load this client/.test(fn));
+});
+
+test('the actionable cards sit above the charts', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const y = (id) => {
+    const m = page.match(new RegExp('gs-id="' + id + '" gs-x="\\d+" gs-y="(\\d+)"'));
+    return m ? Number(m[1]) : null;
+  };
+  assert.ok(y('onboarding') < y('rev-trend'), 'work to do comes before the sales chart');
+  assert.ok(y('ops') < y('what-changed'));
+  assert.ok(y('replies-due') < y('rev-trend'));
+});
+
+test('caching the tagged roster does not serve a stale affiliate status', () => {
+  // The cache added for drawer speed is keyed on the roster, but the affiliate
+  // OVERRIDE is a separate input -- so changing it left the drawer showing the
+  // old status for up to a minute. Caught by two existing tests, not by me.
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const route = src.split("app.post('/api/clients/:id/affiliate'")[1].split('\n});')[0];
+  assert.ok(/clearCacheKey\('clients:tagged'\)/.test(route),
+    'an override must invalidate the tagged roster');
+  const order = route.indexOf("clearCacheKey") < route.indexOf('withAffiliateTags');
+  assert.ok(order, 'and must do so before re-reading');
+});
