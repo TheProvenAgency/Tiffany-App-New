@@ -2293,7 +2293,8 @@ async function withLastPaid(clients) {
 app.get('/api/production', async (req, res) => {
   try {
     res.json({
-      clients: rounds.attach(await withLastPaid(withMfsnTags(await readProd()))),
+      clients: auth.stripCfpbSecretsAll(
+        rounds.attach(await withLastPaid(withMfsnTags(await readProd())))),
       mode: liveMode() ? 'live' : 'demo'
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2367,7 +2368,7 @@ app.get('/api/production/:id', async (req, res) => {
     const [tagged] = withMfsnTags([lead]);
     // Stable shape: a never-edited lead still reports updatedAt, so pollers can
     // rely on the field existing.
-    res.json({ client: { updatedAt: null, updatedBy: null, ...tagged } });
+    res.json({ client: auth.stripCfpbSecrets(req.actor, { updatedAt: null, updatedBy: null, ...tagged }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 // Legacy full-replace path -- JSON only (see lib/production.js

@@ -592,6 +592,21 @@ function opts(a,sel){return a.map(function(o){return '<option'+(o===sel?' select
 // at once rather than one at a time, since a teammate filing a complaint
 // usually needs to compare across rounds.
 var cfpbRevealed=false;
+// The list no longer carries portal passwords for anybody (see
+// auth.stripCfpbSecretsAll), so revealing them has to fetch the single record,
+// which is gated on the disputes capability. Nothing to fetch for a role that
+// would only be refused.
+function revealCfpb(c){
+  var caps=(window.__me&&window.__me.capabilities)||[];
+  if(caps.indexOf('disputes')<0&&caps.indexOf('admin')<0)return Promise.resolve(false);
+  return fetch('/api/production/'+encodeURIComponent(c.id))
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if(!d||!d.client)return false;
+      c.cfpb=d.client.cfpb||c.cfpb;
+      return (c.cfpb||[]).some(function(e){return e&&e.pw;});
+    }).catch(function(){return false;});
+}
 function cfpbHTML(c){
   var rows=c.cfpb||[];
   if(!rows.length)return '';
@@ -696,7 +711,19 @@ function bindDrawer(c){
     });
   };
   var cfpbToggle=document.getElementById('dCfpbToggle');
-  if(cfpbToggle)cfpbToggle.onclick=function(){cfpbRevealed=!cfpbRevealed;document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};
+  if(cfpbToggle){
+    cfpbToggle.onclick=function(){
+      if(cfpbRevealed){ cfpbRevealed=false; document.getElementById('dBody').innerHTML=drawerBody(c); bindDrawer(c); return; }
+      cfpbToggle.disabled=true;
+      revealCfpb(c).then(function(ok){
+        cfpbRevealed=!!ok;
+        document.getElementById('dBody').innerHTML=drawerBody(c); bindDrawer(c);
+        if(!ok){ var t=document.getElementById('dCfpbToggle'); if(t)t.textContent='Not available'; }
+      });
+      return;
+    };
+  }
+
   body.querySelectorAll('input[data-b]').forEach(function(el){el.onchange=function(){var k=el.getAttribute('data-b');c[k].r=parseInt(el.value||'0',10);var p={};p[k]={r:c[k].r};commit(p);};});
   body.querySelectorAll('select[data-b]').forEach(function(el){el.onchange=function(){var k=el.getAttribute('data-b');c[k].st=el.value;var p={};p[k]={st:c[k].st};commit(p);};});
   body.querySelectorAll('input[data-doc]').forEach(function(el){el.onchange=function(){if(!c.docs)c.docs={};var d=el.getAttribute('data-doc');c.docs[d]=el.checked;var dp={};dp[d]=el.checked;commit({docs:dp});document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};});
