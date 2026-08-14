@@ -117,3 +117,18 @@ test('disputers still have the notes box that was promised on the call', () => {
   assert.ok(auth.DISPUTE_FIELDS.has('note'));
   assert.ok(/dqdNote/.test(pub('disputes.js')));
 });
+
+/* ---------- rebrand ---------- */
+
+test('the new logo reaches every surface, including logged-out ones', () => {
+  const html = pub('index.html');
+  assert.ok(/logo-mark\.png"\/>/.test(html), 'square mark as favicon -- a wide wordmark is unreadable at 16px');
+  assert.ok(html.includes('railbrand" onclick="showView(\'dash\')" title="Ms. Financial Solutions"><img src="/logo-mark.png"'));
+  assert.ok(!pub('login.html').includes('msfinancialsolutions.net'),
+    'the login page no longer depends on the marketing site being up');
+  assert.ok(auth.canAccessAsset({ role: 'disputer' }, '/logo-mark.png'), 'workers can load the mark');
+  const open = srvNow().split('const open =')[1].split(';')[0];
+  assert.ok(open.includes("'/logo.png'") && open.includes("'/logo-mark.png'"),
+    'the login page shows the logo before a session exists');
+});
+function srvNow(){ return fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8'); }

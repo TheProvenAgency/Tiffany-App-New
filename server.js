@@ -444,6 +444,12 @@ app.use((req, res, next) => {
   const open = req.path.startsWith('/webhooks/') || req.path.startsWith('/internal/cron/')
     || req.path === '/api/login' || req.path === '/api/sso'
     || req.path === '/login.html' || req.path === '/favicon.ico'
+    // The login page shows the company logo BEFORE anyone has a session --
+    // it used to hotlink the marketing site's copy, which is why this never
+    // came up. Now that it serves our own file, the logo (and the favicon
+    // mark) must be reachable logged-out or the login page shows a broken
+    // image. Static brand art only -- everything else stays gated.
+    || req.path === '/logo.png' || req.path === '/logo-mark.png'
     || req.path === '/set-password.html' || req.path === '/api/set-password';
   if (open) return next();
 
