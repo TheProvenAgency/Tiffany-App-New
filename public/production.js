@@ -141,6 +141,7 @@ var sectionHTML=''+
 '<div class="pv-sub"><b>The client work desk.</b> Every credit-repair client and where they stand across all three bureaus. <b>Overview</b> for the numbers, <b>Queue</b> to work the list, <b>Pipeline</b> to see the board. Open any client to update status, documents, and notes — saved for the whole team.</div>'+
 '<div class="pv-bar" style="margin-bottom:14px"><div class="pv-tabs" style="margin-bottom:0"><button id="pvTabOv" class="on" data-v="overview">Overview</button><button id="pvTabQ" data-v="queue">Queue</button><button id="pvTabP" data-v="board">Pipeline</button></div>'+
  '<div style="display:flex;gap:8px">'+
+ '<button id="pvAddBtn" class="addbtn" style="margin-top:0">+ Add client</button>'+
  '<button id="pvReconcileBtn" class="addbtn" style="display:none;margin-top:0">Sync new clients from GoHighLevel</button>'+
  '<button id="pvSheetBtn" class="addbtn" style="display:none;margin-top:0;background:var(--card);color:var(--ink);border:1px solid var(--line)">Sync from Credit Repair sheet</button>'+
  '<input id="pvSheetFile" type="file" accept=".csv" style="display:none">'+
@@ -522,6 +523,47 @@ function renderProduction(){
   if(tabs)tabs.style.display=lockedFilter?'none':'';
   renderChips();
   var s=document.getElementById('pvSearch'); if(s&&!s.__b){s.__b=1;s.oninput=function(){curSearch=s.value.toLowerCase();curPage=1;drawWork();};}
+  // Manual add-client -- Commas isn't feeding the app yet, so a new sale is
+  // entered here. Minimal on purpose: name is the only required field; the
+  // record lands in Onboarding and every detail can be filled in from the
+  // client drawer afterwards.
+  var ab=document.getElementById('pvAddBtn');
+  if(ab&&!ab.__b){ab.__b=1;ab.onclick=function(){
+    var ex=document.getElementById('pvAddForm');
+    if(ex){ex.remove();return;}
+    var f=document.createElement('div');f.id='pvAddForm';f.className='pv-card';
+    f.style.cssText='margin-bottom:14px;display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr auto;gap:8px;align-items:center;padding:12px 14px';
+    f.innerHTML='<input id="pvAddName" placeholder="Full name (required)" autocomplete="off">'
+      +'<input id="pvAddEmail" placeholder="Email" autocomplete="off">'
+      +'<input id="pvAddPhone" placeholder="Phone" autocomplete="off">'
+      +'<input id="pvAddPkg" placeholder="Package bought" autocomplete="off">'
+      +'<button id="pvAddGo" class="addbtn" style="margin-top:0">Save</button>'
+      +'<div id="pvAddMsg" style="grid-column:1/-1;font-size:12px;color:var(--muted)"></div>';
+    var bar=document.querySelector('#view-production .pv-bar');
+    bar.parentNode.insertBefore(f,bar.nextSibling);
+    f.querySelectorAll('input').forEach(function(i){i.style.cssText='border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;min-width:0';});
+    document.getElementById('pvAddName').focus();
+    document.getElementById('pvAddGo').onclick=function(){
+      var nm=document.getElementById('pvAddName').value.trim();
+      var msg=document.getElementById('pvAddMsg');
+      if(!nm){msg.textContent='A name is required.';return;}
+      msg.textContent='Saving\u2026';
+      fetch('/api/production/add',{method:'POST',credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:nm,
+          email:document.getElementById('pvAddEmail').value.trim(),
+          phone:document.getElementById('pvAddPhone').value.trim(),
+          pkg:document.getElementById('pvAddPkg').value.trim()})
+      }).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});})
+      .then(function(o){
+        if(o.status===409){msg.textContent=o.j.error+' Change the name if this is a different person.';return;}
+        if(!o.ok)throw new Error(o.j.error||'Could not add');
+        msg.textContent='Added \u2713 \u2014 opening their profile\u2026';
+        loaded=false; // force a roster refetch so the new client is in it
+        loadThen(function(){ f.remove(); drawWork(); pvOpen(o.j.id); });
+      }).catch(function(e){msg.textContent=e.message;});
+    };
+  };}
   if(curView==='overview'){ renderOverview(); } else { drawWork(); }
 }
 window.pvSetPV=function(v){

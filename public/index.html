@@ -1791,7 +1791,7 @@ async function renderOps(){
         if(act) act.innerHTML=(a.people||[]).length
           ? a.people.slice(0,3).map(function(p){
               return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:12px">'
-                +'<b>'+escUser(p.who)+'</b><span class="cardsub">'+p.roundsFiled+' rounds \u00b7 '+p.messages+' msgs \u00b7 '+p.completed+' done</span></div>';
+                +'<b>'+escUser(p.who)+'</b><span class="cardsub">'+p.roundsFiled+' rounds \u00b7 '+(p.worked||0)+' worked \u00b7 '+p.messages+' msgs \u00b7 '+p.completed+' done</span></div>';
             }).join('') : '';
       }
     }catch(e){}

@@ -2355,7 +2355,35 @@ app.get('/api/disputes/queue', async (req, res) => {
   try {
     const list = await readProd();
     if (!Array.isArray(list)) return res.status(503).json({ error: 'no production data loaded' });
-    res.json({ queue: disputes.buildQueue(list), mode: liveMode() ? 'live' : 'demo' });
+    // Each row carries today's checkbox state so the desk can sort
+    // unfinished work to the top -- Nica's ask: "their priority during their
+    // shift" first, finished sinking to the bottom.
+    const done = audit.workedToday(store.getAuditLog());
+    const queue = disputes.buildQueue(list).map(r => {
+      const d = done[r.id];
+      return d && d.done ? { ...r, workedToday: true, workedBy: d.who } : r;
+    });
+    res.json({ queue, mode: liveMode() ? 'live' : 'demo' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// The daily task checkbox. Ticking appends client_worked to the audit log
+// (which is durable, feeds the admin per-person activity counts, and names
+// the client); unticking appends client_worked_undone, which throughput()
+// treats as a correction. Deliberately an action, not a record field:
+// "done" resets every day by definition, so deriving it from today's log
+// entries needs no nightly job to clear anything.
+app.post('/api/disputes/:id/worked', async (req, res) => {
+  try {
+    const list = await readProd();
+    const client = (list || []).find(c => String(c.id) === String(req.params.id));
+    if (!client) return res.status(404).json({ error: 'no such client' });
+    const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+    const done = req.body && req.body.done !== false;
+    store.appendAudit([audit.actionEntry(done ? 'client_worked' : 'client_worked_undone', {
+      who, clientId: String(client.id), clientName: client.name || null
+    })]);
+    res.json({ ok: true, done, who });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2417,6 +2445,46 @@ app.get('/api/production/:id', async (req, res) => {
 });
 // Legacy full-replace path -- JSON only (see lib/production.js
 // writeProdJsonOnly's comment). Superseded by PATCH /api/production/:id.
+// Add one client by hand. Until the Commas purchase webhook is connected,
+// a new sale doesn't reach this app on its own -- Nica (or any VA) enters
+// the client here and the record is created durably (Postgres first via
+// appendProdRecords, JSON backup refreshed) exactly like sheet-sync does.
+// Once Commas is wired up this stays useful for one-off referral sales.
+app.post('/api/production/add', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const name = String(b.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const list = await readProd();
+    if (!Array.isArray(list)) return res.status(503).json({ error: 'no production data loaded' });
+    const dupe = list.find(c => String(c.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (dupe && !b.force) {
+      // The sheet had duplicate people entered twice; don't let the app
+      // recreate that problem from a mistyped search.
+      return res.status(409).json({ error: 'A client named "' + dupe.name + '" already exists.', existingId: dupe.id });
+    }
+    const rec = {
+      id: 'manual-' + Date.now().toString(36),
+      name,
+      email: String(b.email || '').trim() || undefined,
+      phone: String(b.phone || '').trim() || undefined,
+      pkg: String(b.pkg || '').trim(),
+      stage: 'Onboarding',
+      tu: { r: 0, st: 'none' }, eq: { r: 0, st: 'none' }, ex: { r: 0, st: 'none' },
+      docs: {}, notes: [], cfpb: []
+    };
+    const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+    if (b.note && String(b.note).trim()) rec.notes.push({ when: new Date().toISOString().slice(0, 10), who, text: String(b.note).trim() });
+    await dealProd.appendProdRecords(list, [rec]);
+    try {
+      store.appendAudit([audit.actionEntry('client_added', { who, clientId: rec.id, clientName: name })]);
+    } catch (e) { console.error('Audit write failed (the client was still added):', e.message); }
+    store.clearCacheKey('roster:composed');
+    store.clearCacheKey('clients:tagged');
+    res.json({ ok: true, id: rec.id, name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/production', (req, res) => {
   const c = req.body && req.body.clients;
   if (!Array.isArray(c)) return res.status(400).json({ error: 'clients array required' });
@@ -2657,6 +2725,19 @@ async function applyProdPatchToJson(id, allowed, who) {
   for (const k of Object.keys(rest)) {
     if (['tu', 'eq', 'ex', 'docs'].includes(k) && rest[k] && typeof rest[k] === 'object') {
       lead[k] = { ...(lead[k] || {}), ...rest[k] };
+    } else if (k === 'cfpb' && Array.isArray(rest.cfpb)) {
+      // Upsert by round, exactly like the Postgres side -- a plain assignment
+      // here would REPLACE the whole login list with the one entry being
+      // added, silently discarding every earlier round's credentials from
+      // the JSON backup and from the record the UI re-renders after saving.
+      const merged = (lead.cfpb || []).slice();
+      for (const entry of rest.cfpb) {
+        if (!entry || entry.round == null) continue;
+        const at = merged.findIndex(x => x && String(x.round) === String(entry.round));
+        if (at >= 0) merged[at] = { ...merged[at], ...entry };
+        else merged.push(entry);
+      }
+      lead.cfpb = merged;
     } else {
       lead[k] = rest[k];
     }

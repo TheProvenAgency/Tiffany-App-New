@@ -42,9 +42,17 @@ function plural(n,w){return n+' '+w+(n===1?'':'s');}
 var css=''+
 '#view-disputes{padding:24px 30px 60px}'+
 '#view-disputes .dq-sub{color:var(--muted);font-size:12.5px;margin:2px 0 16px;max-width:900px;line-height:1.6}'+
-'#view-disputes .dq-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}'+
+'#view-disputes .dq-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}'+
 '#view-disputes .dq-kpi{background:var(--card);border-radius:8px;box-shadow:0 .25rem 1.875rem rgba(46,45,116,.05);padding:14px 16px;border-top:3px solid var(--line)}'+
 '#view-disputes .dq-kpi.ready{border-top-color:#45B369}'+
+'#view-disputes .dq-kpi.done{border-top-color:#4F46E5}'+
+'#view-disputes td.ck{width:34px;text-align:center}'+
+'#view-disputes td.ck input{width:16px;height:16px;cursor:pointer;accent-color:#45B369}'+
+'#view-disputes tr.dq-done td{opacity:.45}'+
+'#view-disputes tr.dq-done td.ck{opacity:1}'+
+'#dqDrawer .cfadd{display:grid;grid-template-columns:70px 1fr 1fr 34px;gap:6px;margin-top:8px}'+
+'#dqDrawer .cfadd input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px;min-width:0}'+
+'#dqDrawer .cfadd button{border:0;border-radius:6px;background:#4F46E5;color:#fff;font-weight:700;cursor:pointer}'+
 '#view-disputes .dq-kpi.blocked{border-top-color:#EF4A00}'+
 '#view-disputes .dq-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '#view-disputes .dq-kpi .v{font-size:24px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
@@ -108,6 +116,7 @@ var sectionHTML=''+
  '<div class="dq-kpi"><div class="l">Waiting on docs</div><div class="v" id="dqKDocs">—</div><div class="s">bureau ready, paperwork missing</div></div>'+
  '<div class="dq-kpi blocked"><div class="l">Blocked on login</div><div class="v" id="dqKBlocked">—</div><div class="s">client must reconnect</div></div>'+
  '<div class="dq-kpi"><div class="l">Mine</div><div class="v" id="dqKMine">—</div><div class="s">assigned to you</div></div>'+
+ '<div class="dq-kpi done"><div class="l">Done today</div><div class="v" id="dqKDone">—</div><div class="s">checked off this shift</div></div>'+
 '</div>'+
 '<div class="dq-tabs" style="margin-bottom:12px">'+
  '<button data-f="workable" class="on">Can file now</button>'+
@@ -136,6 +145,14 @@ function loadQueue(){
     .catch(function(e){ state.err=e.message;state.loading=false;render(); });
 }
 
+// Unfinished work floats to the top, today's checked-off clients sink to the
+// bottom -- requested on the walkthrough call: the list should read as
+// "what's left in my shift", not a fixed roster order.
+function taskSort(rows){
+  return rows.slice().sort(function(a,b){
+    return (a.workedToday?1:0)-(b.workedToday?1:0);
+  });
+}
 function visible(){
   var rows=state.queue;
   if(state.filter==='mine') rows=state.me?rows.filter(function(r){return r.assignedTo===state.me;}):[];
@@ -146,6 +163,7 @@ function visible(){
     var q=state.search.toLowerCase();
     rows=rows.filter(function(r){return String(r.name||'').toLowerCase().indexOf(q)>=0;});
   }
+  rows=taskSort(rows);
   return rows;
 }
 
@@ -178,8 +196,10 @@ function render(){
   if(docsKpi&&docsKpi.closest('.dq-kpi'))docsKpi.closest('.dq-kpi').style.display=tracked?'':'none';
   var blocked=state.queue.filter(function(r){return r.status==='blocked';}).length;
   var mine=state.me?state.queue.filter(function(r){return r.assignedTo===state.me;}).length:0;
+  var doneToday=state.queue.filter(function(r){return r.workedToday;}).length;
   var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
   set('dqKWorkable',workable);set('dqKDocs',docsWait);set('dqKBlocked',blocked);set('dqKMine',mine);
+  set('dqKDone',doneToday);
 
   if(state.loading){host.innerHTML='<div class="empty">Loading…</div>';return;}
   if(state.err){host.innerHTML='<div class="empty">'+esc(state.err)+'</div>';return;}
@@ -195,14 +215,19 @@ function render(){
     return;
   }
 
-  var h='<table><thead><tr><th>Client</th><th>Stage</th><th>Round</th><th>TransUnion</th><th>Equifax</th><th>Experian</th><th>Docs</th><th>Assigned</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th title="Done today">\u2713</th><th>Client</th><th>Stage</th><th>Round</th><th>TransUnion</th><th>Equifax</th><th>Experian</th><th>Docs</th><th>Assigned</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var stAt=function(b){
       if(r.readyBureaus.indexOf(b)>=0)return 'ready';
       if(r.blockedBureaus.indexOf(b)>=0)return 'login';
       return 'done';
     };
-    h+='<tr data-id="'+esc(r.id)+'">'+
+    h+='<tr data-id="'+esc(r.id)+'"'+(r.workedToday?' class="dq-done"':'')+'>'+
+      // The daily task checkbox -- tick it when this client's round is done
+      // for the day. Works on unassigned clients too (the team picks from a
+      // shared pool), and the tick is what credits the work to whoever did
+      // it on the admin activity board.
+      '<td class="ck"><input type="checkbox" '+(r.workedToday?'checked':'')+' aria-label="Done today: '+esc(r.name)+'"'+(r.workedBy&&r.workedToday?' title="Done by '+esc(r.workedBy)+'"':'')+'></td>'+
       '<td class="nm">'+esc(r.name)+'</td>'+
       '<td>'+esc(r.stage)+'</td>'+
       '<td>'+(r.currentRound||'—')+'</td>'+
@@ -217,6 +242,27 @@ function render(){
   host.innerHTML=h;
   host.querySelectorAll('tbody tr').forEach(function(tr){
     tr.onclick=function(){openRecord(tr.getAttribute('data-id'));};
+    var cb=tr.querySelector('input[type=checkbox]');
+    if(cb)cb.onclick=function(ev){
+      ev.stopPropagation(); // ticking the box must not open the drawer
+      markWorked(tr.getAttribute('data-id'),cb.checked,cb);
+    };
+  });
+}
+
+function markWorked(id,done,cb){
+  cb.disabled=true;
+  fetch('/api/disputes/'+encodeURIComponent(id)+'/worked',{
+    method:'POST',credentials:'same-origin',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({done:done})
+  }).then(function(r){
+    if(!r.ok)throw new Error('Could not save');
+    var row=state.queue.filter(function(q){return String(q.id)===String(id);})[0];
+    if(row){row.workedToday=done;row.workedBy=done?state.me:null;}
+    render(); // re-sorts so finished work sinks immediately
+  }).catch(function(){
+    cb.checked=!done;cb.disabled=false;
   });
 }
 
@@ -290,6 +336,17 @@ function renderRecord(){
         '<code>'+esc(c.email||'—')+'</code>'+(c.pw?' · <code>'+esc(c.pw)+'</code>':'')+'</div>';
     });
   }
+  // Disputers open the CFPB account themselves, so they enter the login here
+  // and it shows up on every portal (asked for on the walkthrough call).
+  // Saved with the Save button below like every other field; a repeated round
+  // number updates that round's login rather than duplicating it.
+  var nextRound=(r.currentRound||0)+1;
+  h+='<div class="cfadd">'
+    +'<input type="number" min="1" max="20" id="dqcRound" value="'+nextRound+'" aria-label="Round number">'
+    +'<input type="text" id="dqcEmail" placeholder="Login / email" autocomplete="off" aria-label="CFPB login">'
+    +'<input type="text" id="dqcPw" placeholder="Password" autocomplete="off" aria-label="CFPB password">'
+    +'<span style="align-self:center;font-size:11px;color:var(--muted)">add</span>'
+    +'</div>';
 
   h+='<h4>Notes</h4>';
   (r.notes||[]).slice().reverse().forEach(function(n){
@@ -320,6 +377,13 @@ function saveRecord(){
   var noteEl=document.getElementById('dqdNote');
   var note=noteEl?noteEl.value.trim():'';
   if(note)patch.note=note;
+
+  var cfE=document.getElementById('dqcEmail'),cfP=document.getElementById('dqcPw'),cfR=document.getElementById('dqcRound');
+  if(cfE&&(cfE.value.trim()||cfP&&cfP.value.trim())){
+    patch.cfpb=[{round:parseInt(cfR&&cfR.value,10)||((r.currentRound||0)+1),
+      email:cfE.value.trim(),pw:cfP?cfP.value.trim():'',
+      date:new Date().toISOString().slice(0,10)}];
+  }
 
   var msg=document.getElementById('dqdMsg');
   if(!Object.keys(patch).length){ msg.textContent='Nothing changed.'; return; }
