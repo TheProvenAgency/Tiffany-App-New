@@ -1111,7 +1111,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       </div></div>
 
 
-      <div class="grid-stack-item" gs-id="disputework" gs-x="9" gs-y="10" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
+      <div class="grid-stack-item" gs-id="disputework" gs-x="0" gs-y="0" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-scales-3-line"></i></span> Disputes done</h3>
           <div style="display:flex;gap:4px;margin:6px 0 8px" id="dwChips">
@@ -3439,7 +3439,18 @@ async function loadDashLayout(){
     // the new card would silently vanish for them. Leaving addAndRemove
     // off means a newly-added card just keeps its shipped default spot
     // until the person drags it, instead of disappearing.
-    if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length) dashGridStack.load(d.layout.nodes,false);
+    if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length){
+      dashGridStack.load(d.layout.nodes,false);
+      // A card that shipped AFTER this layout was saved isn't in the node
+      // list, so load() leaves it wherever collision resolution pushed it --
+      // usually the bottom of a long dashboard, which reads as "the new
+      // widget isn't there". New cards surface at the top instead; one drag
+      // and the layout re-saves with wherever the person actually wants it.
+      const known=new Set(d.layout.nodes.map(n=>n.id));
+      dashGridStack.getGridItems()
+        .filter(el=>!known.has(el.getAttribute('gs-id')))
+        .forEach(el=>dashGridStack.update(el,{x:0,y:0}));
+    }
   }catch(e){ /* keep the shipped default layout from the HTML */ }
   // NOTE: this used to "self-heal" rev-kpi-total and revenue-package back
   // up to a hardcoded minimum size on every load, from back when their

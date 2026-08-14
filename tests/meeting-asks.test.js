@@ -140,7 +140,10 @@ function srvNow(){ return fs.readFileSync(path.join(__dirname, '..', 'server.js'
 
 test('the dashboard has a per-person disputes-done card with a time window', () => {
   const html = pub('index.html');
-  assert.ok(/gs-id="disputework"/.test(html), 'a real grid card, so it can be moved and resized like the rest');
+  assert.ok(/gs-id="disputework" gs-x="0" gs-y="0"/.test(html),
+    'ships at the very top of the dashboard');
+  assert.ok(/known\.has\(el\.getAttribute\('gs-id'\)\)/.test(html),
+    'and surfaces at the top even for someone whose saved layout predates it');
   assert.ok(/data-days="1"/.test(html) && /data-days="7"/.test(html) && /data-days="30"/.test(html),
     'Today / Week / Month windows');
   assert.ok(/\/api\/team-activity\?days='\+dwDays/.test(html), 'window drives the same audit-log endpoint');
