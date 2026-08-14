@@ -122,8 +122,11 @@ test('disputers still have the notes box that was promised on the call', () => {
 
 test('the new logo reaches every surface, including logged-out ones', () => {
   const html = pub('index.html');
-  assert.ok(/logo-mark\.png"\/>/.test(html), 'square mark as favicon -- a wide wordmark is unreadable at 16px');
-  assert.ok(html.includes('railbrand" onclick="showView(\'dash\')" title="Ms. Financial Solutions"><img src="/logo-mark.png"'));
+  assert.ok(/logo-mark\.png\?v=\d+"\/>/.test(html), 'square mark as favicon -- a wide wordmark is unreadable at 16px');
+  assert.ok(/railbrand" onclick="showView\('dash'\)" title="Ms\. Financial Solutions"><img src="\/logo-mark\.png\?v=\d+"/.test(html));
+  // Images carry a 7-day max-age, so swapped art MUST ship under a new URL
+  // or the team stares at the old logo for a week.
+  assert.ok(!/src="\/logo(-mark|-wordmark)?\.png"/.test(html), 'no unversioned reference to the swapped art');
   assert.ok(!pub('login.html').includes('msfinancialsolutions.net'),
     'the login page no longer depends on the marketing site being up');
   assert.ok(auth.canAccessAsset({ role: 'disputer' }, '/logo-mark.png'), 'workers can load the mark');
