@@ -318,6 +318,13 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
    and reflow logic; we just theme it and toggle edit mode on/off. */
 .dashbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .grid-stack{margin:0 -10px}
+.dw-chip{border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;cursor:pointer}
+.dw-chip.on{background:var(--inverse-bg);color:var(--inverse-ink);border-color:transparent}
+.dw-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:4px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.dw-row:last-child{border-bottom:none}
+.dw-row b{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dw-row .n{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+.dw-row .s{font-size:10.5px;color:var(--muted);white-space:nowrap}
 .grid-stack-item-content{position:absolute;inset:10px;overflow:hidden;background:none;
   /* lets any card inside size its text/number off the ACTUAL box it's been
      dragged/resized to (via the cq* units below), instead of every card
@@ -1104,6 +1111,17 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       </div></div>
 
 
+      <div class="grid-stack-item" gs-id="disputework" gs-x="9" gs-y="10" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
+        <div class="card">
+          <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-scales-3-line"></i></span> Disputes done</h3>
+          <div style="display:flex;gap:4px;margin:6px 0 8px" id="dwChips">
+            <button class="dw-chip on" data-days="1">Today</button>
+            <button class="dw-chip" data-days="7">Week</button>
+            <button class="dw-chip" data-days="30">Month</button>
+          </div>
+          <div id="dwList"><div class="cardsub">&mdash;</div></div>
+        </div>
+      </div></div>
       <div class="grid-stack-item" gs-id="clientbase" gs-x="6" gs-y="10" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#7F27FF"><i class="ri-team-line"></i></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
@@ -1771,6 +1789,47 @@ window.addEventListener('message', ev=>{
 // so a VA -- who answers these -- gets it too.
 // Clients who have used everything they bought.
 // Admin operations view.
+// Disputes done per person over a picked window (Today / Week / Month).
+// Counts the two things that ARE dispute work in this system: rounds filed
+// (bureau round advanced in the drawer) and clients checked off on the
+// desk's daily task list. Both come from the audit log via /api/team-activity,
+// so an undone checkbox is already netted out server-side.
+let dwDays=1;
+async function renderDisputeWork(){
+  const el=$('dwList'); if(!el)return;
+  const chips=$('dwChips');
+  if(chips&&!chips.__wired){
+    chips.__wired=true;
+    chips.querySelectorAll('.dw-chip').forEach(function(b){
+      b.onclick=function(){
+        dwDays=Number(b.getAttribute('data-days'))||1;
+        chips.querySelectorAll('.dw-chip').forEach(function(x){x.classList.remove('on');});
+        b.classList.add('on');
+        renderDisputeWork();
+      };
+    });
+  }
+  try{
+    const r=await fetch('/api/team-activity?days='+dwDays);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const rows=(d.people||[])
+      .map(function(p){return {who:p.who,done:(p.worked||0)+(p.roundsFiled||0),worked:p.worked||0,rounds:p.roundsFiled||0};})
+      .filter(function(p){return p.done>0;})
+      .sort(function(a,b){return b.done-a.done;});
+    if(!rows.length){ el.innerHTML='<div class="cardsub">No dispute work in this window yet</div>'; return; }
+    el.innerHTML=rows.slice(0,6).map(function(p){
+      const bits=[];
+      if(p.rounds)bits.push(p.rounds+' round'+(p.rounds===1?'':'s'));
+      if(p.worked)bits.push(p.worked+' checked off');
+      return '<div class="dw-row"><div style="min-width:0"><b>'+escUser(p.who)+'</b>'
+        +'<div class="s">'+bits.join(' \u00b7 ')+'</div></div>'
+        +'<span class="n">'+p.done.toLocaleString()+'</span></div>';
+    }).join('')
+    +(rows.length>6?'<div class="cardsub" style="margin-top:6px">+'+(rows.length-6)+' more</div>':'');
+  }catch(e){ el.innerHTML='<div class="cardsub">Could not load</div>'; }
+}
+
 async function renderOps(){
   const el=$('opsList'); if(!el)return;
   try{
@@ -1909,6 +1968,7 @@ async function loadDashboard(){
   renderRepliesDue();
   renderUpsell();
   renderOps();
+  renderDisputeWork();
   const qs=new URLSearchParams({granularity});if(from)qs.set('from',from);if(to)qs.set('to',to);
   const r=await fetch('/api/dashboard?'+qs);if(r.status===401){location.href='/login.html';return;}
   const d=await r.json();const k=d.kpis;

@@ -135,3 +135,16 @@ test('the new logo reaches every surface, including logged-out ones', () => {
     'the login page shows the logo before a session exists');
 });
 function srvNow(){ return fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8'); }
+
+/* ---------- disputes-done widget ---------- */
+
+test('the dashboard has a per-person disputes-done card with a time window', () => {
+  const html = pub('index.html');
+  assert.ok(/gs-id="disputework"/.test(html), 'a real grid card, so it can be moved and resized like the rest');
+  assert.ok(/data-days="1"/.test(html) && /data-days="7"/.test(html) && /data-days="30"/.test(html),
+    'Today / Week / Month windows');
+  assert.ok(/\/api\/team-activity\?days='\+dwDays/.test(html), 'window drives the same audit-log endpoint');
+  assert.ok(/p\.worked\|\|0\)\+\(p\.roundsFiled\|\|0/.test(html),
+    'disputes done = rounds filed + task-list checkoffs, the two forms dispute work takes here');
+  assert.ok(/renderDisputeWork\(\);/.test(html), 'rendered with the other dashboard cards');
+});
