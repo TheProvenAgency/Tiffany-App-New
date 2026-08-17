@@ -20,6 +20,7 @@ const ghl = require('./lib/ghl');
 const ghlcreds = require('./lib/ghlcreds');
 const affiliate = require('./lib/affiliate');
 const sheet = require('./lib/sheet');
+const appCrypto = require('./lib/crypto'); // CFPB portal password encryption -- see the sheet-sync webhook below
 const meta = require('./lib/meta');
 const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
@@ -2080,6 +2081,128 @@ app.post('/webhooks/mfsn', (req, res) => {
   store.setMfsnMembers(members);
   store.setMfsnSyncedAt(new Date().toISOString());
   res.json({ ok: true, count: members.length });
+});
+
+// n8n Google-Sheet sync (~every 6h) -- the automated counterpart to the
+// manual CSV /api/production/sheet-sync route and to POST
+// /api/production/add: same underlying "MSF CREDIT CLIENTS" sheet, same
+// sheet.reconcileSheet() matching/diff engine (see lib/sheet.js), same
+// Postgres-first dealProd.patchProdRecord/appendProdRecords write path
+// every other Deal Production write already uses. CFPB portal passwords
+// are AES-256-GCM encrypted via lib/crypto.js before Postgres ever sees
+// them (patchProdRecord/appendProdRecords already do this per round, see
+// their ON CONFLICT (production_record_id, round_number) upserts) --
+// see the isEnabled() guard below for what happens if no key is set.
+//
+// Identity matching goes one step further than the manual CSV route:
+// reconcileSheet() only ever creates a record when a sheet row ALSO
+// matches a live GHL contact, leaving a sheet-only name in `unmatched` for
+// a human to review. This webhook promotes `unmatched` rows to inserts too
+// (ghlId: null, legacy_id 'SS'+<sheet row's own id>) since it exists to
+// onboard a brand-new sheet-only client automatically, the same thing
+// POST /api/production/add does by hand.
+app.post('/webhooks/sheet-sync', async (req, res) => {
+  if (!checkSecret(req, res)) return;
+  try {
+    // Verified shape from the real n8n payload: the top level is an array
+    // wrapping n8n's own webhook-trigger envelope ({headers, body, ...}),
+    // not a bare array of client rows -- the actual sheet rows live at
+    // payload[0].body. The two fallbacks below mean a future n8n
+    // reconfiguration (e.g. "respond with body only") degrades to still
+    // working rather than a silent 400 on every run.
+    const raw = req.body;
+    let items = null;
+    if (Array.isArray(raw) && raw[0] && Array.isArray(raw[0].body)) items = raw[0].body;
+    else if (raw && Array.isArray(raw.body)) items = raw.body;
+    else if (Array.isArray(raw)) items = raw;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: 'expected an n8n webhook payload with a body[] array of sheet rows' });
+    }
+
+    const sheetRows = sheet.normalizeSheetJsonRows(items);
+    const ghlClients = await getClients();
+    const prod = await readProd() || [];
+
+    // encrypt() throws (not returns null) if APP_ENCRYPTION_KEY is unset,
+    // which would abort the WHOLE Postgres write inside
+    // patchProdRecord/appendProdRecords rather than just skipping the one
+    // secret field. Stripping here instead matches "skip the secret
+    // fields, never plaintext-fallback" without touching that shared code.
+    let strippedPwCount = 0;
+    if (!appCrypto.isEnabled()) {
+      for (const row of sheetRows) {
+        for (const c of row.cfpb) {
+          if (c.pw) { c.pw = null; strippedPwCount++; }
+        }
+      }
+      if (strippedPwCount) {
+        console.error(`sheet-sync webhook: APP_ENCRYPTION_KEY not set -- stripped ${strippedPwCount} CFPB password(s) rather than storing them unencrypted`);
+      }
+    }
+
+    const { updates, toCreate, unmatched, duplicateNames } = sheet.reconcileSheet(sheetRows, ghlClients, prod);
+
+    // ---- updates: existing records, matched by GHL id or legacy name key ----
+    const appliedUpdates = [];
+    for (const u of updates) {
+      const patch = { ...u.patch, note: u.sheetNote || undefined };
+      await dealProd.patchProdRecord(u.id, patch, 'Sheet Sync (n8n)');
+      // Same per-round cfpb upsert (and tu/eq/ex/docs merge, note-append)
+      // the drawer PATCH route uses -- not the CSV sheet-sync route's
+      // plain Object.assign, which still clobbers the JSON backup's cfpb
+      // array with only the rounds in this particular patch.
+      await applyProdPatchToJson(u.id, patch, 'Sheet Sync (n8n)');
+      appliedUpdates.push(u.id);
+    }
+
+    // ---- creates: GHL-matched (toCreate) + sheet-only (unmatched, promoted) ----
+    const blankDocs = { SSC: false, DL: false, POA: false, FTC: false, 'Data breach': false, Affidavit: false, 'Perm. purpose': false, 'Experian letter': false };
+    const fromGhlMatch = toCreate.map(c => ({
+      id: 'S' + c.ghlId, ghlId: c.ghlId, name: c.name, email: c.email, phone: c.phone,
+      pkg: c.pkg, stage: c.stage, days: 0,
+      tu: { r: c.tu.r, st: c.tu.st }, eq: { r: c.eq.r, st: c.eq.st }, ex: { r: c.ex.r, st: c.ex.st },
+      docs: blankDocs, va: '—', cfpb: c.cfpb || [],
+      notes: [{ when: new Date().toISOString().slice(0, 10), who: 'Sheet Sync (n8n)', text: c.notes || 'Added from the n8n Google Sheet sync — matched a GoHighLevel contact not previously tracked in Deal Production.' }]
+    }));
+    const fromUnmatched = unmatched.map(row => ({
+      id: 'SS' + row.sourceRowId, ghlId: null, name: row.name, email: null, phone: null,
+      pkg: row.pkg, stage: sheet.deriveStage(row.tu, row.eq, row.ex), days: 0,
+      tu: row.tu, eq: row.eq, ex: row.ex,
+      docs: blankDocs, va: '—', cfpb: row.cfpb || [],
+      notes: [{ when: new Date().toISOString().slice(0, 10), who: 'Sheet Sync (n8n)', text: row.notes || 'Added from the n8n Google Sheet sync — no matching GoHighLevel contact or existing Deal Production record.' }]
+    }));
+
+    const candidates = fromGhlMatch.concat(fromUnmatched);
+    const existingIds = new Set(prod.map(c => c.id));
+    const created = candidates.filter(r => !existingIds.has(r.id));
+    // Belt-and-suspenders idempotency guard: reconcileSheet's name-based
+    // matching is the primary defense against re-creating someone on a
+    // repeat 6h run; this catches the rare case where that match misses
+    // (e.g. a name-normalization edge case) so a re-fire can't insert a
+    // second row under the same deterministic legacy_id -- which would hit
+    // legacy_id's UNIQUE constraint and roll back this whole batch's
+    // Postgres transaction, not just the one row.
+    const skippedAsAlreadyCreated = candidates.filter(r => existingIds.has(r.id)).map(r => r.id);
+
+    if (created.length) await dealProd.appendProdRecords(prod, created);
+    store.clearCacheKey('roster:composed');
+    store.clearCacheKey('clients:tagged');
+
+    res.json({
+      ok: true,
+      receivedCount: sheetRows.length,
+      updatesCount: appliedUpdates.length,
+      updates: appliedUpdates,
+      createdCount: created.length,
+      created: created.map(c => ({ id: c.id, name: c.name })),
+      skippedAsAlreadyCreatedCount: skippedAsAlreadyCreated.length,
+      skippedAsAlreadyCreated,
+      unmatchedPromotedCount: fromUnmatched.length,
+      duplicateNameCount: duplicateNames.length,
+      duplicateNames: duplicateNames.map(r => r.name),
+      strippedCfpbPasswordCount: strippedPwCount
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ------------------------- daily snapshot job -------------------------

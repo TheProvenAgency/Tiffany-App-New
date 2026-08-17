@@ -59,8 +59,11 @@ There is no `render.yaml`/`Dockerfile`; Render is configured directly in its das
   - `ghlcreds.js` — validates/normalizes pasted GHL credentials so Settings can name the
     real problem (v1 JWT vs v2 token, token pasted into Location field, etc).
   - `affiliate.js` — MyFreeScoreNow "gap" engine (which clients aren't enrolled).
-  - `sheet.js` — one-time/manual reconciliation of a pasted Google Sheet CSV into Deal
-    Production (sheet is source of truth for package/round status where they disagree).
+  - `sheet.js` — reconciliation of the "MSF CREDIT CLIENTS" Google Sheet into Deal
+    Production (sheet is source of truth for package/round status where they disagree),
+    two ingestion paths sharing one matching/diff engine (`reconcileSheet`): a one-time/
+    manual CSV paste (`normalizeSheetRows`, column-index based) and the automated n8n
+    JSON webhook below (`normalizeSheetJsonRows`, named-field based).
   - `demo.js` — deterministic seeded demo dataset (mulberry32 PRNG) matching the real
     business's shape.
   - `meta.js` — Meta Graph API follower counts (needs Page token + IG business ID).
@@ -138,7 +141,7 @@ holding an opaque token that `lib/auth.js` resolves server-side to a user/role.
 | **MyFreeScoreNow** | pushed in via webhook | POSTs to `/webhooks/mfsn` (scheduled Zap fetching the active-members list). |
 | **Meta Graph API** (`graph.facebook.com`) | pulled | IG/FB follower counts via `lib/meta.js`; falls back to public-profile scraping (`lib/social.js`) if no token configured. Snapshotted every 6h. |
 | **Proven Agency dashboard** | both directions | SSO link-out (`GET /api/sso`, signed token) lets Proven auto-login an admin; support tickets (`POST /api/support-tickets`) forward there via shared secret. |
-| **Google Sheets** | manual paste only | No live API integration yet (roadmap item); `lib/sheet.js` reconciles a manually pasted CSV export. |
+| **Google Sheets** | manual paste + automated webhook | `lib/sheet.js` reconciles either a manually pasted CSV export (`POST /api/production/sheet-sync`, admin-only, dry-run by default) or an automated n8n flow POSTing the same "MSF CREDIT CLIENTS" sheet as JSON every ~6h (`POST /webhooks/sheet-sync`) — both funnel through the same `reconcileSheet()` matching/diff engine. No live Sheets API polling from this app either way. |
 | **Lunch Money** | not connected | `public/personal-finances.js` is sample data only; a real integration would be server-proxied to keep the API key off the browser. |
 
 All webhooks require a `?secret=` query param checked against a configured secret
@@ -257,13 +260,28 @@ there).
    list against the client roster (email match, name fallback).
 5. **Social growth**: `lib/meta.js`/`lib/social.js` snapshot follower counts every 6h for
    the growth chart.
-6. **Deal Production** (the Employee-facing work tracker): **Postgres-primary** via
+6. **Sheet sync**: an n8n flow POSTs the "MSF CREDIT CLIENTS" Google Sheet as JSON to
+   `POST /webhooks/sheet-sync` every ~6h → `lib/sheet.js`'s `reconcileSheet()` (shared
+   with the manual CSV path) matches by GHL name or the legacy first-name+last-initial
+   key, UPDATEs existing Deal Production records and INSERTs sheet-only clients that
+   match neither GHL nor an existing record (unlike the manual CSV route, which only
+   ever creates a GHL-matched record and leaves a sheet-only name for a human to
+   review — this webhook exists specifically to onboard those automatically). CFPB
+   portal passwords are AES-256-GCM encrypted via `lib/crypto.js` before Postgres ever
+   sees them (stripped instead of stored if `APP_ENCRYPTION_KEY` is unset — never a
+   plaintext fallback); dates are stored as raw text, never parsed, since neither this
+   nor the CSV path ever populates `production_cfpb_logins.filed_date` — only
+   `filed_date_raw`. Same-payload duplicate names are reported, never merged. Idempotent
+   two ways: re-synced people are found by name on the next run same as the CSV path,
+   and brand-new inserts get a deterministic `'SS' + <sheet row id>` legacy_id so a
+   retry can't double-insert even if name-matching ever misses.
+7. **Deal Production** (the Employee-facing work tracker): **Postgres-primary** via
    `lib/production.js` (see above), `production.json` kept as a live backup, edited
    per-lead via `PATCH /api/production/:id` with a targeted per-row Postgres UPDATE
    (server-side deep-merge on the JSON-backup side) so concurrent edits by different
    employees don't clobber each other; an open drawer polls every 4s (targeted
    single-record query, not the full roster) to pick up a colleague's changes.
-7. Everything else is persisted as flat JSON files under `DATA_DIR` via `lib/store.js` —
+8. Everything else is persisted as flat JSON files under `DATA_DIR` via `lib/store.js` —
    JSON remains the source of truth for every read there. Optionally, when
    `DATABASE_URL` is set, every write is also best-effort mirrored into Postgres (see
    `docs/postgres-schema-design.sql` and the two-tier note above) as a live backup; the
