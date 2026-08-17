@@ -2731,11 +2731,35 @@ app.post('/api/messages/:id/attachments', async (req, res) => {
 // message.
 app.get('/api/snippets', async (req, res) => {
   try {
-    if (!liveMode()) return res.json({ snippets: [] });
-    const snippets = await store.cachedSWR('ghl:snippets', 5 * 60 * 1000,
-      () => ghl.fetchSnippets(store.getConfig()));
-    res.json({ snippets });
+    let ghlSnips = [];
+    if (liveMode()) {
+      try {
+        ghlSnips = await store.cachedSWR('ghl:snippets', 5 * 60 * 1000,
+          () => ghl.fetchSnippets(store.getConfig()));
+      } catch (e) { /* GHL down should not hide the team's own snippets */ }
+    }
+    const app_ = store.getAppSnippets().map(x => ({ ...x, source: 'app' }));
+    res.json({ snippets: app_.concat((ghlSnips || []).map(x => ({ ...x, source: 'ghl' }))) });
   } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+// Team-made snippets, saved in the app (GHL's private-integration API has
+// no template-create endpoint, so ones made here live here -- durable via
+// Postgres like everything else, and shown merged with GHL's).
+app.post('/api/snippets', (req, res) => {
+  const name = String((req.body || {}).name || '').trim();
+  const body = String((req.body || {}).body || '').trim();
+  if (!name || !body) return res.status(400).json({ error: 'name and body are both required' });
+  const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+  const snip = store.addAppSnippet({ name, body, who });
+  res.json({ ok: true, snippet: { ...snip, source: 'app' } });
+});
+
+app.delete('/api/snippets/:id', (req, res) => {
+  if (!store.deleteAppSnippet(req.params.id)) {
+    return res.status(404).json({ error: 'no such app snippet (GHL-managed snippets are edited in GHL)' });
+  }
+  res.json({ ok: true });
 });
 
 app.post('/api/messages/:id/unread', async (req, res) => {
@@ -3087,6 +3111,7 @@ async function bootstrap() {
     store.hydrateNotesFromPostgres(),
     store.hydrateWorkedFromPostgres(),
     store.hydrateAffiliateOverridesFromPostgres(),
+    store.hydrateAppSnippetsFromPostgres(),
     store.hydrateAuditFromPostgres()
   ]).catch(e => console.error('Postgres hydration failed:', e.message));
 

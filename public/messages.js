@@ -244,11 +244,49 @@ var host=document.getElementById('msgSnippetList');
 var ready=SNIPPETS?Promise.resolve(SNIPPETS):fetch('/api/snippets').then(function(r){return r.json();}).then(function(d){SNIPPETS=d.snippets||[];return SNIPPETS;});
 ready.then(function(list){
   var rows=q?list.filter(function(t){return (t.name+' '+t.body).toLowerCase().indexOf(q)>=0;}):list;
-  if(!rows.length){host.innerHTML='<div class="msg-empty">'+(q?'No snippet matches.':'No snippets found in GHL.')+'</div>';return;}
-  host.innerHTML=rows.map(function(t,i){
-    return '<div class="snip" data-i="'+i+'"><b>'+esc(t.name)+'</b><span>'+esc(String(t.body).replace(/<[^>]+>/g,' ').slice(0,90))+'</span></div>';
+  // "+ New snippet" always leads the list -- the team writes their own
+  // (saved in the app, durable; GHL's private API has no create endpoint,
+  // so GHL-made ones are edited in GHL and app-made ones live here).
+  var h='<div class="snip" id="snipNew" style="color:var(--blue,#4F46E5);font-weight:700">+ New snippet</div>'
+    +'<div id="snipForm" style="display:none;padding:6px 10px">'
+    +'<input id="snipName" placeholder="Name" autocomplete="off" style="width:100%;margin:0 0 6px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px">'
+    +'<textarea id="snipBody" placeholder="Snippet text\u2026" rows="3" style="width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;font-family:inherit;resize:vertical"></textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:6px;align-items:center">'
+    +'<button id="snipSave" style="border:0;border-radius:7px;background:#4F46E5;color:#fff;font-weight:700;padding:6px 14px;cursor:pointer;font-size:12px">Save</button>'
+    +'<span id="snipMsg" style="font-size:11px;color:var(--muted)"></span></div></div>';
+  if(!rows.length)h+='<div class="msg-empty">'+(q?'No snippet matches.':'No snippets yet.')+'</div>';
+  h+=rows.map(function(t,i){
+    return '<div class="snip" data-i="'+i+'"><b>'+esc(t.name)
+      +(t.source==='app'?' <i style="font-style:normal;font-size:9.5px;background:var(--soft);border-radius:4px;padding:1px 5px;color:var(--muted)">app</i><em data-del="'+esc(t.id)+'" title="Delete snippet" style="float:right;font-style:normal;opacity:.5;cursor:pointer">&times;</em>':'')
+      +'</b><span>'+esc(String(t.body).replace(/<[^>]+>/g,' ').slice(0,90))+'</span></div>';
   }).join('');
-  Array.prototype.forEach.call(host.querySelectorAll('.snip'),function(sn){
+  host.innerHTML=h;
+  document.getElementById('snipNew').onclick=function(){
+    var f=document.getElementById('snipForm');
+    f.style.display=f.style.display==='none'?'block':'none';
+    if(f.style.display==='block')document.getElementById('snipName').focus();
+  };
+  document.getElementById('snipSave').onclick=function(){
+    var nm=document.getElementById('snipName').value.trim();
+    var bd=document.getElementById('snipBody').value.trim();
+    var msg=document.getElementById('snipMsg');
+    if(!nm||!bd){msg.textContent='Name and text are both required.';return;}
+    msg.textContent='Saving\u2026';
+    fetch('/api/snippets',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:nm,body:bd})
+    }).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Could not save');return j;});})
+    .then(function(){SNIPPETS=null;renderSnippets(q);})
+    .catch(function(e){msg.textContent=e.message;});
+  };
+  Array.prototype.forEach.call(host.querySelectorAll('em[data-del]'),function(x){
+    x.onclick=function(ev){
+      ev.stopPropagation();
+      if(!window.confirm('Delete this snippet for the whole team?'))return;
+      fetch('/api/snippets/'+encodeURIComponent(x.dataset.del),{method:'DELETE'})
+        .then(function(){SNIPPETS=null;renderSnippets(q);});
+    };
+  });
+  Array.prototype.forEach.call(host.querySelectorAll('.snip[data-i]'),function(sn){
     sn.onclick=function(){
       var t=rows[Number(sn.dataset.i)];
       insertAtCursor(String(t.body).replace(/<[^>]+>/g,'').trim());

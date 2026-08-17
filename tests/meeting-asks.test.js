@@ -258,3 +258,35 @@ test('responses are compressed and the CDN libs no longer block first paint', ()
   assert.ok(/DOMContentLoaded/.test(boot.slice(0, 400)),
     'boot waits for DOMContentLoaded, which the spec fires after deferred scripts run');
 });
+
+/* ---------- snippets: team-made + none missing ---------- */
+
+test('snippet fetch pages past 100 and keeps unknown body shapes visible', () => {
+  // "a lot of snippets aren't showing": the fetch stopped at the first 100
+  // AND dropped any snippet whose body sat in a field it didn't map.
+  const ghlSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'ghl.js'), 'utf8');
+  const fn = ghlSrc.split('async function fetchSnippets')[1].split('\n}')[0];
+  assert.ok(/skip < 1000; skip \+= 100/.test(fn), 'pages until GHL runs out');
+  assert.ok(/tpl\.body \|\| tpl\.message \|\| tpl\.text/.test(fn), 'every known body shape');
+  assert.ok(!/filter\(t => t\.body\)/.test(fn), 'a bodyless snippet is shown by name, not silently dropped');
+});
+
+test('the team can add their own snippets, durably, and delete them', () => {
+  assert.ok(auth.canAccess({ role: 'va' }, 'POST', '/api/snippets'));
+  assert.ok(auth.canAccess({ role: 'va' }, 'DELETE', '/api/snippets/x'));
+  const st = require('../lib/store.js');
+  const made = st.addAppSnippet({ name: 'Welcome', body: 'Hi {{name}}, welcome aboard!', who: 'Nica' });
+  assert.ok(made.id && made.createdAt);
+  assert.ok(st.getAppSnippets().some(x => x.id === made.id));
+  assert.ok(st.deleteAppSnippet(made.id), 'and gone again');
+  assert.ok(!st.getAppSnippets().some(x => x.id === made.id));
+  const srv = srvNow();
+  assert.ok(/app_\.concat/.test(srv), 'served merged with the GHL ones');
+  assert.ok(/hydrateAppSnippetsFromPostgres/.test(srv), 'restored at boot -- this disk does not survive a deploy');
+  const migrate = fs.readFileSync(path.join(__dirname, '..', 'lib', 'migrate.js'), 'utf8');
+  assert.ok(/app_snippets/.test(migrate));
+  const ui = pub('messages.js');
+  assert.ok(/snipNew/.test(ui) && /snipSave/.test(ui), 'a + New snippet form in the picker');
+  assert.ok(/data-del/.test(ui) && /Delete this snippet for the whole team/.test(ui),
+    'app-made ones are deletable; GHL-made ones are edited in GHL');
+});
