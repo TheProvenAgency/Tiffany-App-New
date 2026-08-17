@@ -2188,6 +2188,15 @@ app.post('/webhooks/sheet-sync', async (req, res) => {
     store.clearCacheKey('roster:composed');
     store.clearCacheKey('clients:tagged');
 
+    // reconcileSheet() matches a row to an existing record and, if every
+    // field already agrees with the sheet, silently drops it (patch is
+    // empty, so it lands in neither `updates` nor `toCreate`/`unmatched`).
+    // Found live: on a real re-sync of already-current data, that left
+    // receivedCount - updatesCount - createdCount - duplicateNameCount > 0
+    // with no accounting for the difference. This is that count, made
+    // explicit instead of silent.
+    const alreadyInSyncCount = sheetRows.length - duplicateNames.length - updates.length - toCreate.length - unmatched.length;
+
     res.json({
       ok: true,
       receivedCount: sheetRows.length,
@@ -2198,6 +2207,7 @@ app.post('/webhooks/sheet-sync', async (req, res) => {
       skippedAsAlreadyCreatedCount: skippedAsAlreadyCreated.length,
       skippedAsAlreadyCreated,
       unmatchedPromotedCount: fromUnmatched.length,
+      alreadyInSyncCount,
       duplicateNameCount: duplicateNames.length,
       duplicateNames: duplicateNames.map(r => r.name),
       strippedCfpbPasswordCount: strippedPwCount

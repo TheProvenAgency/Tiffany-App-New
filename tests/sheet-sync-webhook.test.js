@@ -134,6 +134,8 @@ test('re-firing the identical payload is idempotent: no new records, no repeat u
   const d = await r.json();
   assert.equal(d.createdCount, 0);
   assert.equal(d.updatesCount, 0, 'every field already matches after the first sync -- reconcileSheet produces no diff at all, not just an empty create list');
+  assert.equal(d.alreadyInSyncCount, 3, 'a matched row with zero diff is accounted for explicitly, not silently dropped from every count');
+  assert.equal(d.receivedCount, d.updatesCount + d.createdCount + d.duplicateNameCount + d.alreadyInSyncCount, 'the counts always add up to what was received');
 
   const after = await dealProd.readProd();
   assert.equal(after.length, beforeCount, 'roster size is unchanged after the re-fire');
