@@ -151,3 +151,36 @@ test('the dashboard has a per-person disputes-done card with a time window', () 
     'disputes done = rounds filed + task-list checkoffs, the two forms dispute work takes here');
   assert.ok(/renderDisputeWork\(\);/.test(html), 'rendered with the other dashboard cards');
 });
+
+/* ---------- unread sync + mark-unread ---------- */
+
+test('the inbox merges recent conversations with the FULL unread backlog', () => {
+  // GHL showed 90+ unread, the app 17. The app fetched the 300 most recent
+  // conversations and nothing else, so any unread thread older than the
+  // 300th-newest conversation was invisible. The unread state itself was
+  // fine -- the fetch was recency-capped.
+  const srv = srvNow();
+  const fn = srv.split('async function allConversations')[1].split('\n}')[0];
+  assert.ok(/messages:unread/.test(fn), 'a second, unread-only fetch');
+  assert.ok(/fetchUnreadConversations/.test(fn));
+  assert.ok(/unread: c\.unread \|\| 1/.test(fn), 'the unread copy wins the merge');
+  for (const route of ["app.get('/api/messages'", "app.get('/api/replies-due'"]) {
+    assert.ok(/allConversations\(/.test(srv.split(route)[1].split('\n});')[0]),
+      route + ' uses the merged list');
+  }
+  const ghlSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'ghl.js'), 'utf8');
+  assert.ok(/status: 'unread'/.test(ghlSrc), 'GHL filters unread server-side, so paging scales with the backlog');
+});
+
+test('mark-unread flips the state in GHL, and a VA is allowed to do it', () => {
+  assert.ok(auth.canAccess({ role: 'va' }, 'POST', '/api/messages/abc/unread'),
+    'inbox triage is the VA\'s actual job');
+  assert.ok(!auth.canAccess({ role: 'disputer' }, 'POST', '/api/messages/abc/unread'));
+  const route = srvNow().split("app.post('/api/messages/:id/unread'")[1].split('\n});')[0];
+  assert.ok(/setConversationUnread/.test(route), 'GHL is the one source of unread truth -- no app-side flag to drift');
+  assert.ok(/clearCacheKey\('messages'\)/.test(route) && /clearCacheKey\('messages:unread'\)/.test(route),
+    'the next list load refetches the truth it just changed');
+  const ui = pub('messages.js');
+  assert.ok(/msgUnreadBtn/.test(ui));
+  assert.ok(/Mark read/.test(ui) && /Mark unread/.test(ui), 'one button, both directions');
+});

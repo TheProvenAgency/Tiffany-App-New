@@ -195,6 +195,36 @@ curId=id;
 var c=CONVOS.find(function(x){return x.id===id;});
 document.getElementById('msgThreadNm').textContent=c?c.name:'—';
 document.getElementById('msgThreadMeta').textContent=c?(c.channel+(c.email?' · '+c.email:'')+(c.phone?' · '+c.phone:'')):'';
+// Mark unread / mark read -- flipped in GHL itself (see the server route),
+// so this app and GHL's own inbox always agree. Marking unread returns you
+// to the list: the whole point of the button is "I'm not dealing with this
+// one right now", so staying inside the thread would be odd.
+var ub=document.getElementById('msgUnreadBtn');
+if(c){
+  ub.style.display='';
+  ub.textContent=c.unread?'Mark read':'Mark unread';
+  ub.onclick=function(ev){
+    ev.preventDefault();
+    var wantUnread=!c.unread;
+    ub.textContent='Saving\u2026';
+    fetch('/api/messages/'+encodeURIComponent(c.id)+'/unread',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({unread:wantUnread})
+    }).then(function(r){
+      if(!r.ok)return r.json().then(function(j){throw new Error(j.error||'Could not save');});
+      c.unread=wantUnread?1:0;
+      if(wantUnread){
+        document.getElementById('view-messages').classList.remove('msg-thread-open');
+        curId=null;
+      }
+      renderChips();renderRows();
+      if(!wantUnread)ub.textContent='Mark unread';
+    }).catch(function(e){
+      ub.textContent=(c.unread?'Mark read':'Mark unread');
+      alert(e.message);
+    });
+  };
+}else{ub.style.display='none';}
 var link=document.getElementById('msgThreadOpen');
 if(c&&c.contactId){link.style.display='';link.onclick=function(){if(typeof window.openClient==='function'){window.showView('clients');window.openClient(c.contactId);}};}
 else link.style.display='none';
@@ -226,7 +256,11 @@ var sectionHTML=''+
 '</div>'+
 '<div class="msg-thread">'+
 '<div class="msg-thead"><div><button class="msg-back" id="msgBack">‹</button><span class="nm" id="msgThreadNm">Select a conversation</span>'+
-'<div class="meta" id="msgThreadMeta"></div></div><a href="#" id="msgThreadOpen" style="display:none">Open client →</a></div>'+
+'<div class="meta" id="msgThreadMeta"></div></div>'+
+'<div style="display:flex;gap:14px;align-items:center">'+
+'<a href="#" id="msgUnreadBtn" style="display:none"></a>'+
+'<a href="#" id="msgThreadOpen" style="display:none">Open client →</a>'+
+'</div></div>'+
 '<div class="msg-scroll" id="msgScroll"><div class="msg-noselect">Pick a conversation on the left to see the full thread.</div></div>'+
 '<div class="msg-composer" id="msgComposer">'+
 '<textarea id="msgInput" placeholder="Type a reply…" rows="1"></textarea>'+

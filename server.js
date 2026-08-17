@@ -2380,10 +2380,7 @@ app.get('/api/replies-due', async (req, res) => {
   try {
     let list;
     if (!liveMode()) list = demoData().messages;
-    else {
-      const cfg = store.getConfig();
-      list = await store.cachedSWR('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 }));
-    }
+    else list = await allConversations(store.getConfig());
     res.json(replies.buildQueue(list, {
       slaDays: Number(req.query.sla) || undefined,
       limit: Math.min(Number(req.query.limit) || 12, 200)
@@ -2665,14 +2662,47 @@ app.post('/api/production', (req, res) => {
 // platforms, so they don't feed this list; DisputeFox's own client-portal
 // messaging is a separate product with its own API key Tiffany would need
 // to hand over before that can be added here too.
+// The inbox = the 300 most recent conversations PLUS every unread one,
+// merged by id. Recency alone is what made the app show 17 unread while
+// GHL's inbox showed 90+: the other 73 were unread threads that simply
+// weren't among the 300 newest conversations. Where both fetches return the
+// same conversation, the unread fetch's copy wins -- it is the fresher
+// claim about unread state.
+async function allConversations(cfg) {
+  const [recent, unread] = await Promise.all([
+    store.cachedSWR('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 })),
+    store.cachedSWR('messages:unread', 45 * 1000, () => ghl.fetchUnreadConversations(cfg, { max: 500 }))
+  ]);
+  const byId = new Map();
+  for (const c of recent || []) byId.set(c.id, c);
+  for (const c of unread || []) byId.set(c.id, { ...(byId.get(c.id) || {}), ...c, unread: c.unread || 1 });
+  return [...byId.values()].sort((a, b) => String(b.lastAt || '').localeCompare(String(a.lastAt || '')));
+}
+
+// Mark a conversation unread (or read) -- flipped IN GHL, not in some app-side
+// flag, so the two inboxes cannot drift apart. On success both conversation
+// caches are dropped; the next list load refetches the truth it just changed.
+app.post('/api/messages/:id/unread', async (req, res) => {
+  try {
+    if (!liveMode()) return res.json({ ok: true, demo: true });
+    const unread = !(req.body && req.body.unread === false);
+    if (readOnly()) return refuseWrite(res, 'setConversationUnread', req.params.id);
+    await ghl.setConversationUnread(store.getConfig(), req.params.id, unread);
+    store.clearCacheKey('messages');
+    store.clearCacheKey('messages:unread');
+    res.json({ ok: true, unread });
+  } catch (e) {
+    res.status(502).json({ error: 'GoHighLevel refused the change: ' + e.message });
+  }
+});
+
 app.get('/api/messages', async (req, res) => {
   try {
     let list;
     if (!liveMode()) {
       list = demoData().messages;
     } else {
-      const cfg = store.getConfig();
-      list = await store.cached('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 }));
+      list = await allConversations(store.getConfig());
     }
     const channel = (req.query.channel || '').toUpperCase();
     const q = (req.query.q || '').trim().toLowerCase();
@@ -3039,8 +3069,12 @@ async function bootstrap() {
       () => buildDashboardPayload({ from, to, granularity: 'day' })).catch(() => {});
     // The conversation list backs both the Messages view and the reply-SLA
     // queue; it is a network fetch plus a large JSON parse, so keep it hot too.
-    if (liveMode()) store.cachedSWR('messages', 45 * 1000,
-      () => ghl.fetchAllConversations(store.getConfig(), { max: 300 })).catch(() => {});
+    if (liveMode()) {
+      store.cachedSWR('messages', 45 * 1000,
+        () => ghl.fetchAllConversations(store.getConfig(), { max: 300 })).catch(() => {});
+      store.cachedSWR('messages:unread', 45 * 1000,
+        () => ghl.fetchUnreadConversations(store.getConfig(), { max: 500 })).catch(() => {});
+    }
   };
   setTimeout(warm, 3000); // after boot settles, not during it
   setInterval(warm, 50 * 1000).unref?.();
