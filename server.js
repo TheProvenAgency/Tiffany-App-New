@@ -21,6 +21,7 @@ const ghlcreds = require('./lib/ghlcreds');
 const affiliate = require('./lib/affiliate');
 const sheet = require('./lib/sheet');
 const appCrypto = require('./lib/crypto'); // CFPB portal password encryption -- see the sheet-sync webhook below
+const webhookFeed = require('./lib/webhook-feed'); // real-time admin-only webhook activity feed
 const meta = require('./lib/meta');
 const social = require('./lib/social');
 const { demoData } = require('./lib/demo');
@@ -2031,6 +2032,19 @@ async function handlePaymentWebhook(req, res) {
   }
   res.json({ ok: true, id: saved.id, client });
 }
+
+// Real-time admin-only "is this actually firing" signal -- see
+// lib/webhook-feed.js for the capture-time allowlist/redaction design.
+// Mounted before the individual routes below so a rejected/malformed call
+// (bad secret, garbage body) still shows up; that answer matters as much
+// as a successful one when someone's asking "did Zapier just fire?".
+app.use('/webhooks', (req, res, next) => {
+  if (req.method !== 'POST') return next();
+  const entry = webhookFeed.record(req.path, req.body);
+  res.on('finish', () => webhookFeed.setStatus(entry.id, res.statusCode));
+  next();
+});
+
 app.post('/webhooks/fanbasis', handlePaymentWebhook);
 app.post('/webhooks/commas', handlePaymentWebhook);
 
@@ -2213,6 +2227,17 @@ app.post('/webhooks/sheet-sync', async (req, res) => {
       strippedCfpbPasswordCount: strippedPwCount
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Polled by public/webhook-toast.js every ~3s. Admin-only -- deliberately
+// NOT added to EMPLOYEE_API/ROUTE_CAPS in lib/auth.js, so auth.canAccess's
+// existing deny-by-default refuses it for every non-admin actor with no
+// new gating code (same pattern as GET /api/affiliate-gap). Every value
+// already went through lib/webhook-feed.js's allowlist at capture time --
+// this route trusts that and does no redaction of its own.
+app.get('/api/recent-webhooks', (req, res) => {
+  const after = parseInt(req.query.after, 10) || 0;
+  res.json({ entries: webhookFeed.since(after), latestId: webhookFeed.latestId() });
 });
 
 // ------------------------- daily snapshot job -------------------------
