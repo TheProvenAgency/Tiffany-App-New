@@ -13,6 +13,10 @@ production.json
 # history, private repo or not.
 MSF CREDIT CLIENTS - Credit Repair.csv
 
+# Scratch space for manual testing -- can hold real payloads with plaintext
+# CFPB passwords (e.g. a sheet-sync webhook test payload), never source.
+tmp/
+
 # Local tool state (npx skills add / Claude Code's own skill cache) -- not
 # project source, not needed for the app to run.
 .agents/
