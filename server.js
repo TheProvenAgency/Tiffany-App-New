@@ -2,6 +2,7 @@
 // GHL (clients, pipeline, SMS) + Fanbasis (payments via webhook/GHL sync)
 // + DisputeFox (rounds via GHL tags + webhook) + Meta (IG/FB followers)
 const express = require('express');
+const compression = require('compression');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
@@ -269,6 +270,12 @@ const app = express();
 app.set('trust proxy', 1);
 // 15mb: a 10MB file becomes ~13.4MB of base64 on the attachment-upload
 // route; every other route stays tiny in practice.
+// Nothing here was compressed before this line existed. The production
+// roster is ~2.4MB of JSON and index.html is ~230KB -- as gzip they are
+// roughly a tenth of that, and this app's payloads are exactly the highly
+// repetitive JSON that compresses best. This is pure wire-time savings;
+// no fetch, cadence, or cache changed.
+app.use(compression());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' })); // Zapier webhooks post form-encoded
 const PORT = process.env.PORT || 3000;

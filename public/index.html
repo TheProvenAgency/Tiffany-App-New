@@ -5,14 +5,16 @@
 <script>(function(){try{if(localStorage.getItem('mfsTheme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 <title>Ms. Financial Solutions — Command Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <link rel="icon" type="image/png" href="/logo-mark.png?v=2"/>
 <link rel="shortcut icon" type="image/png" href="/logo-mark.png?v=2"/>
 <link rel="apple-touch-icon" href="/logo-mark.png?v=2"/>
 <link href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <style>
 :root{
   /* Admina full re-skin (indigo brand). Every value below is read from
@@ -3506,6 +3508,11 @@ function setLayoutAsDefault(){
 }
 
 /* ================= boot ================= */
+// Wrapped in DOMContentLoaded because Chart.js and GridStack are deferred
+// now (they were render-blocking); deferred scripts are spec-guaranteed to
+// run before DOMContentLoaded listeners, so both globals exist by the time
+// this executes.
+document.addEventListener('DOMContentLoaded',function(){
 [from,to]=presetRange(preset);granularity=pickGran(from,to);
 renderFilters();initDashGrid();
 // layout and dashboard data load in parallel (independent fetches); once
@@ -3520,6 +3527,7 @@ setInterval(loadDashboard,5*60*1000);
 // people who never open Ticket Requests.
 setInterval(loadTickets,20*1000);
 setInterval(loadNotifications,20*1000);
+});
 </script>
 <script>
 /* Five different modules ask "who am I?" on every page load; before this they

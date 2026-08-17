@@ -239,3 +239,22 @@ test('GHL snippets appear in the composer, pulled from GHL itself', () => {
   const ui = pub('messages.js');
   assert.ok(/msgSnippetBtn/.test(ui) && /msgSnippetSearch/.test(ui), 'a searchable picker in the composer');
 });
+
+/* ---------- speed without touching any pull ---------- */
+
+test('responses are compressed and the CDN libs no longer block first paint', () => {
+  const srv = srvNow();
+  assert.ok(/app\.use\(compression\(\)\)/.test(srv),
+    'the 2.4MB roster JSON and 230KB index.html ship at ~a tenth of their size');
+  assert.ok(srv.indexOf('app.use(compression())') < srv.indexOf("express.static"),
+    'compression is installed before anything that serves bytes');
+  const html = pub('index.html');
+  assert.ok(/<script defer src="https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js/.test(html));
+  assert.ok(/<script defer src="https:\/\/cdn\.jsdelivr\.net\/npm\/gridstack/.test(html));
+  assert.ok(/rel="preconnect" href="https:\/\/cdn\.jsdelivr\.net"/.test(html),
+    'TLS to the CDN starts before the HTML finishes arriving');
+  // deferring the libs is only safe because the boot block waits for them:
+  const boot = html.split('/* ================= boot =================')[1];
+  assert.ok(/DOMContentLoaded/.test(boot.slice(0, 400)),
+    'boot waits for DOMContentLoaded, which the spec fires after deferred scripts run');
+});
