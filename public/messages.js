@@ -6,6 +6,7 @@ Production, and wraps window.showView rather than touching index.html's core scr
 var CHAN_COLOR={SMS:'#00B8F2',EMAIL:'#F4941E',FACEBOOK:'#3b5998',INSTAGRAM:'#DE3ACE',WHATSAPP:'#25d366',CALL:'#6B7280',VOICEMAIL:'#6B7280',GMB:'#4285f4',LIVE_CHAT:'#45B369',REVIEW:'#F86624',OTHER:'#9CA3AF'};
 function chanColor(k){return CHAN_COLOR[k]||CHAN_COLOR.OTHER;}
 var CONVOS=[], CHANNELS=[], curChannel='ALL', curSearch='', curId=null, curContactId=null, curChannelKey=null, sending=false, loaded=false, pollTimer=null, unreadOnly=false;
+var SHOW_STEP=300, showCount=SHOW_STEP; // full history now loads -- render it in slices, not 5,000 DOM rows at once
 
 /* ---------- styles ---------- */
 var css=''+
@@ -156,6 +157,7 @@ Array.prototype.forEach.call(wrap.querySelectorAll('.msg-chip'),function(el){
 el.onclick=function(){
   if(el.dataset.unread){unreadOnly=!unreadOnly;}
   else{curChannel=el.dataset.k;}
+  showCount=SHOW_STEP; // a new filter starts from the top of the list
   loadList();
 };
 });
@@ -165,7 +167,8 @@ var wrap=document.getElementById('msgRows');
 if(!CONVOS.length){
 wrap.innerHTML='<div class="msg-empty">'+(unreadOnly?'Nothing unread. Everyone has been replied to.':'No conversations yet.')+'</div>';
 return;}
-wrap.innerHTML=CONVOS.map(function(c){
+var visible=CONVOS.slice(0,showCount);
+wrap.innerHTML=visible.map(function(c){
 var dirPrefix=c.lastDirection==='outbound'?'You: ':'';
 return'<div class="msg-row'+(c.id===curId?' on':'')+(c.unread?' unread':'')+'" data-id="'+esc(c.id)+'">'+
 '<div class="msg-avatar">'+esc(initials(c.name))+'<span class="chandot" style="background:'+chanColor(c.channelKey)+'"></span></div>'+
@@ -175,10 +178,15 @@ return'<div class="msg-row'+(c.id===curId?' on':'')+(c.unread?' unread':'')+'" d
 '</div>'+
 (c.unread?'<div class="msg-unreaddot"></div>':'')+
 '</div>';
-}).join('');
+}).join('')
++(CONVOS.length>showCount
+  ?'<div class="msg-empty" id="msgMore" style="cursor:pointer;color:var(--blue,#4F46E5);font-weight:600">Show '+Math.min(SHOW_STEP,CONVOS.length-showCount)+' more ('+(CONVOS.length-showCount).toLocaleString()+' left)</div>'
+  :'');
 Array.prototype.forEach.call(wrap.querySelectorAll('.msg-row'),function(el){
 el.onclick=function(){openThread(el.dataset.id);};
 });
+var more=document.getElementById('msgMore');
+if(more)more.onclick=function(){showCount+=SHOW_STEP;renderRows();};
 }
 function renderThread(msgs){
 var el=document.getElementById('msgScroll');

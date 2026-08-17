@@ -2669,9 +2669,14 @@ app.post('/api/production', (req, res) => {
 // same conversation, the unread fetch's copy wins -- it is the fresher
 // claim about unread state.
 async function allConversations(cfg) {
+  // The FULL history -- every conversation GHL has, tens of requests' worth
+  // -- on a 5-minute refresh cycle (any faster and paging the whole book
+  // burns GHL's rate limit for no news). Unread state moves quicker than
+  // that, so a second, cheap unread-only fetch overlays it every 45s: new
+  // unread shows within a minute even though the big list is minutes old.
   const [recent, unread] = await Promise.all([
-    store.cachedSWR('messages', 45 * 1000, () => ghl.fetchAllConversations(cfg, { max: 300 })),
-    store.cachedSWR('messages:unread', 45 * 1000, () => ghl.fetchUnreadConversations(cfg, { max: 500 }))
+    store.cachedSWR('messages', 5 * 60 * 1000, () => ghl.fetchAllConversations(cfg, {})),
+    store.cachedSWR('messages:unread', 45 * 1000, () => ghl.fetchUnreadConversations(cfg, { max: 2000 }))
   ]);
   const byId = new Map();
   for (const c of recent || []) byId.set(c.id, c);
@@ -3070,10 +3075,10 @@ async function bootstrap() {
     // The conversation list backs both the Messages view and the reply-SLA
     // queue; it is a network fetch plus a large JSON parse, so keep it hot too.
     if (liveMode()) {
-      store.cachedSWR('messages', 45 * 1000,
-        () => ghl.fetchAllConversations(store.getConfig(), { max: 300 })).catch(() => {});
+      store.cachedSWR('messages', 5 * 60 * 1000,
+        () => ghl.fetchAllConversations(store.getConfig(), {})).catch(() => {});
       store.cachedSWR('messages:unread', 45 * 1000,
-        () => ghl.fetchUnreadConversations(store.getConfig(), { max: 500 })).catch(() => {});
+        () => ghl.fetchUnreadConversations(store.getConfig(), { max: 2000 })).catch(() => {});
     }
   };
   setTimeout(warm, 3000); // after boot settles, not during it

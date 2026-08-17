@@ -154,16 +154,23 @@ test('the dashboard has a per-person disputes-done card with a time window', () 
 
 /* ---------- unread sync + mark-unread ---------- */
 
-test('the inbox merges recent conversations with the FULL unread backlog', () => {
-  // GHL showed 90+ unread, the app 17. The app fetched the 300 most recent
-  // conversations and nothing else, so any unread thread older than the
-  // 300th-newest conversation was invisible. The unread state itself was
-  // fine -- the fetch was recency-capped.
+test('the inbox carries the FULL history with a fresher unread overlay', () => {
+  // GHL showed 90+ unread, the app 17: the fetch was capped at the 300 most
+  // recent conversations. Now the whole book loads (the default max is a
+  // 20,000-conversation runaway guard, not a window) on a 5-minute cycle,
+  // with a cheap unread-only fetch overlaid every 45s so new unread shows
+  // within a minute even though the big list is minutes old.
   const srv = srvNow();
   const fn = srv.split('async function allConversations')[1].split('\n}')[0];
+  assert.ok(/5 \* 60 \* 1000/.test(fn), 'full history on a 5-minute cycle -- faster would burn GHL rate limit');
+  assert.ok(/fetchAllConversations\(cfg, \{\}\)/.test(fn), 'no recency cap on the big fetch');
   assert.ok(/messages:unread/.test(fn), 'a second, unread-only fetch');
-  assert.ok(/fetchUnreadConversations/.test(fn));
   assert.ok(/unread: c\.unread \|\| 1/.test(fn), 'the unread copy wins the merge');
+  const ghl2 = fs.readFileSync(path.join(__dirname, '..', 'lib', 'ghl.js'), 'utf8');
+  assert.ok(/max = 20000/.test(ghl2), 'the pager walks the whole history, stopping at the first short page');
+  const ui = pub('messages.js');
+  assert.ok(/showCount/.test(ui) && /Show /.test(ui),
+    'thousands of rows render in slices, not one giant DOM dump');
   for (const route of ["app.get('/api/messages'", "app.get('/api/replies-due'"]) {
     assert.ok(/allConversations\(/.test(srv.split(route)[1].split('\n});')[0]),
       route + ' uses the merged list');
