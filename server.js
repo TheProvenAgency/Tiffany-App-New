@@ -267,7 +267,9 @@ const app = express();
 // rather than the visitor. Trust exactly one hop: entries a client forges
 // earlier in X-Forwarded-For are then ignored.
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '2mb' }));
+// 15mb: a 10MB file becomes ~13.4MB of base64 on the attachment-upload
+// route; every other route stays tiny in practice.
+app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' })); // Zapier webhooks post form-encoded
 const PORT = process.env.PORT || 3000;
 
@@ -2674,12 +2676,21 @@ async function allConversations(cfg) {
   // burns GHL's rate limit for no news). Unread state moves quicker than
   // that, so a second, cheap unread-only fetch overlays it every 45s: new
   // unread shows within a minute even though the big list is minutes old.
-  const [recent, unread] = await Promise.all([
+  // Three fetches, three speeds. The full history (tens of requests) can
+  // only afford a 5-minute cycle -- but anything that CHANGED has a new
+  // last-message date and therefore appears on the first pages of a
+  // newest-first search. So a cheap 200-conversation fetch every 30s
+  // overlays the big list, which is what makes the inbox read as live:
+  // no thread's latest state is ever older than ~30s, even though the
+  // long tail of history refreshes lazily. Unread-only rides the same 30s.
+  const [full, fresh, unread] = await Promise.all([
     store.cachedSWR('messages', 5 * 60 * 1000, () => ghl.fetchAllConversations(cfg, {})),
-    store.cachedSWR('messages:unread', 45 * 1000, () => ghl.fetchUnreadConversations(cfg, { max: 2000 }))
+    store.cachedSWR('messages:fresh', 30 * 1000, () => ghl.fetchAllConversations(cfg, { max: 200 })),
+    store.cachedSWR('messages:unread', 30 * 1000, () => ghl.fetchUnreadConversations(cfg, { max: 2000 }))
   ]);
   const byId = new Map();
-  for (const c of recent || []) byId.set(c.id, c);
+  for (const c of full || []) byId.set(c.id, c);
+  for (const c of fresh || []) byId.set(c.id, c); // fresher copy of anything recent wins
   for (const c of unread || []) byId.set(c.id, { ...(byId.get(c.id) || {}), ...c, unread: c.unread || 1 });
   return [...byId.values()].sort((a, b) => String(b.lastAt || '').localeCompare(String(a.lastAt || '')));
 }
@@ -2687,6 +2698,39 @@ async function allConversations(cfg) {
 // Mark a conversation unread (or read) -- flipped IN GHL, not in some app-side
 // flag, so the two inboxes cannot drift apart. On success both conversation
 // caches are dropped; the next list load refetches the truth it just changed.
+// Upload a photo/file for a conversation. The browser sends base64 JSON
+// (no multipart parser needed on our side); GHL hosts the file and returns
+// the URL(s) the reply route then carries in its attachments array. 10MB
+// cap matches what GHL's own composer accepts for most channels.
+app.post('/api/messages/:id/attachments', async (req, res) => {
+  try {
+    if (!liveMode()) return res.json({ ok: true, demo: true, urls: [] });
+    if (readOnly()) return refuseWrite(res, 'uploadAttachment', req.params.id);
+    const { name, dataUrl } = req.body || {};
+    const m = /^data:([^;]+);base64,(.+)$/.exec(String(dataUrl || ''));
+    if (!m) return res.status(400).json({ error: 'expected {name, dataUrl}' });
+    const buffer = Buffer.from(m[2], 'base64');
+    if (buffer.length > 10 * 1024 * 1024) return res.status(413).json({ error: 'file is over 10MB' });
+    const urls = await ghl.uploadMessageAttachment(store.getConfig(), {
+      conversationId: req.params.id, filename: name || 'file', buffer, mime: m[1]
+    });
+    if (!urls.length) return res.status(502).json({ error: 'GoHighLevel accepted the upload but returned no file URL' });
+    res.json({ ok: true, urls });
+  } catch (e) { res.status(502).json({ error: e.message, detail: e.detail }); }
+});
+
+// The sub-account's snippets, for the composer's snippet picker. Cached a
+// few minutes -- snippets change when someone edits them in GHL, not per
+// message.
+app.get('/api/snippets', async (req, res) => {
+  try {
+    if (!liveMode()) return res.json({ snippets: [] });
+    const snippets = await store.cachedSWR('ghl:snippets', 5 * 60 * 1000,
+      () => ghl.fetchSnippets(store.getConfig()));
+    res.json({ snippets });
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
 app.post('/api/messages/:id/unread', async (req, res) => {
   try {
     if (!liveMode()) return res.json({ ok: true, demo: true });
@@ -2694,6 +2738,7 @@ app.post('/api/messages/:id/unread', async (req, res) => {
     if (readOnly()) return refuseWrite(res, 'setConversationUnread', req.params.id);
     await ghl.setConversationUnread(store.getConfig(), req.params.id, unread);
     store.clearCacheKey('messages');
+    store.clearCacheKey('messages:fresh');
     store.clearCacheKey('messages:unread');
     res.json({ ok: true, unread });
   } catch (e) {
@@ -2747,11 +2792,15 @@ app.post('/api/messages/:id/reply', async (req, res) => {
     const message = (req.body.message || '').trim();
     const contactId = req.body.contactId;
     const type = (req.body.type || 'SMS').toUpperCase();
-    if (!message) return res.status(400).json({ error: 'empty message' });
+    const hasAttachments = Array.isArray(req.body.attachments) && req.body.attachments.length;
+    if (!message && !hasAttachments) return res.status(400).json({ error: 'empty message' });
     if (!contactId) return res.status(400).json({ error: 'contactId required' });
     if (readOnly() && liveMode()) return refuseWrite(res, 'replyMessage', `${req.params.id} (${type}, ${message.length} chars)`);
     if (!liveMode()) return res.json({ ok: true, demo: true, note: 'Demo mode — no message actually sent. Connect GHL to enable.' });
-    const r = await ghl.sendMessage(store.getConfig(), { contactId, conversationId: req.params.id, type, message });
+    const r = await ghl.sendMessage(store.getConfig(), {
+      contactId, conversationId: req.params.id, type, message,
+      attachments: Array.isArray(req.body.attachments) ? req.body.attachments.slice(0, 10) : undefined
+    });
     store.addEvent({ type: 'message_out', channel: type, at: new Date().toISOString(), contactId, conversationId: req.params.id });
     const replyWho = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
     store.appendAudit([audit.actionEntry('message_sent', { who: replyWho, clientId: contactId })]);
@@ -3077,12 +3126,17 @@ async function bootstrap() {
     if (liveMode()) {
       store.cachedSWR('messages', 5 * 60 * 1000,
         () => ghl.fetchAllConversations(store.getConfig(), {})).catch(() => {});
-      store.cachedSWR('messages:unread', 45 * 1000,
+      store.cachedSWR('messages:fresh', 30 * 1000,
+        () => ghl.fetchAllConversations(store.getConfig(), { max: 200 })).catch(() => {});
+      store.cachedSWR('messages:unread', 30 * 1000,
         () => ghl.fetchUnreadConversations(store.getConfig(), { max: 2000 })).catch(() => {});
     }
   };
   setTimeout(warm, 3000); // after boot settles, not during it
-  setInterval(warm, 50 * 1000).unref?.();
+  // 25s beats the 30s message TTLs (the roster/dashboard TTLs are longer
+  // still), so the background refresh -- never a visitor -- pays for
+  // every rebuild and the inbox stays within ~30s of GHL at all times.
+  setInterval(warm, 25 * 1000).unref?.();
 
   // 6. Top the event log up with the real Commas sale history (idempotent by
   //    payment id -- see store.seedCommasPayments).

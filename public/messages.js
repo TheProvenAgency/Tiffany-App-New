@@ -7,6 +7,8 @@ var CHAN_COLOR={SMS:'#00B8F2',EMAIL:'#F4941E',FACEBOOK:'#3b5998',INSTAGRAM:'#DE3
 function chanColor(k){return CHAN_COLOR[k]||CHAN_COLOR.OTHER;}
 var CONVOS=[], CHANNELS=[], curChannel='ALL', curSearch='', curId=null, curContactId=null, curChannelKey=null, sending=false, loaded=false, pollTimer=null, unreadOnly=false;
 var SHOW_STEP=300, showCount=SHOW_STEP; // full history now loads -- render it in slices, not 5,000 DOM rows at once
+var PENDING_FILES=[]; // {name, dataUrl} staged in the composer, uploaded on send
+var EMOJI_DATA=null, SNIPPETS=null; // both lazy-loaded on first open
 
 /* ---------- styles ---------- */
 var css=''+
@@ -33,6 +35,27 @@ var css=''+
 '#view-messages .msg-row.unread .msg-snip{color:var(--ink);font-weight:600}'+
 '#view-messages .msg-chip-unread{margin-left:auto}'+
 '#view-messages .msg-unreaddot{width:8px;height:8px;border-radius:50%;background:var(--red);flex:none;margin-top:4px}'+
+'#view-messages .msg-toolbtn{border:none;background:transparent;font-size:17px;cursor:pointer;color:var(--muted);padding:6px 7px;border-radius:8px;flex:none}'+
+'#view-messages .msg-toolbtn:hover{background:var(--soft);color:var(--ink)}'+
+'#view-messages .msg-pop{position:absolute;bottom:64px;left:12px;right:12px;max-height:320px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:40;display:flex;flex-direction:column;overflow:hidden}'+
+'#view-messages .msg-pop input{margin:10px 10px 6px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;background:var(--bg);color:var(--ink)}'+
+'#view-messages .msg-emojigrid{overflow:auto;padding:4px 10px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr))}'+
+'#view-messages .msg-emojigrid button{border:none;background:transparent;font-size:21px;line-height:1.5;cursor:pointer;border-radius:7px;padding:2px}'+
+'#view-messages .msg-emojigrid button:hover{background:var(--soft)}'+
+'#view-messages .msg-emojigrid .ecat{grid-column:1/-1;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 2px 3px;font-weight:700}'+
+'#view-messages #msgSnippetList{overflow:auto;padding:2px 6px 10px}'+
+'#view-messages #msgSnippetList .snip{padding:8px 10px;border-radius:8px;cursor:pointer}'+
+'#view-messages #msgSnippetList .snip:hover{background:var(--soft)}'+
+'#view-messages #msgSnippetList .snip b{display:block;font-size:12.5px}'+
+'#view-messages #msgSnippetList .snip span{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+'#view-messages #msgAttachStrip{display:none}'+
+'#view-messages #msgAttachStrip.on{display:flex}'+
+'#view-messages .msg-filechip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:11.5px;max-width:230px}'+
+'#view-messages .msg-filechip em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+'#view-messages .msg-filechip b{cursor:pointer;opacity:.6}'+
+'#view-messages .msg-bubble img{max-width:220px;max-height:220px;border-radius:10px;display:block;margin-top:6px;cursor:pointer}'+
+'#view-messages .msg-bubble a.att{display:block;margin-top:6px;font-size:12px;word-break:break-all}'+
+'#view-messages .msg-thread{position:relative}'+
 '#view-messages .msg-empty{padding:30px 16px;color:var(--muted);font-size:12.5px;text-align:center}'+
 '#view-messages .msg-thread{background:var(--card);border:none;border-radius:8px;box-shadow:0 0.25rem 1.875rem rgba(46,45,116,.05);display:flex;flex-direction:column;min-height:0;overflow:hidden}'+
 '#view-messages .msg-thead{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}'+
@@ -84,12 +107,15 @@ if(!still&&CONVOS.length){/* keep whatever's open, just not highlighted */}
 }
 }).catch(function(){});
 }
-function loadThread(id){
+function loadThread(id,quiet){
 var el=document.getElementById('msgScroll');
-el.innerHTML='<div class="msg-noselect">Loading…</div>';
+if(!quiet)el.innerHTML='<div class="msg-noselect">Loading…</div>';
+var atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<40;
 return fetch('/api/messages/'+encodeURIComponent(id)).then(function(r){return r.json();}).then(function(d){
+if(id!==curId)return; // they moved on while this was in flight
 renderThread(d.messages||[]);
-}).catch(function(){el.innerHTML='<div class="msg-noselect">Couldn\'t load this thread.</div>';});
+if(quiet&&!atBottom)el.scrollTop=0; // don't yank someone reading history to the bottom
+}).catch(function(){if(!quiet)el.innerHTML='<div class="msg-noselect">Couldn\'t load this thread.</div>';});
 }
 
 /* ---------- send a reply ---------- */
@@ -101,14 +127,26 @@ function sendReply(){
 if(sending)return;
 var ta=document.getElementById('msgInput');
 var text=(ta.value||'').trim();
-if(!text||!curId||!curContactId)return;
+if((!text&&!PENDING_FILES.length)||!curId||!curContactId)return;
 sending=true;
 var btn=document.getElementById('msgSendBtn');
 btn.disabled=true;ta.disabled=true;
-fetch('/api/messages/'+encodeURIComponent(curId)+'/reply',{
+// Staged files upload to GHL first (it hosts them and hands back URLs),
+// then one send carries text + attachments together -- same order GHL's
+// own composer does it in.
+var uploads=PENDING_FILES.map(function(f){
+  return fetch('/api/messages/'+encodeURIComponent(curId)+'/attachments',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:f.name,dataUrl:f.dataUrl})
+  }).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Upload failed');return j.urls||[];});});
+});
+Promise.all(uploads).then(function(urlSets){
+var attachments=[].concat.apply([],urlSets);
+return fetch('/api/messages/'+encodeURIComponent(curId)+'/reply',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({contactId:curContactId,type:curChannelKey||'SMS',message:text})
+body:JSON.stringify({contactId:curContactId,type:curChannelKey||'SMS',message:text,attachments:attachments})
+});
 }).then(function(r){
 return r.json().then(function(d){return{status:r.status,body:d};});
 }).then(function(res){
@@ -118,21 +156,106 @@ window.alert((res.body&&res.body.error)?res.body.error:'Could not send that mess
 return;
 }
 ta.value='';ta.style.height='auto';
+var sentFiles=PENDING_FILES.slice();
+PENDING_FILES=[];renderAttachStrip();
 if(res.body.demo){
 window.alert(res.body.note||'Demo mode — no message actually sent.');
 }else{
 var el=document.getElementById('msgScroll');
 var noSelect=el.querySelector('.msg-noselect');
 if(noSelect)el.innerHTML='';
-el.insertAdjacentHTML('beforeend',bubbleHTML(text));
+el.insertAdjacentHTML('beforeend',bubbleHTML(text||(sentFiles.length?'\uD83D\uDCCE '+sentFiles.map(function(f){return f.name;}).join(', '):'')));
 el.scrollTop=el.scrollHeight;
 }
 loadList();
 ta.focus();
-}).catch(function(){
+}).catch(function(e){
 sending=false;btn.disabled=false;ta.disabled=false;
-window.alert('Network error — message may not have sent.');
+window.alert(e&&e.message?e.message:'Network error — message may not have sent.');
 });
+}
+
+/* ---------- composer extras: files, emojis, snippets ---------- */
+function renderAttachStrip(){
+var strip=document.getElementById('msgAttachStrip');
+if(!strip)return;
+strip.classList.toggle('on',PENDING_FILES.length>0);
+strip.innerHTML=PENDING_FILES.map(function(f,i){
+  return '<span class="msg-filechip"><i class="ri-attachment-2"></i><em>'+esc(f.name)+'</em><b data-i="'+i+'" title="Remove">&times;</b></span>';
+}).join('');
+Array.prototype.forEach.call(strip.querySelectorAll('b[data-i]'),function(x){
+  x.onclick=function(){PENDING_FILES.splice(Number(x.dataset.i),1);renderAttachStrip();};
+});
+}
+function stageFiles(files){
+Array.prototype.forEach.call(files,function(f){
+  if(f.size>10*1024*1024){window.alert(f.name+' is over 10MB.');return;}
+  var rd=new FileReader();
+  rd.onload=function(){PENDING_FILES.push({name:f.name,dataUrl:rd.result});renderAttachStrip();};
+  rd.readAsDataURL(f);
+});
+}
+function insertAtCursor(txt){
+var ta=document.getElementById('msgInput');
+var st=ta.selectionStart||0,en=ta.selectionEnd||0;
+ta.value=ta.value.slice(0,st)+txt+ta.value.slice(en);
+ta.selectionStart=ta.selectionEnd=st+txt.length;
+ta.focus();
+}
+function togglePop(id){
+['msgEmojiPop','msgSnippetPop'].forEach(function(x){
+  var el=document.getElementById(x);
+  if(el)el.style.display=(x===id&&el.style.display==='none')?'flex':'none';
+});
+}
+// The FULL Unicode emoji set -- ~1,900 of them, same inventory GHL's picker
+// draws from -- fetched once from the emoji.json dataset on first open and
+// grouped by its categories. If the CDN is unreachable, a built-in core set
+// keeps the button useful rather than dead.
+var EMOJI_FALLBACK=['\uD83D\uDE00','\uD83D\uDE02','\uD83D\uDE0A','\uD83D\uDE0D','\uD83D\uDE18','\uD83D\uDE09','\uD83D\uDE0E','\uD83E\uDD73','\uD83D\uDE22','\uD83D\uDE2D','\uD83D\uDE21','\uD83D\uDE31','\uD83E\uDD14','\uD83D\uDE44','\uD83D\uDC4D','\uD83D\uDC4E','\uD83D\uDC4F','\uD83D\uDE4F','\uD83D\uDCAA','\uD83E\uDD1D','\u2764\uFE0F','\uD83D\uDC95','\uD83D\uDD25','\u2B50','\uD83C\uDF89','\uD83C\uDF8A','\u2705','\u274C','\u26A0\uFE0F','\uD83D\uDCB0','\uD83D\uDCB8','\uD83D\uDCC8','\uD83D\uDCC5','\uD83D\uDCCE','\uD83D\uDCDE','\uD83D\uDCE7','\uD83D\uDD14','\uD83C\uDFE6','\uD83D\uDCB3','\uD83D\uDE80'];
+function loadEmojis(){
+if(EMOJI_DATA)return Promise.resolve(EMOJI_DATA);
+return fetch('https://cdn.jsdelivr.net/npm/emoji.json@15.1.0/emoji.json')
+.then(function(r){if(!r.ok)throw 0;return r.json();})
+.then(function(list){EMOJI_DATA=list.map(function(e){return{c:e.char,n:e.name,g:e.group};});return EMOJI_DATA;})
+.catch(function(){EMOJI_DATA=EMOJI_FALLBACK.map(function(c){return{c:c,n:'',g:'Smileys & Emotion'};});return EMOJI_DATA;});
+}
+function renderEmojiGrid(q){
+var grid=document.getElementById('msgEmojiGrid');
+loadEmojis().then(function(list){
+  var rows=q?list.filter(function(e){return (e.n||'').toLowerCase().indexOf(q)>=0;}):list;
+  var h='',lastG=null,shown=0;
+  for(var i=0;i<rows.length&&shown<1200;i++){
+    var e=rows[i];
+    if(!q&&e.g!==lastG){h+='<div class="ecat">'+esc(e.g||'')+'</div>';lastG=e.g;}
+    h+='<button type="button" data-e="'+esc(e.c)+'" title="'+esc(e.n)+'">'+e.c+'</button>';
+    shown++;
+  }
+  grid.innerHTML=h||'<div class="msg-empty">No match.</div>';
+  Array.prototype.forEach.call(grid.querySelectorAll('button[data-e]'),function(b){
+    b.onclick=function(){insertAtCursor(b.dataset.e);};
+  });
+});
+}
+// The sub-account's GHL snippets, verbatim -- same library the team already
+// maintains in GHL, so nothing has to be re-created in this app.
+function renderSnippets(q){
+var host=document.getElementById('msgSnippetList');
+var ready=SNIPPETS?Promise.resolve(SNIPPETS):fetch('/api/snippets').then(function(r){return r.json();}).then(function(d){SNIPPETS=d.snippets||[];return SNIPPETS;});
+ready.then(function(list){
+  var rows=q?list.filter(function(t){return (t.name+' '+t.body).toLowerCase().indexOf(q)>=0;}):list;
+  if(!rows.length){host.innerHTML='<div class="msg-empty">'+(q?'No snippet matches.':'No snippets found in GHL.')+'</div>';return;}
+  host.innerHTML=rows.map(function(t,i){
+    return '<div class="snip" data-i="'+i+'"><b>'+esc(t.name)+'</b><span>'+esc(String(t.body).replace(/<[^>]+>/g,' ').slice(0,90))+'</span></div>';
+  }).join('');
+  Array.prototype.forEach.call(host.querySelectorAll('.snip'),function(sn){
+    sn.onclick=function(){
+      var t=rows[Number(sn.dataset.i)];
+      insertAtCursor(String(t.body).replace(/<[^>]+>/g,'').trim());
+      togglePop('msgSnippetPop');
+    };
+  });
+}).catch(function(){host.innerHTML='<div class="msg-empty">Could not load snippets.</div>';});
 }
 
 /* ---------- render ---------- */
@@ -188,12 +311,21 @@ el.onclick=function(){openThread(el.dataset.id);};
 var more=document.getElementById('msgMore');
 if(more)more.onclick=function(){showCount+=SHOW_STEP;renderRows();};
 }
+function attHTML(urls){
+return (urls||[]).map(function(u){
+  var clean=String(u).split('?')[0];
+  var img=/\.(png|jpe?g|gif|webp|heic)$/i.test(clean);
+  return img
+    ?'<a href="'+esc(u)+'" target="_blank" rel="noopener"><img src="'+esc(u)+'" alt="attachment"></a>'
+    :'<a class="att" href="'+esc(u)+'" target="_blank" rel="noopener"><i class="ri-attachment-2"></i> '+esc(clean.split('/').pop()||'attachment')+'</a>';
+}).join('');
+}
 function renderThread(msgs){
 var el=document.getElementById('msgScroll');
 if(!msgs.length){el.innerHTML='<div class="msg-noselect">No messages in this thread.</div>';return;}
 el.innerHTML=msgs.map(function(m){
 var dir=m.direction==='outbound'?'out':'in';
-return'<div class="msg-bubblewrap '+dir+'"><div class="msg-bubble">'+esc(m.body||'(no content)')+'</div>'+
+return'<div class="msg-bubblewrap '+dir+'"><div class="msg-bubble">'+esc(m.body||(m.attachments&&m.attachments.length?'':'(no content)'))+attHTML(m.attachments)+'</div>'+
 '<div class="msg-bmeta">'+esc(m.channel||'')+' · '+(m.at?new Date(m.at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'')+'</div></div>';
 }).join('');
 el.scrollTop=el.scrollHeight;
@@ -270,9 +402,22 @@ var sectionHTML=''+
 '<a href="#" id="msgThreadOpen" style="display:none">Open client →</a>'+
 '</div></div>'+
 '<div class="msg-scroll" id="msgScroll"><div class="msg-noselect">Pick a conversation on the left to see the full thread.</div></div>'+
+'<div id="msgAttachStrip" style="display:none;padding:6px 14px;gap:6px;flex-wrap:wrap"></div>'+
 '<div class="msg-composer" id="msgComposer">'+
+'<button id="msgEmojiBtn" type="button" class="msg-toolbtn" title="Emoji">\uD83D\uDE42</button>'+
+'<button id="msgSnippetBtn" type="button" class="msg-toolbtn" title="Snippets"><i class="ri-file-list-2-line"></i></button>'+
+'<button id="msgAttachBtn" type="button" class="msg-toolbtn" title="Attach a photo or file"><i class="ri-attachment-2"></i></button>'+
+'<input id="msgFile" type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.csv" style="display:none">'+
 '<textarea id="msgInput" placeholder="Type a reply…" rows="1"></textarea>'+
 '<button id="msgSendBtn" type="button">Send</button>'+
+'</div>'+
+'<div id="msgEmojiPop" class="msg-pop" style="display:none">'+
+'<input id="msgEmojiSearch" type="search" placeholder="Search emojis\u2026" autocomplete="off">'+
+'<div id="msgEmojiGrid" class="msg-emojigrid"><div class="msg-empty">Loading\u2026</div></div>'+
+'</div>'+
+'<div id="msgSnippetPop" class="msg-pop" style="display:none">'+
+'<input id="msgSnippetSearch" type="search" placeholder="Search snippets\u2026" autocomplete="off">'+
+'<div id="msgSnippetList"><div class="msg-empty">Loading\u2026</div></div>'+
 '</div>'+
 '</div>'+
 '</div>';
@@ -298,6 +443,13 @@ clearTimeout(qTimer);var v=e.target.value;qTimer=setTimeout(function(){curSearch
 });
 
 document.getElementById('msgSendBtn').onclick=sendReply;
+// composer extras -- files, emojis, snippets
+document.getElementById('msgAttachBtn').onclick=function(){document.getElementById('msgFile').click();};
+document.getElementById('msgFile').onchange=function(e){stageFiles(e.target.files);e.target.value='';};
+document.getElementById('msgEmojiBtn').onclick=function(){togglePop('msgEmojiPop');renderEmojiGrid('');};
+document.getElementById('msgSnippetBtn').onclick=function(){togglePop('msgSnippetPop');renderSnippets('');};
+document.getElementById('msgEmojiSearch').oninput=function(e){renderEmojiGrid(e.target.value.trim().toLowerCase());};
+document.getElementById('msgSnippetSearch').oninput=function(e){renderSnippets(e.target.value.trim().toLowerCase());};
 var msgInput=document.getElementById('msgInput');
 msgInput.addEventListener('keydown',function(e){
 if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendReply();}
@@ -325,7 +477,9 @@ if(window.setNavGroup)window.setNavGroup('pr',false);
 var pt=document.getElementById('pageTitle');if(pt)pt.textContent='All Messages';
 loadList();
 if(pollTimer)clearInterval(pollTimer);
-pollTimer=setInterval(loadList,30000);
+// Live means the OPEN thread refreshes too -- a client's reply appears
+// within 30s without closing and reopening the conversation.
+pollTimer=setInterval(function(){loadList();if(curId)loadThread(curId,true);},30000);
 loaded=true;
 } else {
 var v2=document.getElementById('view-messages');if(v2)v2.style.display='none';

@@ -44,8 +44,8 @@ test('the expensive endpoints use SWR and boot keeps them warm', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(/cachedSWR\('roster:composed'/.test(src));
   assert.ok(/cachedSWR\(cacheKey/.test(src), 'the dashboard payload too');
-  assert.ok(/setInterval\(warm, 50 \* 1000\)/.test(src),
-    '50s beats the 60s TTL, so the background refresh -- never a visitor -- pays for rebuilds');
+  assert.ok(/setInterval\(warm, 25 \* 1000\)/.test(src),
+    '25s beats the shortest (30s message) TTL, so the background refresh -- never a visitor -- pays for rebuilds');
 });
 
 test('New Clients means bought in the last 30 days, not the whole backlog', () => {

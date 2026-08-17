@@ -191,3 +191,51 @@ test('mark-unread flips the state in GHL, and a VA is allowed to do it', () => {
   assert.ok(/msgUnreadBtn/.test(ui));
   assert.ok(/Mark read/.test(ui) && /Mark unread/.test(ui), 'one button, both directions');
 });
+
+/* ---------- live inbox: 30s refresh, files, emojis, snippets ---------- */
+
+test('the inbox is within ~30s of GHL without re-paging the whole history', () => {
+  const srv = srvNow();
+  const fn = srv.split('async function allConversations')[1].split('\n}')[0];
+  assert.ok(/messages:fresh/.test(fn) && /30 \* 1000/.test(fn),
+    'a cheap 200-conversation fetch every 30s overlays the 5-minute full history');
+  assert.ok(/setInterval\(warm, 25 \* 1000\)/.test(srv),
+    'the warm loop beats the 30s TTL so a visitor never pays for the refresh');
+  const ui = pub('messages.js');
+  assert.ok(/loadThread\(curId,true\)/.test(ui), 'the OPEN thread re-polls too, silently');
+});
+
+test('photos and files go out through GHL, staged in the composer', () => {
+  const srv = srvNow();
+  const route = srv.split("app.post('/api/messages/:id/attachments'")[1].split('\n});')[0];
+  assert.ok(/uploadMessageAttachment/.test(route), 'GHL hosts the file and returns the URL');
+  assert.ok(/10 \* 1024 \* 1024/.test(route), 'a 10MB cap, like GHL itself');
+  assert.ok(auth.canAccess({ role: 'va' }, 'POST', '/api/messages/x/attachments'));
+  const reply = srv.split("app.post('/api/messages/:id/reply'")[1].split('\n});')[0];
+  assert.ok(/attachments:/.test(reply), 'the reply carries the uploaded URLs');
+  assert.ok(/hasAttachments/.test(reply), 'a photo with no text is still a valid message');
+  const ghlSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'ghl.js'), 'utf8');
+  assert.ok(/body\.attachments = attachments/.test(ghlSrc));
+  assert.ok(/attachments: Array\.isArray\(m\.attachments\)/.test(ghlSrc), 'inbound attachments survive normalization');
+  const ui = pub('messages.js');
+  assert.ok(/msgAttachBtn/.test(ui) && /PENDING_FILES/.test(ui) && /attHTML/.test(ui),
+    'staged chips in the composer, rendered images/links in the thread');
+});
+
+test('the emoji picker draws from the full Unicode set with a working fallback', () => {
+  const ui = pub('messages.js');
+  assert.ok(/emoji\.json/.test(ui), 'the complete ~1,900-emoji dataset, lazy-loaded on first open');
+  assert.ok(/EMOJI_FALLBACK/.test(ui), 'a built-in core set if the CDN is unreachable -- never a dead button');
+  assert.ok(/msgEmojiSearch/.test(ui), 'searchable by name');
+  assert.ok(/insertAtCursor/.test(ui), 'inserts where the cursor is, not appended at the end');
+});
+
+test('GHL snippets appear in the composer, pulled from GHL itself', () => {
+  assert.ok(auth.canAccess({ role: 'va' }, 'GET', '/api/snippets'));
+  const srv = srvNow();
+  assert.ok(/ghl:snippets/.test(srv), 'cached a few minutes -- snippets change on edit, not per message');
+  const ghlSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'ghl.js'), 'utf8');
+  assert.ok(/function fetchSnippets/.test(ghlSrc) && /templates\?deleted=false/.test(ghlSrc));
+  const ui = pub('messages.js');
+  assert.ok(/msgSnippetBtn/.test(ui) && /msgSnippetSearch/.test(ui), 'a searchable picker in the composer');
+});
