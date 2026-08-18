@@ -151,6 +151,15 @@ aside.collapsed .navpanel{margin-left:-248px;opacity:0;pointer-events:none}
 /* Money columns exist only for sessions holding the revenue capability. The
    server already strips the values; this stops the empty columns rendering. */
 body:not([data-caps~="revenue"]) .moneyCol{display:none}
+/* An account manager (capability 'users', e.g. Nica) opens the same Settings
+   modal the admin does, but sees ONLY the Team block: API keys, webhook
+   secrets and the like stay admin-only. The admin-granting controls hide
+   too -- the server refuses them anyway (see the /api/users guards); hiding
+   them just avoids offering something that would be refused. */
+body:not([data-caps~="admin"]) #setSecrets{display:none}
+body:not([data-caps~="admin"]) #u_role option[value="admin"]{display:none}
+body:not([data-caps~="admin"]) #u_capsBox label:has(input[data-cap="admin"]){display:none}
+body:not([data-caps~="admin"]) #u_capsBox label:has(input[data-cap="users"]){display:none}
 /* flat worker nav: no group headings, so the sections need their own spacing */
 body.flatnav .navgroup+.navgroup{margin-top:2px}
 body.flatnav .navrail{display:none}
@@ -838,6 +847,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     <button id="backToProvenBtn" style="--ic:#9CA3AF;display:none" onclick="location.href='https://proven-agency-dashboard.vercel.app/dashboard'"><span class="ico2"><i class="ri-arrow-left-line"></i></span>Back to Proven Agency</button>
     <button onclick="openNotifications()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-notification-3-line"></i></span>Notifications <span class="badge" id="notifBadge" style="display:none"></span></button>
     <button onclick="openSettings()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-plug-line"></i></span>Settings &amp; Connections</button>
+    <button id="teamAccNavBtn" onclick="openSettings()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-team-line"></i></span>Team Accounts</button>
     <button id="changePwNavBtn" onclick="openChangePw()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-key-2-line"></i></span>Change password</button>
     <button onclick="showView('tickets')" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-coupon-3-line"></i></span>Ticket Requests <span class="badge" id="ticketBadge" style="display:none"></span></button>
     <button onclick="openSupportTicket()" style="--ic:#9CA3AF"><span class="ico2"><i class="ri-mail-line"></i></span>Submit a Support Ticket</button>
@@ -1517,6 +1527,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2>Settings & connections</h2>
+    <div id="setSecrets">
     <p class="hint">Keys are stored on the server and masked here.</p>
     <label>GoHighLevel — private integration token</label>
     <input id="s_ghlToken" placeholder="pit-…">
@@ -1536,6 +1547,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     <div class="hookurl" id="hookMfsn"></div>
     <label style="margin-top:20px">Your password</label>
     <input id="s_appPassword" type="text" placeholder="change your own login password">
+    </div><!-- /setSecrets -->
 
     <label style="margin-top:20px">Team</label>
     <div id="userList"></div>
@@ -3014,7 +3026,7 @@ function copySetupLink(){
 // if the two ever drift, because a preset that lies about what an account can
 // reach is worse than no preset.
 const ROLE_PRESETS={
-  admin:['production','messages','disputes','clients','pipeline','followups','tickets','revenue','admin','assign'],
+  admin:['production','messages','disputes','clients','pipeline','followups','tickets','revenue','admin','assign','users'],
   employee:['production','messages','clients','pipeline','followups','tickets','assign'],
   va:['production','messages','clients','followups','tickets','assign'],
   disputer:['disputes','tickets']
@@ -3022,7 +3034,8 @@ const ROLE_PRESETS={
 const CAP_LABELS={
   production:'Deal Production', messages:'Messages', disputes:'Dispute rounds',
   clients:'Clients', pipeline:'Pipeline', followups:'Follow-ups',
-  tickets:'Support tickets', revenue:'Revenue & money', assign:'Assign work', admin:'Settings & team'
+  tickets:'Support tickets', revenue:'Revenue & money', assign:'Assign work',
+  users:'Team accounts', admin:'Settings & team'
 };
 const ROLE_BLURBS={
   va:'VA — the client desk: full Deal Production and the inbox. No money.',

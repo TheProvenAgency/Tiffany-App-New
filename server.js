@@ -612,6 +612,13 @@ app.post('/api/users', async (req, res) => {
   }
   const caps = normalizeCapabilities(capabilities);
   if (caps === INVALID_CAPS) return res.status(400).json({ error: 'unknown capability' });
+  // Escalation guard: someone holding 'users' (but not admin) can staff the
+  // desk, not mint administrators -- neither by role nor by a capability
+  // override that smuggles 'admin' or 'users' in.
+  const actorAdmin = auth.capsFor(req.actor).has('admin');
+  if (!actorAdmin && (role === 'admin' || (caps || []).includes('admin') || (caps || []).includes('users'))) {
+    return res.status(403).json({ error: 'only an admin can create admin or account-manager access' });
+  }
   const list = getUsers();
   if (list.some(u => u.username === username)) return res.status(409).json({ error: 'username already taken' });
   const user = auth.makeUser({ username, name, role, password });
@@ -634,6 +641,19 @@ app.patch('/api/users/:id', (req, res) => {
   const list = getUsers();
   const u = list.find(x => x.id === req.params.id);
   if (!u) return res.status(404).json({ error: 'no such user' });
+  // Escalation guard, both directions: a non-admin account manager can
+  // neither TOUCH an admin account (that includes its password) nor RAISE
+  // any account to admin/account-manager.
+  const actorAdmin = auth.capsFor(req.actor).has('admin');
+  if (!actorAdmin) {
+    if (u.role === 'admin' || (u.capabilities || []).includes('admin')) {
+      return res.status(403).json({ error: 'only an admin can modify an admin account' });
+    }
+    const wantCaps = 'capabilities' in req.body ? (normalizeCapabilities(req.body.capabilities) || []) : [];
+    if (req.body.role === 'admin' || wantCaps.includes('admin') || wantCaps.includes('users')) {
+      return res.status(403).json({ error: 'only an admin can grant admin or account-manager access' });
+    }
+  }
   // Never let the last admin lock themselves out.
   const admins = list.filter(x => x.role === 'admin' && !x.disabled);
   const demoting = (req.body.role && req.body.role !== 'admin') || req.body.disabled === true;
@@ -663,6 +683,15 @@ app.patch('/api/users/:id', (req, res) => {
 // password at all, it just hands them a way to pick a new one themselves.
 // Admin-only (not in EMPLOYEE_API).
 app.post('/api/users/:id/invite', (req, res) => {
+  {
+    const target = getUsers().find(x => x.id === req.params.id);
+    if (target && !auth.capsFor(req.actor).has('admin')
+      && (target.role === 'admin' || (target.capabilities || []).includes('admin'))) {
+      // A setup link IS a password reset -- handing one out for an admin
+      // account would be the takeover the other guards exist to prevent.
+      return res.status(403).json({ error: 'only an admin can reset an admin account' });
+    }
+  }
   const u = getUsers().find(x => x.id === req.params.id);
   if (!u) return res.status(404).json({ error: 'no such user' });
   res.json({ ok: true, setupLink: setupLinkFor(u.id) });
@@ -3135,13 +3164,47 @@ async function bootstrap() {
     if (nica) {
       const caps = Array.isArray(nica.capabilities) ? nica.capabilities.slice()
         : (auth.ROLE_CAPS[nica.role] || []).slice();
-      if (!caps.includes('disputes') && !caps.includes('admin')) {
-        nica.capabilities = caps.concat('disputes');
+      const wanted = ['disputes', 'users']; // desk + team accounts, never admin
+      const missing = wanted.filter(c => !caps.includes(c));
+      if (missing.length && !caps.includes('admin')) {
+        nica.capabilities = caps.concat(missing);
         await saveUsersDurable(grantCfg.users);
-        console.log("Capability grant: Nica now holds 'disputes' alongside her VA capabilities");
+        console.log(`Capability grant: Nica now holds ${missing.join('+')} alongside her VA capabilities`);
       }
     }
   } catch (e) { console.error('Nica capability grant failed (retries next boot):', e.message); }
+  // One-time account seed, requested 2026-08-17: the four disputers. Seeded
+  // at boot (their accounts live in production data no one can edit
+  // directly) with scrypt HASHES precomputed from the owner-chosen shared
+  // starter password -- the plaintext is deliberately NOT in this file.
+  // Idempotent by username: once an account exists it is never touched
+  // again, so password changes and Team-form edits stick. They should each
+  // change the shared starter password after first login.
+  try {
+    const seedCfg = store.getConfig();
+    const seedUsers = seedCfg.users || [];
+    const DISPUTER_SEED = [
+    { username: 'alfred', name: 'Alfred', hash: 'acadccc080957150694299f65418c80bc11aba73d136b89eae62c87e3c312d43583f2d6a486b6a41bd2358b1519c6fc4ade19827c8ac9e32dd6d971b3e50b146', salt: 'fe46ad273fa998c321946ae895e8157d' },
+    { username: 'antonette', name: 'Antonette', hash: '6654f41e601842d01bb0d773892aa115405f2c445eb62f0968807ff5251177ab11a7ba54a05c9bbc65de4f95399c952151edbcba8255273357d932bdbf3b0d9b', salt: '4d70c2bc56f493e22d519a45269f5c53' },
+    { username: 'mber', name: 'Mber', hash: '2cf8ecc3feb790d38ddfcf1897dbac59f9458db5a13017182c3a92d574118fdb37e29bd0c75fecdd7e3be14a1f920e1f21428633eed45d9dfd77f9c895e92733', salt: '64fcaec99e05a8c0c0bb09250e3b6c9f' },
+    { username: 'yvette', name: 'Yvette', hash: '50704b5b84ca5786ce4ba6efdca409a936f7bdefac10cf702fc3c1d5e078cf67941b7a836d4fbd49f1d667cec7ce2bc7648fa4271d6789b01a58a36637ac994f', salt: '81d525d4a8e6037ccae9d96b3f6ed33b' }
+    ];
+    const toAdd = DISPUTER_SEED.filter(d =>
+      !seedUsers.some(u => (u.username || '').toLowerCase() === d.username));
+    if (toAdd.length) {
+      for (const d of toAdd) {
+        seedUsers.push({
+          id: crypto.randomUUID(),
+          username: d.username, name: d.name, role: 'disputer',
+          hash: d.hash, salt: d.salt,
+          mustSetPassword: false, disabled: false,
+          createdAt: new Date().toISOString()
+        });
+      }
+      const mirror = await saveUsersDurable(seedUsers);
+      console.log(`Seeded disputer accounts: ${toAdd.map(d => d.name).join(', ')} (durable: ${!!mirror.ok})`);
+    }
+  } catch (e) { console.error('Disputer seed failed (retries next boot):', e.message); }
   await store.mirrorUsers(getUsers())
     .then(() => Promise.all([
       store.hydrateNotificationsFromPostgres(),

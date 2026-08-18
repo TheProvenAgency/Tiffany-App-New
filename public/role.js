@@ -77,10 +77,15 @@
     // exactly one work destination; giving a third of their nav to "Change
     // password" made settings look like half the job.
     changePwNavBtn: false,
-    signOutNavBtn: false
+    signOutNavBtn: false,
+    // Team Accounts: the account-manager door into the (team-only) Settings
+    // modal. Admin doesn't need it -- their full Settings entry opens the
+    // same modal with everything showing -- so it's hidden for admins below.
+    teamAccNavBtn: 'users'
   };
   // A group heading is worth showing when anything under it is.
   var GROUP_OF = {
+    teamAccNavBtn: 'ac',
     teamNavBtn: 'ov', pvNavBtn: 'pr', pvNewClientsBtn: 'cl', disputesNavBtn: 'cl',
     pipelineNavBtn: 'cl', clientsNavBtn: 'cl', fuNavBtn: 'pr', msgNavBtn: 'pr',
     rvNavBtn: 'fi', mfNavBtn: 'fi', lmNavBtn: 'fi',
@@ -221,6 +226,11 @@
       var caps = Array.isArray(me.capabilities) ? me.capabilities : [];
       var can = function (c) { return caps.indexOf(c) >= 0; };
       document.body.setAttribute('data-caps', caps.join(' '));
+      // see NAV_CAPS.teamAccNavBtn -- redundant for an admin
+      if (caps.indexOf('admin') >= 0) {
+        var tab = document.getElementById('teamAccNavBtn');
+        if (tab) tab.style.display = 'none';
+      }
       wirePreviewToggle(me);
 
       // Shown only for a session that arrived via the Proven Agency's

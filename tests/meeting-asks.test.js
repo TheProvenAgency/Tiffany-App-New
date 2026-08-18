@@ -313,7 +313,7 @@ test('the boot grant is idempotent and only ever ADDS disputes', () => {
   const srv = srvNow();
   const grant = srv.split('One-time capability grant')[1].split('await store.mirrorUsers')[0];
   assert.ok(/toLowerCase\(\) === 'nica'/.test(grant));
-  assert.ok(/!caps\.includes\('disputes'\)/.test(grant), 'a second boot changes nothing');
+  assert.ok(/wanted\.filter\(c => !caps\.includes\(c\)\)/.test(grant), 'a second boot changes nothing');
   assert.ok(/saveUsersDurable/.test(grant), 'survives the next deploy like any account change');
   assert.ok(/ROLE_CAPS\[nica\.role\]/.test(grant), 'an override starts from her real VA capabilities');
 });
@@ -323,4 +323,62 @@ test('holding disputes alongside production does not move the front door', () =>
   const landing = dq.split('their home\n  // screen')[1] || dq.split('home screen')[1];
   assert.ok(/indexOf\('production'\)<0/.test(landing),
     'only a PURE disputer auto-lands on the desk; a VA with desk access keeps her VA home');
+});
+
+/* ---------- account management for Nica + the four disputers ---------- */
+
+test("the 'users' capability manages the team but can never mint an admin", () => {
+  const mgr = { role: 'va', capabilities: ['production', 'messages', 'clients', 'followups', 'tickets', 'assign', 'disputes', 'users'] };
+  assert.ok(auth.canAccess(mgr, 'POST', '/api/users'), 'create members');
+  assert.ok(auth.canAccess(mgr, 'PATCH', '/api/users/x'), 'edit members');
+  assert.ok(auth.canAccess(mgr, 'POST', '/api/users/x/invite'), 'resend setup links');
+  assert.ok(!auth.canAccess(mgr, 'DELETE', '/api/users/x'), 'deleting accounts stays admin-only');
+  const srv = srvNow();
+  const post = srv.split("app.post('/api/users',")[1].split('app.patch')[0];
+  assert.ok(/role === 'admin' \|\| \(caps \|\| \[\]\)\.includes\('admin'\)/.test(post),
+    'a non-admin creator cannot create admin access by role OR by capability override');
+  const patch = srv.split("app.patch('/api/users/:id',")[1].split('app.post')[0];
+  assert.ok(/only an admin can modify an admin account/.test(patch),
+    'nor touch an admin account -- a password change there would be a takeover');
+  const invite = srv.split("app.post('/api/users/:id/invite',")[1].split('\n});')[0];
+  assert.ok(/only an admin can reset an admin account/.test(invite),
+    'a setup link IS a password reset, so it gets the same wall');
+});
+
+test('the Team Accounts door shows the team block and none of the secrets', () => {
+  const html = pub('index.html');
+  assert.ok(/id="setSecrets"/.test(html), 'API keys and webhook secrets are wrapped');
+  assert.ok(/body:not\(\[data-caps~="admin"\]\) #setSecrets\{display:none\}/.test(html));
+  assert.ok(/id="teamAccNavBtn"/.test(html), 'a sidebar entry for account managers');
+  assert.ok(/#u_role option\[value="admin"\]\{display:none\}/.test(html),
+    'the Admin role option hides for non-admin (the server refuses it regardless)');
+  const role = pub('role.js');
+  assert.ok(/teamAccNavBtn: 'users'/.test(role), 'gated on the users capability');
+  assert.ok(/users:'Team accounts'/.test(html), 'CAP_LABELS stays in sync with lib/auth');
+});
+
+test('the four disputer accounts seed at boot, with no plaintext password in the repo', () => {
+  const srv = srvNow();
+  const seed = srv.split('DISPUTER_SEED = [')[1].split('];')[0];
+  for (const n of ['alfred', 'antonette', 'mber', 'yvette']) {
+    assert.ok(seed.includes(`username: '${n}'`), n + ' is seeded');
+  }
+  assert.ok(/role: 'disputer'/.test(srv.split('DISPUTER_SEED')[2] || srv.split('DISPUTER_SEED = [')[1]),
+    'seeded as disputers');
+  assert.ok(!srv.includes('Dispute2026'), 'the starter password never appears in source -- only scrypt hashes');
+  assert.ok(/!seedUsers\.some\(u => \(u\.username \|\| ''\)\.toLowerCase\(\) === d\.username\)/.test(srv),
+    'idempotent by username: later password changes and Team edits stick');
+  assert.ok(/saveUsersDurable\(seedUsers\)/.test(srv), 'durable like every other account');
+});
+
+test('seeded disputers appear in the assignment lists automatically', () => {
+  // disputes.js builds its assignee dropdown from /api/users, keeping anyone
+  // whose role or capability override includes dispute work -- so the four
+  // new accounts show up for Nica and the admins with no further wiring, and
+  // the daily worked-checkbox counts (Disputes done card, team activity)
+  // track them by name the moment they tick a box.
+  const dq = pub('disputes.js');
+  const filter = dq.split('DISPUTERS=(us||[])')[1].split('.map(')[0];
+  assert.ok(/u\.role==='disputer'/.test(filter));
+  assert.ok(/indexOf\('disputes'\)>=0/.test(filter), 'capability overrides count too (Nica herself)');
 });
