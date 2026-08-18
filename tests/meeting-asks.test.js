@@ -290,3 +290,37 @@ test('the team can add their own snippets, durably, and delete them', () => {
   assert.ok(/data-del/.test(ui) && /Delete this snippet for the whole team/.test(ui),
     'app-made ones are deletable; GHL-made ones are edited in GHL');
 });
+
+/* ---------- Nica: VA + dispute desk, never admin ---------- */
+
+test("a VA-plus-disputes override opens the desk and nothing admin", () => {
+  const caps = ['production', 'messages', 'clients', 'followups', 'tickets', 'assign', 'disputes'];
+  const nica = { role: 'va', capabilities: caps };
+  assert.ok(auth.canAccess(nica, 'GET', '/api/disputes/queue'), 'the desk opens');
+  assert.ok(auth.canAccess(nica, 'PATCH', '/api/disputes/x'), 'and she can work a record');
+  assert.ok(auth.canAccess(nica, 'POST', '/api/disputes/x/worked'));
+  assert.ok(auth.canAccessAsset(nica, '/disputes.js'), 'the desk code is served to her');
+  assert.ok(auth.canAccess(nica, 'GET', '/api/production'), 'her VA portal is untouched');
+  assert.ok(!auth.canAccess(nica, 'POST', '/api/users'), 'creating accounts stays admin-only');
+  assert.ok(!auth.canAccess(nica, 'GET', '/api/team-activity'), 'the admin activity board stays closed');
+  // and the money wall is a capability, which she still does not hold:
+  const rec = { id: 'c', name: 'X', totalSpent: 900, mfsnCommission: 50 };
+  const redacted = auth.redactClient(nica, rec);
+  assert.equal(redacted.totalSpent, undefined, 'no money appears anywhere in her session');
+});
+
+test('the boot grant is idempotent and only ever ADDS disputes', () => {
+  const srv = srvNow();
+  const grant = srv.split('One-time capability grant')[1].split('await store.mirrorUsers')[0];
+  assert.ok(/toLowerCase\(\) === 'nica'/.test(grant));
+  assert.ok(/!caps\.includes\('disputes'\)/.test(grant), 'a second boot changes nothing');
+  assert.ok(/saveUsersDurable/.test(grant), 'survives the next deploy like any account change');
+  assert.ok(/ROLE_CAPS\[nica\.role\]/.test(grant), 'an override starts from her real VA capabilities');
+});
+
+test('holding disputes alongside production does not move the front door', () => {
+  const dq = fs.readFileSync(path.join(__dirname, '..', 'public', 'disputes.js'), 'utf8');
+  const landing = dq.split('their home\n  // screen')[1] || dq.split('home screen')[1];
+  assert.ok(/indexOf\('production'\)<0/.test(landing),
+    'only a PURE disputer auto-lands on the desk; a VA with desk access keeps her VA home');
+});

@@ -3120,6 +3120,28 @@ async function bootstrap() {
   // Users first: mirrorUsers pushes the LOCAL list to Postgres, so restoring
   // after it would mirror the freshly-wiped list over the good copy.
   await store.hydrateUsersFromPostgres().catch(e => console.error('User restore failed:', e.message));
+  // One-time capability grant, requested 2026-08-17: Nica runs the whole
+  // desk and needs the Dispute Desk alongside her VA portal -- but NOT
+  // admin. A capability OVERRIDE on her account (VA caps + disputes) does
+  // exactly that: the desk nav appears, disputes routes and assets open,
+  // and the money walls stay up because she still has no revenue/admin
+  // capability. Done here rather than by hand because her account lives in
+  // production data no one can edit directly; idempotent, and the Team
+  // form's capability checkboxes can change it later (this only ever ADDS
+  // 'disputes' when missing, so an admin unticking something else sticks).
+  try {
+    const grantCfg = store.getConfig();
+    const nica = (grantCfg.users || []).find(u => (u.username || '').toLowerCase() === 'nica');
+    if (nica) {
+      const caps = Array.isArray(nica.capabilities) ? nica.capabilities.slice()
+        : (auth.ROLE_CAPS[nica.role] || []).slice();
+      if (!caps.includes('disputes') && !caps.includes('admin')) {
+        nica.capabilities = caps.concat('disputes');
+        await saveUsersDurable(grantCfg.users);
+        console.log("Capability grant: Nica now holds 'disputes' alongside her VA capabilities");
+      }
+    }
+  } catch (e) { console.error('Nica capability grant failed (retries next boot):', e.message); }
   await store.mirrorUsers(getUsers())
     .then(() => Promise.all([
       store.hydrateNotificationsFromPostgres(),

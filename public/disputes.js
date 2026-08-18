@@ -471,9 +471,14 @@ function initDQ(){
     };
   }
 
-  // A disputer has no dashboard to land on -- the desk is their home screen.
+  // A PURE disputer has no dashboard to land on -- the desk is their home
+  // screen. Someone who holds disputes ALONGSIDE production (Nica: VA desk
+  // plus the dispute desk) lands on their normal home and reaches the desk
+  // by its nav button -- the extra capability adds a room, it must not
+  // move the front door.
   if(window.__me&&Array.isArray(window.__me.capabilities)
      &&window.__me.capabilities.indexOf('disputes')>=0
+     &&window.__me.capabilities.indexOf('production')<0
      &&window.__me.capabilities.indexOf('revenue')<0){
     setTimeout(function(){ if(window.showView)window.showView('disputes'); },0);
   }
