@@ -2478,9 +2478,12 @@ app.get('/api/mfsn-gap', async (req, res) => {
 // so it can't fight with a colleague's PATCH.
 function withMfsnTags(clients) {
   if (!Array.isArray(clients)) return clients;
-  const gap = affiliate.productionGap(clients, store.getMfsnMembers());
-  const tagOf = new Map(gap.tagged.map(t => [t.id, t.mfsn]));
-  return clients.map(c => ({ ...c, mfsn: tagOf.get(c.id) || null }));
+  const gap = affiliate.productionGap(clients, store.getMfsnMembers(), store.getAffiliateOverrides());
+  const tagOf = new Map(gap.tagged.map(t => [t.id, t]));
+  return clients.map(c => {
+    const t = tagOf.get(c.id);
+    return { ...c, mfsn: (t && t.mfsn) || null, mfsnOverride: (t && t.mfsnOverride) || null };
+  });
 }
 
 // Deal Production records come from the sheet and carry no purchase date --
@@ -2591,6 +2594,11 @@ app.get('/api/disputes/:id', async (req, res) => {
     const rec = await dealProd.readOneProdRecord(req.params.id);
     const record = disputes.toDisputeRecord(rec);
     if (!record) return res.status(404).json({ error: 'no such client' });
+    // MFSN standing rides along so the desk drawer can show and set it --
+    // a disputer is often the first to learn a client's monitoring changed.
+    const [tagged] = withMfsnTags([rec]);
+    record.mfsn = (tagged && tagged.mfsn) || null;
+    record.mfsnOverride = (tagged && tagged.mfsnOverride) || null;
     res.json(record);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2681,6 +2689,26 @@ app.post('/api/production/add', async (req, res) => {
     store.clearCacheKey('roster:composed');
     store.clearCacheKey('clients:tagged');
     res.json({ ok: true, id: rec.id, name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Mark a Deal Production client's MyFreeScoreNow standing by hand --
+// 'affiliate' (they're on MFSN under her link), 'not_on_mfsn', or null to
+// go back to the automatic name-match. Same override map the Clients
+// drawer writes, so every surface reads one truth; both roster caches
+// drop because both render the pill being changed.
+app.post('/api/production/:id/mfsn', async (req, res) => {
+  try {
+    const valid = ['affiliate', 'not_on_mfsn'];
+    const status = valid.includes(req.body && req.body.status) ? req.body.status : null;
+    const list = await readProd();
+    if (!Array.isArray(list) || !list.some(c => String(c.id) === String(req.params.id))) {
+      return res.status(404).json({ error: 'no such client' });
+    }
+    store.setAffiliateOverride(req.params.id, status);
+    store.clearCacheKey('roster:composed');
+    store.clearCacheKey('clients:tagged');
+    res.json({ ok: true, mfsn: status === 'affiliate' ? 'affiliate' : (status ? 'needs' : null), override: status });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

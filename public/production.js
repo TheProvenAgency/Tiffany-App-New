@@ -101,6 +101,8 @@ var css=''+
 '#view-production .pv-doc{font-size:11px;font-weight:700}#view-production .doc-ok{color:var(--green-ink)}#view-production .doc-part{color:var(--gold)}#view-production .doc-no{color:var(--red)}'+
 '#view-production .pv-mfsn{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}'+
 '#view-production .mfsn-yes{background:var(--green-soft);color:var(--green-ink)}#view-production .mfsn-no{background:var(--gold-soft);color:var(--gold-ink)}'+
+'.mfsnmark{border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;cursor:pointer}'+
+'.mfsnmark:hover{color:var(--ink);border-color:var(--ink)}'+
 '#view-production .pv-days{font-size:11.5px;color:var(--muted);white-space:nowrap}'+
 '#view-production .pv-pager{display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--muted)}'+
 '#view-production .pv-pager button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;color:var(--ink);font-size:12px}'+
@@ -742,8 +744,20 @@ function drawerBody(c){
    (c.paymentCount?factRow('Purchases on record', String(c.paymentCount)):'')+
    factRow('Purchase source', '<span class="pv-days">'+esc(srcLabel)+'</span>')+
    factRow('Days in stage', (c.days==null?'—':c.days+'d'))+
-   factRow('MyFreeScoreNow', c.mfsn==='affiliate'?'<span class="pv-mfsn mfsn-yes">Affiliate</span>'
-        :(c.mfsn==='needs'?'<span class="pv-mfsn mfsn-no">Needs enrolling</span>':'<span class="pv-days">unknown</span>'))+
+   /* Markable by hand: the automatic tag is a coarse name-match against the
+      MFSN member export, and the team often KNOWS (client told them, they
+      enrolled the client themselves). Buttons write the same override the
+      Clients drawer uses, so every surface reads one truth; "auto" clears
+      the mark and returns to the name-match. */
+   factRow('MyFreeScoreNow',
+     (c.mfsn==='affiliate'?'<span class="pv-mfsn mfsn-yes">On MFSN</span>'
+       :(c.mfsn==='needs'?'<span class="pv-mfsn mfsn-no">Not on MFSN</span>':'<span class="pv-days">unknown</span>'))
+     +(c.mfsnOverride?' <span class="pv-days">(marked by hand)</span>':'')
+     +'<span style="float:right;display:inline-flex;gap:5px">'
+     +(c.mfsnOverride!=='affiliate'?'<button class="mfsnmark" data-st="affiliate">On MFSN</button>':'')
+     +(c.mfsnOverride!=='not_on_mfsn'?'<button class="mfsnmark" data-st="not_on_mfsn">Not on</button>':'')
+     +(c.mfsnOverride?'<button class="mfsnmark" data-st="">auto</button>':'')
+     +'</span>')+
    (c.email?factRow('Email','<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>'):'')+
    (c.phone?factRow('Phone','<a href="tel:'+esc(String(c.phone).replace(/[^0-9+]/g,''))+'">'+esc(c.phone)+'</a>'):'')+
 
@@ -757,6 +771,21 @@ function drawerBody(c){
 }
 function bindDrawer(c){
   var body=document.getElementById('dBody');
+  Array.prototype.forEach.call(body.querySelectorAll('.mfsnmark'),function(b){
+    b.onclick=function(){
+      b.disabled=true;
+      fetch('/api/production/'+encodeURIComponent(c.id)+'/mfsn',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({status:b.dataset.st||null})
+      }).then(function(r){return r.json();}).then(function(j){
+        if(j.error){alert(j.error);b.disabled=false;return;}
+        c.mfsn=j.mfsn||( /* auto: recompute unknown until next roster load */ c.mfsn);
+        c.mfsnOverride=j.override;
+        pvOpen(c.id); // re-render the drawer with the new pill
+        loaded=false; // the list pill refreshes on the next roster paint
+      }).catch(function(){b.disabled=false;});
+    };
+  });
   /* Each handler saves only what it touched, so the server merge stays clean. */
   function commit(patch){save(c,patch);if(curView==='overview')renderOverview();else drawWork();document.getElementById('dMt').textContent=c.pkg+' · '+(c.days||0)+' days in '+c.stage.toLowerCase();}
   document.getElementById('dStage').onchange=function(e){if(c.stage!==e.target.value){c.stage=e.target.value;c.days=0;}commit({stage:c.stage,days:c.days});document.getElementById('dBody').innerHTML=drawerBody(c);bindDrawer(c);};

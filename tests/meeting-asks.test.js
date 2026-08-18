@@ -382,3 +382,44 @@ test('seeded disputers appear in the assignment lists automatically', () => {
   assert.ok(/u\.role==='disputer'/.test(filter));
   assert.ok(/indexOf\('disputes'\)>=0/.test(filter), 'capability overrides count too (Nica herself)');
 });
+
+/* ---------- MFSN markable everywhere ---------- */
+
+test('a hand-set MFSN mark beats the name-match guess on the production side', () => {
+  const affiliate = require('../lib/affiliate.js');
+  const clients = [{ id: 'p1', name: 'April O.' }, { id: 'p2', name: 'Ben K.' }];
+  const members = [{ name: 'April Oldman', email: 'a@x.com' }]; // p1 auto-matches
+  const g0 = affiliate.productionGap(clients, members, {});
+  assert.equal(g0.tagged.find(t => t.id === 'p1').mfsn, 'affiliate', 'auto match still works');
+  assert.equal(g0.tagged.find(t => t.id === 'p2').mfsn, 'needs');
+  const g1 = affiliate.productionGap(clients, members, { p1: 'not_on_mfsn', p2: 'affiliate' });
+  assert.equal(g1.tagged.find(t => t.id === 'p1').mfsn, 'needs', 'the team can overrule a false match');
+  assert.equal(g1.tagged.find(t => t.id === 'p2').mfsn, 'affiliate', 'and mark someone the export missed');
+  assert.equal(g1.tagged.find(t => t.id === 'p2').mfsnOverride, 'affiliate', 'the drawer can say "marked by hand"');
+});
+
+test('the mark is settable from both desks and durable for BOTH id namespaces', () => {
+  assert.ok(auth.canAccess({ role: 'va' }, 'POST', '/api/production/x/mfsn'));
+  assert.ok(auth.canAccess({ role: 'disputer' }, 'POST', '/api/production/x/mfsn'));
+  const srv = srvNow();
+  const route = srv.split("app.post('/api/production/:id/mfsn'")[1].split('\n});')[0];
+  assert.ok(/setAffiliateOverride/.test(route), 'one override map for every surface');
+  assert.ok(/clearCacheKey\('roster:composed'\)/.test(route) && /clearCacheKey\('clients:tagged'\)/.test(route),
+    'both cached rosters drop -- both render the pill being changed');
+  const st = fs.readFileSync(path.join(__dirname, '..', 'lib', 'store.js'), 'utf8');
+  assert.ok(/insert into mfsn_overrides/.test(st),
+    'the generic mirror keyed by raw id -- production legacy ids never resolved through the GHL join, so their marks used to evaporate on redeploy');
+  assert.ok(/select ext_id, status from mfsn_overrides/.test(st), 'and they hydrate back at boot');
+});
+
+test('the pill is a control in the production drawer and the dispute desk', () => {
+  const pv = pub('production.js');
+  assert.ok(/mfsnmark/.test(pv) && /\/api\/production\/'\+encodeURIComponent\(c\.id\)\+'\/mfsn/.test(pv));
+  const dq = pub('disputes.js');
+  assert.ok(/dq-mfsn/.test(dq) && /\/mfsn'/.test(dq));
+  assert.ok(/marked by hand/.test(pv) && /marked by hand/.test(dq),
+    'a hand mark is labeled, so nobody mistakes it for the automatic match');
+  const srv = srvNow();
+  assert.ok(/record\.mfsnOverride/.test(srv.split("app.get('/api/disputes/:id'")[1].split('\n});')[0]),
+    'the dispute record carries the standing so the desk can show it');
+});

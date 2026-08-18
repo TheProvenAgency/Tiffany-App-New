@@ -53,6 +53,8 @@ var css=''+
 '#dqDrawer .cfadd{display:grid;grid-template-columns:70px 1fr 1fr 34px;gap:6px;margin-top:8px}'+
 '#dqDrawer .cfadd input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px;min-width:0}'+
 '#dqDrawer .cfadd button{border:0;border-radius:6px;background:#4F46E5;color:#fff;font-weight:700;cursor:pointer}'+
+'#dqDrawer .dq-mfsn{border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;cursor:pointer}'+
+'#dqDrawer .dq-mfsn:hover{color:var(--ink);border-color:var(--ink)}'+
 '#view-disputes .dq-kpi.blocked{border-top-color:#EF4A00}'+
 '#view-disputes .dq-kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}'+
 '#view-disputes .dq-kpi .v{font-size:24px;font-weight:800;margin-top:6px;letter-spacing:-.5px}'+
@@ -304,6 +306,16 @@ function renderRecord(){
   } else if(r.assignedTo){
     h+='<h4>Assigned to</h4><div class="brow" style="grid-template-columns:1fr"><b>'+esc(r.assignedTo)+'</b></div>';
   }
+  // MyFreeScoreNow standing, markable from the desk too -- a disputer is
+  // often first to learn monitoring changed. Same override the production
+  // and Clients drawers write; one truth on every surface.
+  h+='<h4>MyFreeScoreNow</h4><div class="brow" style="grid-template-columns:1fr auto auto auto;gap:6px">'
+    +'<b>'+(r.mfsn==='affiliate'?'On MFSN':(r.mfsn==='needs'?'Not on MFSN':'Unknown'))
+    +(r.mfsnOverride?' <span style="font-weight:400;color:var(--muted);font-size:11px">(marked by hand)</span>':'')+'</b>'
+    +(r.mfsnOverride!=='affiliate'?'<button class="dq-mfsn" data-st="affiliate">On MFSN</button>':'<span></span>')
+    +(r.mfsnOverride!=='not_on_mfsn'?'<button class="dq-mfsn" data-st="not_on_mfsn">Not on</button>':'<span></span>')
+    +(r.mfsnOverride?'<button class="dq-mfsn" data-st="">auto</button>':'<span></span>')
+    +'</div>';
   h+='<h4>Bureau status</h4>';
   BUREAUS.forEach(function(b){
     var cur=r.bureaus[b]||{round:0,status:'none'};
@@ -355,6 +367,19 @@ function renderRecord(){
   h+='<textarea id="dqdNote" placeholder="Add a note — what you filed, what you are waiting on…"></textarea>';
 
   document.getElementById('dqdBody').innerHTML=h;
+  Array.prototype.forEach.call(document.querySelectorAll('#dqdBody .dq-mfsn'),function(b){
+    b.onclick=function(){
+      b.disabled=true;
+      fetch('/api/production/'+encodeURIComponent(state.openId)+'/mfsn',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({status:b.dataset.st||null})
+      }).then(function(res){return res.json();}).then(function(j){
+        if(j.error){alert(j.error);b.disabled=false;return;}
+        r.mfsn=j.mfsn||r.mfsn; r.mfsnOverride=j.override;
+        renderRecord();
+      }).catch(function(){b.disabled=false;});
+    };
+  });
 }
 
 function saveRecord(){
