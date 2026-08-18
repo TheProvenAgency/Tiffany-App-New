@@ -1707,8 +1707,18 @@ function setPreset(p){preset=p;[from,to]=presetRange(p);granularity=pickGran(fro
 function applyCustom(){preset='';from=$('fromD').value||null;to=$('toD').value||null;granularity=pickGran(from,to);renderFilters();loadDashboard();}
 
 /* ================= charts ================= */
+// Chart.js is a DEFERRED script now (it was render-blocking). This inline
+// script runs at parse time, BEFORE deferred scripts execute -- so touching
+// Chart here threw a ReferenceError that killed this entire script block,
+// which is most of the app ("the admin side is completely glitched out").
+// The defaults wait for DOMContentLoaded, which the spec fires only after
+// deferred scripts have run; every chart is created after a fetch resolves,
+// so the defaults are always in place first.
+document.addEventListener('DOMContentLoaded',function(){
+if(typeof Chart==='undefined')return; // CDN failed -- charts degrade, the app must not
 Chart.defaults.color='#9CA3AF';Chart.defaults.borderColor='rgba(156,163,175,.2)';
 Chart.defaults.font.family="-apple-system,'Segoe UI',Inter,sans-serif";
+});
 const charts={};
 /* Chart.js throws "Canvas is already in use" if a chart is still attached
    to the canvas -- our own charts{} bookkeeping only knows about charts WE
@@ -3405,6 +3415,7 @@ function resizeDashCharts(){
   });
 }
 function initDashGrid(){
+  if(typeof GridStack==='undefined')return; // CDN failed -- cards render static, the app must not die
   const el=$('dashGrid'); if(!el||dashGridStack)return;
   dashGridStack=GridStack.init({
     column:12, cellHeight:50, margin:8, float:false, animate:true,
