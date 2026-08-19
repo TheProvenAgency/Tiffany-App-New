@@ -464,7 +464,8 @@ test('the audit tab: numbered, un-audited first by default, outcomes explained',
   const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
   assert.ok(/filter:'todo'/.test(au), 'opens on Not audited -- the work, not the trophies');
   assert.ok(/data-open=/.test(au), 'client name opens the audit drawer');
-  assert.ok(/OUT_DESC/.test(au) && /upsell/.test(au), 'each outcome says what it means before you click it');
+  assert.ok(/OUT_DESC/.test(au) && /nothing left to fix/.test(au),
+    'each outcome says what it means in plain words -- no funding/upsell/unlimited jargon that presumes tags she has not made yet');
   assert.ok(/hydrateClientAuditsFromPostgres/.test(srvNow()), 'audit state survives every deploy');
   assert.ok(/audit\.js" defer/.test(pub('index.html')));
 });

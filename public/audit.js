@@ -16,10 +16,10 @@ var SHOW=100, showCount=SHOW;
 
 var OUT_LABEL={graduated:'Graduated',completed:'Completed',free_round:'Free round',in_progress:'In process'};
 var OUT_DESC={
-  graduated:'Credit fully finished — ready for funding / mentorship upsell',
-  completed:'Paid rounds fulfilled — may still need monitoring or an upsell',
-  free_round:'Out of rounds — doing one free to re-engage them',
-  in_progress:'Still in repair — keep working'
+  graduated:'Their credit is fully finished — nothing left to fix',
+  completed:'They got everything they paid for — but their credit may still need work',
+  free_round:'Out of rounds — giving them one free to bring them back',
+  in_progress:'Still working on their credit — keep going as normal'
 };
 var OUT_COLOR={graduated:'#45B369',completed:'#4F46E5',free_round:'#D97706',in_progress:'#9CA3AF'};
 
@@ -156,7 +156,7 @@ function pkgChips(pkg){
   return parts.map(function(pp){return '<span class="au-pkg">'+esc(pp)+'</span>';}).join('');
 }
 function roundsBar(r){
-  if(r.unlimited)return '<span class="au-sub"><b style="color:var(--ink)">'+(r.roundsUsed||0)+'</b> used \u00b7 unlimited</span>';
+  if(r.unlimited)return '<span class="au-sub"><b style="color:var(--ink)">'+(r.roundsUsed||0)+'</b> used \u00b7 no round limit</span>';
   if(r.roundsIncluded==null)return '<span class="au-sub"><b style="color:var(--ink)">'+(r.roundsUsed||0)+'</b> used \u00b7 package unclear</span>';
   var used=r.roundsUsed||0, inc=r.roundsIncluded||0;
   var pct=inc?Math.min(100,Math.round(used/inc*100)):0;
@@ -278,14 +278,14 @@ function readFile(r){
   var first=(r.name||'This client').split(' ')[0];
   var bits=[], suggest=null, why='';
   if(r.unlimited){
-    bits.push(first+' has an <b>unlimited</b> package and has used '+(r.roundsUsed||0)+' rounds');
-    suggest='in_progress'; why='unlimited runs until the credit is done';
+    bits.push(first+'\u2019s package has <b>no round limit</b> \u2014 they\u2019ve used '+(r.roundsUsed||0)+' rounds so far');
+    suggest='in_progress'; why='this package keeps going until their credit is done';
   }else if(r.roundsIncluded==null){
     bits.push(first+'\u2019s package can\u2019t be read automatically ('+esc(String(r.pkg||'').slice(0,40))+'\u2026)');
     suggest=null; why='';
   }else if((r.roundsUsed||0)>=r.roundsIncluded){
     bits.push(first+' paid for <b>'+r.roundsIncluded+'</b> round'+(r.roundsIncluded===1?'':'s')+' and used <b>all of them</b>');
-    suggest='completed'; why='everything they paid for is delivered \u2014 Completed (or Free round to re-engage, or Graduated if the credit is fully done)';
+    suggest='completed'; why='they got everything they paid for \u2014 usually Completed. If their credit is fully finished, pick Graduated instead.';
   }else{
     bits.push(first+' paid for <b>'+r.roundsIncluded+'</b> round'+(r.roundsIncluded===1?'':'s')+' and has <b>'+(r.roundsIncluded-(r.roundsUsed||0))+' left</b>');
     suggest='in_progress'; why='rounds are still owed \u2014 usually still In process';
@@ -351,7 +351,7 @@ function renderFile(row,full,thread){
   // ---- everything about them ----
   var rounds=[['TransUnion',r.tu],['Equifax',r.eq],['Experian',r.ex]]
     .map(function(p){return p[0].slice(0,2)+' R'+((p[1]&&p[1].r)||0);}).join(' \u00b7 ');
-  var allowance=r.unlimited?'Unlimited':(r.roundsIncluded==null?'?':r.roundsIncluded);
+  var allowance=r.unlimited?'no limit':(r.roundsIncluded==null?'?':r.roundsIncluded);
   h+='<h4>What they bought</h4>'
     +'<div style="margin:2px 0 4px">'+pkgChips(r.pkg)+'</div>'
     +'<h4>The file</h4>'
