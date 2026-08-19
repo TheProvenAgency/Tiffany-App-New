@@ -2806,7 +2806,39 @@ app.post('/api/audit/:id', async (req, res) => {
       store.appendAudit([audit.actionEntry(outcome ? 'client_audited' : 'client_audit_cleared',
         { who, clientId: String(client.id), clientName: client.name || null })]);
     } catch (e) { console.error('Activity log write failed (the audit still saved):', e.message); }
-    res.json({ ok: true, audit: entry });
+    // Mirror the mark into GHL as a contact tag (audit:graduated etc.), so
+    // her GHL workflows and smart lists can key off the audit too. The order
+    // of operations is deliberate: the app's own record saved FIRST and is
+    // the source of truth; the GHL tag is a copy, and a GHL hiccup must
+    // never lose an audit -- the response says ghlTagged so the UI can tell
+    // the truth about whether the copy landed.
+    let ghlTagged = false, ghlTagError = null;
+    const AUDIT_TAGS = ['audit:graduated', 'audit:completed', 'audit:free_round', 'audit:in_progress'];
+    if (liveMode() && !readOnly()) {
+      try {
+        let contactId = client.ghlId || null;
+        if (!contactId) {
+          // sheet-era records carry no GHL id -- match by email, then phone
+          const gclients = await getClients();
+          const email = String(client.email || '').toLowerCase();
+          const phone = String(client.phone || '').replace(/[^0-9]/g, '').slice(-10);
+          const hit = (email && gclients.find(g => String(g.email || '').toLowerCase() === email))
+            || (phone && gclients.find(g => String(g.phone || '').replace(/[^0-9]/g, '').slice(-10) === phone)) || null;
+          contactId = hit ? hit.id : null;
+        }
+        if (contactId) {
+          const cfg = store.getConfig();
+          // one audit tag at a time: clear the others so a re-mark can never
+          // leave a contact carrying two contradictory outcomes
+          await ghl.removeTags(cfg, contactId, AUDIT_TAGS).catch(() => {});
+          if (outcome) await ghl.addTags(cfg, contactId, ['audit:' + outcome]);
+          ghlTagged = true;
+        } else {
+          ghlTagError = 'no GHL contact found for this client (no id, email, or phone match)';
+        }
+      } catch (e) { ghlTagError = e.message; }
+    }
+    res.json({ ok: true, audit: entry, ghlTagged, ghlTagError });
   } catch (e) {
     res.status(e.message && e.message.startsWith('outcome must') ? 400 : 500).json({ error: e.message });
   }

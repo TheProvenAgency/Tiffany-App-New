@@ -553,3 +553,18 @@ test('threads read oldest-first everywhere -- GHL hands them back reversed', () 
   assert.ok(/nameHits\.length === 1/.test(audThread),
     'and a bare name only matches when unique -- two Kiaras must never swap texts');
 });
+
+test('every audit mark is mirrored into GHL as a tag, app record first', () => {
+  const srv = srvNow();
+  const post = srv.split("app.post('/api/audit/:id',")[1].split('\napp.')[0];
+  assert.ok(post.indexOf('setClientAudit') < post.indexOf('addTags'),
+    'the app record saves FIRST -- a GHL hiccup can never lose an audit');
+  assert.ok(/removeTags\(cfg, contactId, AUDIT_TAGS\)/.test(post),
+    'old audit tags clear before the new one, so a re-mark never leaves two contradictory outcomes on a contact');
+  assert.ok(/'audit:' \+ outcome/.test(post), 'tagged audit:graduated / audit:completed / etc.');
+  assert.ok(/client\.ghlId \|\| null/.test(post) && /email/.test(post) && /phone/.test(post),
+    'sheet-era records with no GHL id still tag via email/phone match');
+  assert.ok(/ghlTagged/.test(post) && /ghlTagError/.test(post),
+    'the response says whether the GHL copy landed -- the UI can tell the truth');
+  assert.ok(/liveMode\(\) && !readOnly\(\)/.test(post), 'no GHL writes in demo or read-only mode');
+});
