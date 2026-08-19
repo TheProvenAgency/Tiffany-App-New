@@ -41,6 +41,10 @@
   body.single-card{padding:0;height:100vh;overflow:hidden}
   body.single-card [data-card]{display:none}
   body.single-card [data-card].adm-active{display:flex;height:100%;width:100%}
+  /* The three-dots menus are Admina template chrome with nothing behind
+     them in single-card mode -- Tiffany clicked one and nothing happened.
+     A control that does nothing is a bug report waiting to happen. */
+  body.single-card .dropdown{display:none}
   /* The .col-sm-6.col-lg-3 Bootstrap grid classes on each [data-card]
      wrapper give it a width based on breakpoint percentages of the
      iframe's own viewport (25% at >=992px, 50% at >=576px, discrete
@@ -271,7 +275,10 @@ function applySummary(sum){
   setText('admEnrolled', (m.enrolled||0).toLocaleString());
   setText('admEnrolledSub', pct(m.active, m.enrolled) + '% active monitoring');
   setText('admActives', (m.newActives||0).toLocaleString());
-  setText('admActivesSub', pct(m.newActives, m.targetActives) + '% of ' + (m.targetActives||0).toLocaleString() + ' target');
+  // This is a portal-audit snapshot, not a live feed -- it does NOT follow
+  // the date range at the top, which read as a bug on the walkthrough.
+  // Say where the number comes from until MFSN member sync makes it live.
+  setText('admActivesSub', pct(m.newActives, m.targetActives) + '% of ' + (m.targetActives||0).toLocaleString() + ' target \u00b7 portal audit ' + (m.auditedAt||''));
   // Flipped per Tiffany 8/17: the useful number is how many are LEFT on the
   // old platform -- she drives it to zero, then the tile retires.
   setText('admUpgraded', (m.toUpgrade||0).toLocaleString());

@@ -414,6 +414,12 @@ function renderOverview(){
     bur.TU[bucketOf(c.tu)]++; bur.EQ[bucketOf(c.eq)]++; bur.EX[bucketOf(c.ex)]++;
   });
   var topPkg=Object.keys(pkg).map(function(k){return[k,pkg[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  // Nobody has ever ticked a document box anywhere in the system, so
+  // "Docs incomplete: 3,857" was an empty field rendered as a crisis --
+  // Tiffany's "that number's not right, right?" on the walkthrough. Until
+  // somebody actually uses the checklist, say so instead. The moment one
+  // box gets ticked anywhere, the real count switches on by itself.
+  var docsTracked=CLIENTS.some(function(c){if(!c.docs)return false;for(var d=0;d<DOCS.length;d++)if(c.docs[DOCS[d]])return true;return false;});
   ov.innerHTML=''+
    '<div class="pv-kpis" style="grid-template-columns:repeat(8,1fr)">'+
     '<div class="pv-kpi"><div class="l">Total clients</div><div class="v">'+fmt(CLIENTS.length)+'</div></div>'+
@@ -421,7 +427,9 @@ function renderOverview(){
     '<div class="pv-kpi"><div class="l">Completed</div><div class="v">'+fmt(st.Completed)+'</div></div>'+
     '<div class="pv-kpi"><div class="l">Onboarding</div><div class="v">'+fmt(st.Onboarding)+'</div></div>'+
     '<div class="pv-kpi alert"><div class="l">Login blocked</div><div class="v">'+fmt(attn)+'</div></div>'+
-    '<div class="pv-kpi"><div class="l">Docs incomplete</div><div class="v">'+fmt(docsInc)+'</div></div>'+
+    (docsTracked
+      ?'<div class="pv-kpi"><div class="l">Docs incomplete</div><div class="v">'+fmt(docsInc)+'</div></div>'
+      :'<div class="pv-kpi"><div class="l">Docs</div><div class="v" style="font-size:14px;color:var(--muted)">not tracked yet</div></div>')+
     '<div class="pv-kpi good"><div class="l">MFSN affiliate</div><div class="v">'+fmt(mfsnAffiliate)+'</div></div>'+
     '<div class="pv-kpi alert"><div class="l">Needs affiliate</div><div class="v">'+fmt(mfsnNeeds)+'</div></div>'+
    '</div>'+
@@ -461,6 +469,10 @@ function renderChips(){
   // hand -- keep it out of Admin's Queue toolbar (unchanged from before)
   // and out of an Employee's normal Pipeline browsing too.
   var list=FILTERS.filter(function(fl){return fl.id!=='newclients';});
+  // same not-tracked rule as the overview tile: a filter that matches the
+  // entire book because a checklist is unused is noise, not a filter
+  var anyDocs=CLIENTS.some(function(c){if(!c.docs)return false;for(var d=0;d<DOCS.length;d++)if(c.docs[DOCS[d]])return true;return false;});
+  if(!anyDocs)list=list.filter(function(fl){return fl.id!=='docs';});
   chips.innerHTML=list.map(function(fl){var n=CLIENTS.filter(fl.f).length;return '<div class="pv-chip'+(fl.id===curFilter?' active':'')+'" data-f="'+fl.id+'"><span class="dotc" style="background:'+fl.dot+'"></span>'+fl.label+' <span class="n">'+fmt(n)+'</span></div>';}).join('');
   chips.querySelectorAll('.pv-chip').forEach(function(el){el.onclick=function(){curFilter=el.getAttribute('data-f');curPage=1;drawWork();};});
 }

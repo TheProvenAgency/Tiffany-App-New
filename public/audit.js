@@ -494,9 +494,10 @@ function initAudit(){
       if(id==='audit'){
         var sv=document.querySelectorAll('.view');
         for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
-        ['view-production','view-personal','view-rev','view-mfsn','view-messages','view-disputes'].forEach(function(x){
-          var e=document.getElementById(x);if(e)e.style.display='none';
-        });
+        // generic: hide every injected module view except this one (a
+        // hand-written list goes stale the day the next module ships)
+        var mods=document.querySelectorAll('section[id^="view-"]');
+        for(var mi=0;mi<mods.length;mi++)if(mods[mi].id!=='view-audit')mods[mi].style.display='none';
         var v=document.getElementById('view-audit');if(v)v.style.display='';
         var nbs=document.querySelectorAll('.navgroup button');
         for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('on');

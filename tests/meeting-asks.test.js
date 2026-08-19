@@ -641,3 +641,25 @@ test('Client base separates Completed (from her audit) out of Inactive', () => {
   assert.ok(/showView\('audit'\)/.test(html.split('const segs=')[1].slice(0, 1200)),
     'clicking the Completed tile opens The Audit');
 });
+
+/* ---------- bug sweep from the walkthrough ---------- */
+
+test('the bugs Tiffany hit on the walkthrough are fixed', () => {
+  const pv = pub('production.js');
+  // "that number's not right, right?" -- Docs incomplete counted against a
+  // checklist nobody has ever used; it now says "not tracked yet" until
+  // somebody ticks a first box, and the matching filter chip hides too.
+  assert.ok(/not tracked yet/.test(pv));
+  assert.ok(/fl\.id!=='docs'/.test(pv), 'the docs filter chip hides while untracked');
+  const adm = pub('admina-dashboard.html');
+  // she clicked a three-dots menu that does nothing
+  assert.ok(/body\.single-card \.dropdown\{display:none\}/.test(adm));
+  // "maybe it's bugged to not go with the timeframe" -- it's a snapshot;
+  // the tile now says which audit the number comes from
+  assert.ok(/portal audit ' \+ \(m\.auditedAt/.test(adm));
+  // the blank Dispute Desk: view-hiding is generic now, so a newly shipped
+  // module can never be missing from someone's hand-written hide list
+  for (const f of ['disputes.js', 'audit.js']) {
+    assert.ok(/section\[id\^="view-"\]/.test(pub(f)), f + ' hides every module view generically');
+  }
+});

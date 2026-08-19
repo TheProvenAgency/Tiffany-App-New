@@ -475,9 +475,12 @@ function initDQ(){
       if(id==='disputes'){
         var sv=document.querySelectorAll('.view');
         for(var i=0;i<sv.length;i++){sv[i].classList.remove('on');sv[i].style.display='';}
-        ['view-production','view-personal','view-rev','view-mfsn'].forEach(function(x){
-          var e=document.getElementById(x);if(e)e.style.display='none';
-        });
+        // hide EVERY injected module view except this one -- the old
+        // hand-written list went stale each time a module was added, which
+        // is how the desk could appear blank behind a still-visible view
+        // until you toggled tabs
+        var mods=document.querySelectorAll('section[id^="view-"]');
+        for(var mi=0;mi<mods.length;mi++)if(mods[mi].id!=='view-disputes')mods[mi].style.display='none';
         var v=document.getElementById('view-disputes');if(v)v.style.display='';
         var nbs=document.querySelectorAll('.navgroup button');
         for(var j=0;j<nbs.length;j++)nbs[j].classList.remove('on');
