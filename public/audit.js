@@ -56,7 +56,34 @@ var css=''+
 '#view-audit .au-menu .opt b{display:block;font-size:12.5px}'+
 '#view-audit .au-menu .opt span{font-size:11px;color:var(--muted)}'+
 '#view-audit .au-empty{padding:40px;text-align:center;color:var(--muted)}'+
-'#view-audit .au-more{padding:12px;text-align:center;color:var(--blue,#4F46E5);font-weight:700;cursor:pointer}';
+'#view-audit .au-more{padding:12px;text-align:center;color:var(--blue,#4F46E5);font-weight:700;cursor:pointer}'+
+/* the audit drawer: the whole file + their conversation, one panel */
+'#auDrawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,94vw);background:var(--card);box-shadow:-8px 0 40px rgba(0,0,0,.16);z-index:1300;display:none;flex-direction:column}'+
+'#auDrawer.on{display:flex}'+
+'#auDrawer .hd{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}'+
+'#auDrawer .hd h3{margin:0;font-size:17px}'+
+'#auDrawer .hd .meta{font-size:12px;color:var(--muted);margin-top:2px}'+
+'#auDrawer .x{margin-left:auto;border:none;background:transparent;font-size:22px;cursor:pointer;color:var(--muted)}'+
+'#auDrawer .bd{padding:14px 20px;overflow:auto;flex:1}'+
+'#auDrawer h4{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:16px 0 8px}'+
+'#auDrawer h4:first-child{margin-top:0}'+
+'#auDrawer .fact{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}'+
+'#auDrawer .fact b{font-weight:650;text-align:right}'+
+'#auDrawer .au-outbtns{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 2px}'+
+'#auDrawer .au-outbtns button{border:1px solid var(--line);background:var(--card);font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:999px;cursor:pointer;color:var(--ink)}'+
+'#auDrawer .au-outbtns button.on{color:#fff;border-color:transparent}'+
+'#auDrawer .note{border-left:2px solid var(--line);padding:3px 0 3px 10px;margin-bottom:8px;font-size:12.5px}'+
+'#auDrawer .note .w{font-size:10.5px;color:var(--muted)}'+
+'#auDrawer .msgs{border:1px solid var(--line);border-radius:10px;max-height:300px;overflow:auto;padding:10px;background:var(--bg)}'+
+'#auDrawer .mb{max-width:82%;padding:7px 11px;border-radius:12px;font-size:12.5px;margin-bottom:7px;white-space:pre-wrap;word-break:break-word}'+
+'#auDrawer .mb.in{background:var(--card);border:1px solid var(--line)}'+
+'#auDrawer .mb.out{background:#4F46E5;color:#fff;margin-left:auto}'+
+'#auDrawer .mmeta{font-size:9.5px;opacity:.6;margin-top:2px}'+
+'#auDrawer .comp{display:flex;gap:8px;margin-top:8px}'+
+'#auDrawer .comp textarea{flex:1;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:12.5px;resize:vertical;background:var(--card);color:var(--ink)}'+
+'#auDrawer .comp button{border:0;border-radius:9px;background:#4F46E5;color:#fff;font-weight:700;padding:0 16px;cursor:pointer}'+
+'#auScrim{position:fixed;inset:0;background:rgba(15,18,32,.34);z-index:1299;display:none}'+
+'#auScrim.on{display:block}';
 
 var sectionHTML=''+
 '<h2 style="margin:0 0 2px;font-size:22px;letter-spacing:-.4px">The Audit</h2>'+
@@ -145,7 +172,7 @@ function render(){
   host.innerHTML=h;
 
   Array.prototype.forEach.call(host.querySelectorAll('[data-open]'),function(el){
-    el.onclick=function(){if(window.pvOpenClient)window.pvOpenClient(el.dataset.open);};
+    el.onclick=function(){openFile(el.dataset.open);};
   });
   Array.prototype.forEach.call(host.querySelectorAll('[data-mark]'),function(btn){
     btn.onclick=function(ev){
@@ -188,6 +215,131 @@ function mark(id,outcome){
   }).catch(function(e){alert(e.message);});
 }
 
+/* ---------- the audit drawer: everything about one person ---------- */
+var openId=null;
+function when(d){if(!d)return '\u2014';var t=new Date(d);return isFinite(t)?t.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'\u2014';}
+function fact(l,v){return '<div class="fact"><span>'+l+'</span><b>'+v+'</b></div>';}
+function openFile(id){
+  openId=id;
+  var row=state.rows.filter(function(x){return String(x.id)===String(id);})[0];
+  document.getElementById('auScrim').classList.add('on');
+  document.getElementById('auDrawer').classList.add('on');
+  document.getElementById('audName').textContent=row?row.name:'Loading\u2026';
+  document.getElementById('audMeta').textContent=row?('#'+row.n+' \u00b7 '+(row.stage||'')):'';
+  document.getElementById('audBody').innerHTML='<div class="au-empty">Loading\u2026</div>';
+  // two fetches in parallel: the full record (notes, docs, logins) and
+  // their conversation -- the drawer paints facts first, thread when ready
+  Promise.all([
+    fetch('/api/production/'+encodeURIComponent(id)).then(function(r){return r.json();}).catch(function(){return {};}),
+    fetch('/api/audit/'+encodeURIComponent(id)+'/thread').then(function(r){return r.json();}).catch(function(){return {conversation:null,messages:[]};})
+  ]).then(function(res){
+    if(String(openId)!==String(id))return; // they moved on
+    renderFile(row,res[0].client||{},res[1]);
+  });
+}
+function closeFile(){
+  openId=null;
+  document.getElementById('auScrim').classList.remove('on');
+  document.getElementById('auDrawer').classList.remove('on');
+}
+function renderFile(row,full,thread){
+  var r=row||{};var body=document.getElementById('audBody');
+  var a=r.audit;
+  var h='';
+  // ---- the audit verdict, right at the top: mark it without leaving ----
+  h+='<h4>Audit</h4>'
+    +(a?'<div class="au-sub" style="margin-bottom:6px">Marked <b style="color:'+OUT_COLOR[a.outcome]+'">'+OUT_LABEL[a.outcome]+'</b> by '+esc(a.who)+' \u00b7 '+String(a.at).slice(0,10)+'</div>':'')
+    +'<div class="au-outbtns">'
+    +Object.keys(OUT_LABEL).map(function(k){
+      var on=a&&a.outcome===k;
+      return '<button data-out="'+k+'"'+(on?' class="on" style="background:'+OUT_COLOR[k]+'"':'')+' title="'+esc(OUT_DESC[k])+'">'+OUT_LABEL[k]+'</button>';
+    }).join('')
+    +(a?'<button data-out="">undo</button>':'')
+    +'</div>';
+
+  // ---- everything about them ----
+  var rounds=[['TransUnion',r.tu],['Equifax',r.eq],['Experian',r.ex]]
+    .map(function(p){return p[0].slice(0,2)+' R'+((p[1]&&p[1].r)||0);}).join(' \u00b7 ');
+  var allowance=r.unlimited?'Unlimited':(r.roundsIncluded==null?'?':r.roundsIncluded);
+  h+='<h4>The file</h4>'
+    +fact('Bought',esc(r.pkg||'\u2014'))
+    +fact('Rounds used',(r.roundsUsed||0)+' of '+allowance+(r.finished?' \u00b7 finished':''))
+    +fact('Round by bureau',esc(rounds))
+    +fact('Stage',esc(r.stage||'\u2014')+(r.days!=null?' ('+r.days+'d)':''))
+    +fact('MyFreeScoreNow',(r.mfsn==='affiliate'?'<span style="color:#2f8a4d">On</span>':'<span style="color:#c98a00">Off</span>')
+      +(r.mfsnOverride?' <span class="au-sub">(by hand)</span>':'')
+      +' <button class="au-markbtn" data-mfsn="'+(r.mfsn==='affiliate'?'not_on_mfsn':'affiliate')+'" style="margin-left:6px;padding:2px 8px;font-size:10.5px">mark '+(r.mfsn==='affiliate'?'off':'on')+'</button>')
+    +fact('First paid',when(r.firstPaid))
+    +fact('Last paid',when(r.lastPaid))
+    +(r.paymentCount?fact('Purchases on record',String(r.paymentCount)):'')
+    +fact('Assigned',esc(r.va||'\u2014'))
+    +(r.email?fact('Email','<a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a>'):'')
+    +(r.phone?fact('Phone','<a href="tel:'+esc(String(r.phone).replace(/[^0-9+]/g,''))+'">'+esc(r.phone)+'</a>'):'')
+    +'<div class="au-sub" style="margin-top:6px"><a href="#" id="audFull">Open full profile \u2192</a> <span style="opacity:.6">(edit package, docs, logins, assign)</span></div>';
+
+  // ---- notes from the record ----
+  var notes=(full&&full.notes)||[];
+  h+='<h4>Notes</h4>';
+  h+=notes.length?notes.slice().reverse().slice(0,8).map(function(n){
+    return '<div class="note"><div class="w">'+esc(n.who||'\u2014')+' \u00b7 '+esc(n.when||'')+'</div>'+esc(n.text||'')+'</div>';
+  }).join(''):'<div class="au-sub">No notes yet.</div>';
+
+  // ---- their conversation, right here ----
+  h+='<h4>Messages</h4>';
+  if(thread&&thread.conversation){
+    var ms=thread.messages||[];
+    h+='<div class="msgs" id="audMsgs">'+(ms.length?ms.map(function(m){
+      var dir=m.direction==='outbound'?'out':'in';
+      return '<div class="mb '+dir+'">'+esc(m.body||'(no content)')
+        +'<div class="mmeta">'+esc(m.channel||'')+' \u00b7 '+(m.at?new Date(m.at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'')+'</div></div>';
+    }).join(''):'<div class="au-sub">No messages in this thread yet.</div>')+'</div>'
+    +'<div class="comp"><textarea id="audReply" placeholder="Message '+esc((r.name||'').split(' ')[0])+'\u2026"></textarea><button id="audSend">Send</button></div>';
+  }else{
+    h+='<div class="au-sub">No conversation found for this client (no email or phone match in the inbox).</div>';
+  }
+  body.innerHTML=h;
+  var mbox=document.getElementById('audMsgs');if(mbox)mbox.scrollTop=mbox.scrollHeight;
+
+  // wiring
+  Array.prototype.forEach.call(body.querySelectorAll('[data-out]'),function(b){
+    b.onclick=function(){
+      mark(r.id,b.dataset.out||null);
+      setTimeout(function(){if(String(openId)===String(r.id))openFile(r.id);},250);
+    };
+  });
+  var mf=body.querySelector('[data-mfsn]');
+  if(mf)mf.onclick=function(){
+    mf.disabled=true;
+    fetch('/api/production/'+encodeURIComponent(r.id)+'/mfsn',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status:mf.dataset.mfsn})
+    }).then(function(res){return res.json();}).then(function(j){
+      if(j.error){alert(j.error);mf.disabled=false;return;}
+      r.mfsn=j.mfsn;r.mfsnOverride=j.override;
+      renderFile(r,full,thread);render();
+    }).catch(function(){mf.disabled=false;});
+  };
+  var fullLink=document.getElementById('audFull');
+  if(fullLink)fullLink.onclick=function(e){e.preventDefault();closeFile();if(window.pvOpenClient)window.pvOpenClient(r.id);};
+  var send=document.getElementById('audSend');
+  if(send)send.onclick=function(){
+    var ta=document.getElementById('audReply');
+    var text=(ta.value||'').trim();if(!text)return;
+    send.disabled=true;ta.disabled=true;
+    fetch('/api/messages/'+encodeURIComponent(thread.conversation.id)+'/reply',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contactId:thread.conversation.contactId,type:thread.conversation.channelKey||'SMS',message:text})
+    }).then(function(res){return res.json().then(function(j){return {ok:res.ok,j:j};});})
+    .then(function(o){
+      send.disabled=false;ta.disabled=false;
+      if(!o.ok||o.j.error){alert(o.j.error||'Could not send');return;}
+      ta.value='';
+      var mb=document.getElementById('audMsgs');
+      if(mb){mb.insertAdjacentHTML('beforeend','<div class="mb out">'+esc(text)+'</div>');mb.scrollTop=mb.scrollHeight;}
+    }).catch(function(){send.disabled=false;ta.disabled=false;alert('Network error');});
+  };
+}
+
 /* ---------- init ---------- */
 function initAudit(){
   if(document.getElementById('view-audit'))return;
@@ -196,6 +348,15 @@ function initAudit(){
   var sec=document.createElement('section');
   sec.id='view-audit';sec.style.display='none';sec.innerHTML=sectionHTML;
   if(anc&&anc.parentNode)anc.parentNode.insertBefore(sec,anc);else document.body.appendChild(sec);
+
+  var scrim=document.createElement('div');scrim.id='auScrim';document.body.appendChild(scrim);
+  var dr=document.createElement('aside');dr.id='auDrawer';
+  dr.innerHTML='<div class="hd"><div><h3 id="audName">\u2014</h3><div class="meta" id="audMeta"></div></div>'
+    +'<button class="x" id="audClose" aria-label="Close">&times;</button></div>'
+    +'<div class="bd" id="audBody"></div>';
+  document.body.appendChild(dr);
+  scrim.onclick=closeFile;
+  dr.querySelector('#audClose').onclick=closeFile;
 
   sec.querySelectorAll('#auTabs button').forEach(function(b){
     b.onclick=function(){

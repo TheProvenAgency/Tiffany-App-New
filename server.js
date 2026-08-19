@@ -2709,8 +2709,14 @@ app.get('/api/audit', async (req, res) => {
     const rows = roster.map((c, i) => ({
       n: i + 1,
       id: c.id, name: c.name, stage: c.stage, pkg: c.pkg, va: c.va || null,
-      mfsn: c.mfsn || null, roundsUsed: c.roundsUsed, roundsIncluded: c.roundsIncluded,
-      unlimited: c.unlimited, finished: c.finished, lastPaid: c.lastPaid || c.firstPaid || null,
+      email: c.email || null, phone: c.phone || null,
+      mfsn: c.mfsn || null, mfsnOverride: c.mfsnOverride || null,
+      roundsUsed: c.roundsUsed, roundsIncluded: c.roundsIncluded,
+      tu: c.tu || null, eq: c.eq || null, ex: c.ex || null,
+      unlimited: c.unlimited, finished: c.finished, finishedBy: c.finishedBy || null,
+      firstPaid: c.firstPaid || null, lastPaid: c.lastPaid || null,
+      paymentCount: c.paymentCount || null, paidSource: c.paidSource || null,
+      days: c.days == null ? null : c.days,
       audit: audits[c.id] || null
     }));
     const byOutcome = { graduated: 0, completed: 0, free_round: 0, in_progress: 0 };
@@ -2720,6 +2726,31 @@ app.get('/api/audit', async (req, res) => {
       rows,
       totals: { clients: rows.length, audited, remaining: rows.length - audited, ...byOutcome }
     });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// The client's conversation, for the audit drawer -- so 'open the file,
+// message them, mark the outcome' happens in ONE place. Matched by email
+// first, phone second, exact name last, against the same cached inbox the
+// Messages tab uses (no extra GHL calls).
+app.get('/api/audit/:id/thread', async (req, res) => {
+  try {
+    const roster = await composedRoster();
+    const client = roster.find(c => String(c.id) === String(req.params.id));
+    if (!client) return res.status(404).json({ error: 'no such client' });
+    if (!liveMode()) return res.json({ conversation: null, messages: [] });
+    const convos = await allConversations(store.getConfig());
+    const email = String(client.email || '').toLowerCase();
+    const phone = String(client.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const name = String(client.name || '').trim().toLowerCase();
+    const convo =
+      (email && convos.find(cv => String(cv.email || '').toLowerCase() === email))
+      || (phone && convos.find(cv => String(cv.phone || '').replace(/[^0-9]/g, '').slice(-10) === phone))
+      || (name && convos.find(cv => String(cv.name || '').trim().toLowerCase() === name))
+      || null;
+    if (!convo) return res.json({ conversation: null, messages: [] });
+    const raw = await ghl.fetchMessages(store.getConfig(), convo.id);
+    res.json({ conversation: convo, messages: raw.map(ghl.normalizeMessage) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

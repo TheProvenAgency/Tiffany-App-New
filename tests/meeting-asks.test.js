@@ -463,7 +463,7 @@ test('the audit routes are admin-only and the tab is invisible to workers', () =
 test('the audit tab: numbered, un-audited first by default, outcomes explained', () => {
   const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
   assert.ok(/filter:'todo'/.test(au), 'opens on Not audited -- the work, not the trophies');
-  assert.ok(/data-open=/.test(au), 'client name opens the full drawer (notes, logins, MFSN, assign)');
+  assert.ok(/data-open=/.test(au), 'client name opens the audit drawer');
   assert.ok(/OUT_DESC/.test(au) && /upsell/.test(au), 'each outcome says what it means before you click it');
   assert.ok(/hydrateClientAuditsFromPostgres/.test(srvNow()), 'audit state survives every deploy');
   assert.ok(/audit\.js" defer/.test(pub('index.html')));
@@ -477,4 +477,23 @@ test("labels match what Tiffany corrected on the call", () => {
   assert.ok(html.includes('<option value="va">Team Lead</option>'), 'VA reads as Team Lead; the role value is unchanged so nothing breaks');
   const pv = pub('production.js');
   assert.ok(/MFSN on/.test(pv) && /MFSN off/.test(pv), 'pill says on/off, her words');
+});
+
+test('the audit drawer holds the WHOLE file and their conversation', () => {
+  // Her follow-up: the audit tab must carry the message thread for the
+  // person AND everything about them -- round they are on, what they paid
+  // for, MFSN, all of it -- so one panel serves the whole audit pass.
+  const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
+  assert.ok(/Round by bureau/.test(au) && /Bought/.test(au) && /First paid/.test(au)
+    && /MyFreeScoreNow/.test(au), 'round, purchases, MFSN -- the facts she listed');
+  assert.ok(/data-mfsn/.test(au), 'MFSN markable right in the drawer');
+  assert.ok(/data-out=/.test(au), 'the outcome buttons live in the drawer too');
+  assert.ok(/audSend/.test(au) && /\/reply'/.test(au), 'message them without leaving the audit');
+  const srv = srvNow();
+  const thread = srv.split("app.get('/api/audit/:id/thread'")[1].split('\n});')[0];
+  assert.ok(/email/.test(thread) && /phone/.test(thread), 'their thread found by email, then phone, then name');
+  assert.ok(/allConversations/.test(thread), 'against the same cached inbox as Messages -- no extra GHL calls');
+  const rows = srv.split("app.get('/api/audit',")[1].split('\n});')[0];
+  assert.ok(/tu: c\.tu/.test(rows) && /paymentCount/.test(rows) && /firstPaid/.test(rows),
+    'the list rows carry bureau rounds and payment history for the drawer');
 });
