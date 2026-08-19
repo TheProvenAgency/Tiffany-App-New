@@ -152,8 +152,14 @@ function visible(){
 // as its own chip instead of one truncated string nobody can read.
 function pkgChips(pkg){
   var parts=String(pkg||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+  // "Upgrade to Unlimited" and "funding" segments confuse the pass (they
+  // presume tags she hasn't made yet), so they don't render as chips. The
+  // data is untouched: the rounds math still honors the unlimited upgrade,
+  // and the full package string is on the full profile.
+  var shown=parts.filter(function(pp){return !/upgrade to unlimited/i.test(pp)&&!/funding/i.test(pp);});
   if(!parts.length)return '<span class="au-sub">no package recorded</span>';
-  return parts.map(function(pp){return '<span class="au-pkg">'+esc(pp)+'</span>';}).join('');
+  if(!shown.length)return '<span class="au-sub">see full profile</span>';
+  return shown.map(function(pp){return '<span class="au-pkg">'+esc(pp)+'</span>';}).join('');
 }
 function roundsBar(r){
   if(r.unlimited)return '<span class="au-sub"><b style="color:var(--ink)">'+(r.roundsUsed||0)+'</b> used \u00b7 no round limit</span>';

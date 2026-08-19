@@ -663,3 +663,28 @@ test('the bugs Tiffany hit on the walkthrough are fixed', () => {
     assert.ok(/section\[id\^="view-"\]/.test(pub(f)), f + ' hides every module view generically');
   }
 });
+
+test('the last uncached heavy paths are cached and pre-warmed', () => {
+  // "some areas take 10 seconds": the Clients LIST re-tagged all 5,500
+  // contacts on every search keystroke and page turn, and the MFSN gap
+  // name-matched the whole book per open (~4.7s). Both now share cached
+  // builds the warm loop keeps hot, and an override clears all three keys.
+  const srv = srvNow();
+  const clientsRoute = srv.split("app.get('/api/clients',")[1].split('\napp.')[0];
+  assert.ok(/cachedSWR\('clients:tagged'/.test(clientsRoute), 'the list shares the tagged-roster cache');
+  const gapRoute = srv.split("app.get('/api/mfsn-gap',")[1].split('\n});')[0];
+  assert.ok(/cachedSWR\('mfsn:gap'/.test(gapRoute));
+  const warm = srv.split('const warm = ()')[1].split('setTimeout(warm')[0];
+  assert.ok(/clients:tagged/.test(warm) && /mfsn:gap/.test(warm), 'both stay hot in the warm loop');
+  const mfsnMark = srv.split("app.post('/api/production/:id/mfsn'")[1].split('\n});')[0];
+  assert.ok(/clearCacheKey\('mfsn:gap'\)/.test(mfsnMark), 'a hand mark refreshes the gap card too');
+});
+
+test('the confusing package chips stay off the audit list', () => {
+  const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
+  assert.ok(/upgrade to unlimited/i.test(au.split('function pkgChips')[1].split('\n}')[0]),
+    'Upgrade to Unlimited does not render as a chip');
+  assert.ok(/funding/i.test(au.split('function pkgChips')[1].split('\n}')[0]),
+    'funding does not render as a chip');
+  assert.ok(/see full profile/.test(au), 'a client with ONLY those segments still shows something honest');
+});

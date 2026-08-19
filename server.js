@@ -1393,7 +1393,11 @@ function withAffiliateTags(clients) {
 app.get('/api/clients', async (req, res) => {
   try {
     const { q = '', status = '', deal = '', round = '', affiliate: affiliateFilter = '', sort = 'totalSpent', dir = 'desc', page = '1', pageSize = '25' } = req.query;
-    let list = withAffiliateTags(await getClients());
+    // The tagged roster is the same 5,500-contact computation the drawer
+    // route caches -- share it. Re-tagging the whole book on every search
+    // keystroke, sort click and page turn was the Clients tab's 5-10s.
+    let list = await store.cachedSWR('clients:tagged', 60 * 1000,
+      async () => withAffiliateTags(await getClients()));
     const ql = q.toLowerCase();
     if (ql) list = list.filter(c => (c.name || '').toLowerCase().includes(ql) || (c.email || '').toLowerCase().includes(ql) || (c.phone || '').includes(ql));
     if (status) list = list.filter(c => c.status === status);
@@ -2478,8 +2482,11 @@ app.get('/api/team-activity', (req, res) => {
 
 app.get('/api/mfsn-gap', async (req, res) => {
   try {
-    const clients = await readProd() || [];
-    const gap = affiliate.productionGap(clients, store.getMfsnMembers());
+    // Measured at ~4.7s per hit: name-matching the whole book against the
+    // member list on every open. The inputs change on member sync or an
+    // override, both of which clear this key.
+    const gap = await store.cachedSWR('mfsn:gap', 60 * 1000, async () =>
+      affiliate.productionGap(await readProd() || [], store.getMfsnMembers(), store.getAffiliateOverrides()));
     res.json({
       counts: gap.counts,
       prospects: gap.prospects, // [{email, name}] — on MFSN, no matching client
@@ -2894,6 +2901,7 @@ app.post('/api/production/:id/mfsn', async (req, res) => {
     store.setAffiliateOverride(req.params.id, status);
     store.clearCacheKey('roster:composed');
     store.clearCacheKey('clients:tagged');
+    store.clearCacheKey('mfsn:gap');
     res.json({ ok: true, mfsn: status === 'affiliate' ? 'affiliate' : (status ? 'needs' : null), override: status });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -3473,6 +3481,10 @@ async function bootstrap() {
   const warm = () => {
     composedRoster().catch(() => {});
     getClients().catch(() => {});
+    store.cachedSWR('clients:tagged', 60 * 1000,
+      async () => withAffiliateTags(await getClients())).catch(() => {});
+    store.cachedSWR('mfsn:gap', 60 * 1000, async () =>
+      affiliate.productionGap(await readProd() || [], store.getMfsnMembers(), store.getAffiliateOverrides())).catch(() => {});
     // The dashboard's default view is "last 30 days" -- every login lands on
     // it. Its from/to are computed here exactly the way the browser computes
     // them (UTC calendar days, see presetRange in index.html), so the cache
