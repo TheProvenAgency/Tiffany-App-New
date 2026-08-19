@@ -2719,12 +2719,42 @@ app.get('/api/audit', async (req, res) => {
       days: c.days == null ? null : c.days,
       audit: audits[c.id] || null
     }));
+    // Follow-through, the part that happens AFTER the audit: if the client
+    // replied since (they spoke last), the row says so; and the totals count
+    // how many audited clients now have MFSN on -- "in 30 days you can see
+    // half the people did, and the 50 that still haven't."
+    try {
+      if (liveMode()) {
+        const convos = await allConversations(store.getConfig());
+        const byEmail = new Map(), byPhone = new Map();
+        for (const cv of convos) {
+          const e = String(cv.email || '').toLowerCase();
+          const ph = String(cv.phone || '').replace(/[^0-9]/g, '').slice(-10);
+          if (e && !byEmail.has(e)) byEmail.set(e, cv);
+          if (ph && !byPhone.has(ph)) byPhone.set(ph, cv);
+        }
+        for (const r of rows) {
+          const cv = (r.email && byEmail.get(String(r.email).toLowerCase()))
+            || (r.phone && byPhone.get(String(r.phone).replace(/[^0-9]/g, '').slice(-10))) || null;
+          if (cv) {
+            r.replied = cv.lastDirection === 'inbound';
+            r.unread = cv.unread || 0;
+            r.lastMsgAt = cv.lastAt || null;
+          }
+        }
+      }
+    } catch (e) { /* the audit list must work even when the inbox is down */ }
     const byOutcome = { graduated: 0, completed: 0, free_round: 0, in_progress: 0 };
-    let audited = 0;
-    for (const r of rows) if (r.audit) { audited++; if (byOutcome[r.audit.outcome] != null) byOutcome[r.audit.outcome]++; }
+    let audited = 0, auditedMfsnOn = 0, auditedReplied = 0;
+    for (const r of rows) if (r.audit) {
+      audited++;
+      if (byOutcome[r.audit.outcome] != null) byOutcome[r.audit.outcome]++;
+      if (r.mfsn === 'affiliate') auditedMfsnOn++;
+      if (r.replied) auditedReplied++;
+    }
     res.json({
       rows,
-      totals: { clients: rows.length, audited, remaining: rows.length - audited, ...byOutcome }
+      totals: { clients: rows.length, audited, remaining: rows.length - audited, auditedMfsnOn, auditedReplied, ...byOutcome }
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2743,14 +2773,20 @@ app.get('/api/audit/:id/thread', async (req, res) => {
     const email = String(client.email || '').toLowerCase();
     const phone = String(client.phone || '').replace(/[^0-9]/g, '').slice(-10);
     const name = String(client.name || '').trim().toLowerCase();
+    // Email and phone are real identifiers. A bare name is not: two Kiaras
+    // in a 5,000-conversation inbox means the name fallback would show one
+    // client the OTHER Kiara's texts. Names only match when exactly one
+    // conversation carries that name.
+    const nameHits = name ? convos.filter(cv => String(cv.name || '').trim().toLowerCase() === name) : [];
     const convo =
       (email && convos.find(cv => String(cv.email || '').toLowerCase() === email))
       || (phone && convos.find(cv => String(cv.phone || '').replace(/[^0-9]/g, '').slice(-10) === phone))
-      || (name && convos.find(cv => String(cv.name || '').trim().toLowerCase() === name))
-      || null;
+      || (nameHits.length === 1 ? nameHits[0] : null);
     if (!convo) return res.json({ conversation: null, messages: [] });
     const raw = await ghl.fetchMessages(store.getConfig(), convo.id);
-    res.json({ conversation: convo, messages: raw.map(ghl.normalizeMessage) });
+    const messages = raw.map(ghl.normalizeMessage)
+      .sort((a, b) => String(a.at || '').localeCompare(String(b.at || ''))); // oldest first, like a chat
+    res.json({ conversation: convo, messages });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2944,7 +2980,11 @@ app.get('/api/messages/:id', async (req, res) => {
     }
     const cfg = store.getConfig();
     const raw = await ghl.fetchMessages(cfg, req.params.id);
-    res.json({ messages: raw.map(ghl.normalizeMessage), mode: 'live' });
+    // GHL returns newest-first; a chat reads oldest-first. Without this sort
+    // every thread rendered upside down and replies looked interleaved wrong.
+    const messages = raw.map(ghl.normalizeMessage)
+      .sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
+    res.json({ messages, mode: 'live' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

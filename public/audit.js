@@ -66,6 +66,7 @@ var css=''+
 '#view-audit .au-mfsn.on{background:rgba(69,179,105,.15);color:#2f8a4d}'+
 '#view-audit .au-mfsn.off{background:rgba(217,119,6,.14);color:#b45309}'+
 '#view-audit .au-saved{color:#2f8a4d;font-weight:700;font-size:11px}'+
+'#view-audit .au-replied{display:inline-block;background:#4F46E5;color:#fff;border-radius:999px;font-size:9.5px;font-weight:800;padding:1px 7px;vertical-align:2px}'+
 /* the audit drawer: the whole file + their conversation, one panel */
 '#auDrawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,94vw);background:var(--card);box-shadow:-8px 0 40px rgba(0,0,0,.16);z-index:1300;display:none;flex-direction:column}'+
 '#auDrawer.on{display:flex}'+
@@ -78,9 +79,13 @@ var css=''+
 '#auDrawer h4:first-child{margin-top:0}'+
 '#auDrawer .fact{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}'+
 '#auDrawer .fact b{font-weight:650;text-align:right}'+
-'#auDrawer .au-outbtns{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 2px}'+
-'#auDrawer .au-outbtns button{border:1px solid var(--line);background:var(--card);font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:999px;cursor:pointer;color:var(--ink)}'+
-'#auDrawer .au-outbtns button.on{color:#fff;border-color:transparent}'+
+'#auDrawer .au-outcards{display:grid;grid-template-columns:1fr 1fr;gap:8px}'+
+'#auDrawer .au-outcard{border:2px solid var(--line);border-radius:11px;padding:10px 12px;cursor:pointer;transition:border-color .12s}'+
+'#auDrawer .au-outcard:hover{border-color:var(--oc)}'+
+'#auDrawer .au-outcard.on{border-color:var(--oc);background:color-mix(in srgb,var(--oc) 8%,var(--card))}'+
+'#auDrawer .au-outcard b{display:block;font-size:13px;color:var(--oc);margin-bottom:2px}'+
+'#auDrawer .au-outcard span{font-size:11px;color:var(--muted);line-height:1.5;display:block}'+
+'#auDrawer .au-hint{font-size:9.5px;background:var(--oc);color:#fff;border-radius:999px;padding:1px 7px;vertical-align:2px}'+
 '#auDrawer .note{border-left:2px solid var(--line);padding:3px 0 3px 10px;margin-bottom:8px;font-size:12.5px}'+
 '#auDrawer .note .w{font-size:10.5px;color:var(--muted)}'+
 '#auDrawer .msgs{border:1px solid var(--line);border-radius:10px;max-height:300px;overflow:auto;padding:10px;background:var(--bg)}'+
@@ -96,7 +101,14 @@ var css=''+
 
 var sectionHTML=''+
 '<h2 style="margin:0 0 2px;font-size:22px;letter-spacing:-.4px">The Audit</h2>'+
-'<div class="au-sub" style="color:var(--muted);font-size:12.5px;margin:0 0 14px">Touch every file. Open a client, check DisputeFox beside it, message them, then mark what you found. Anyone without a mark still needs a pass — including clients who arrive after today.</div>'+
+'<div style="background:var(--card);border-radius:10px;padding:12px 16px;margin:0 0 14px;box-shadow:0 .25rem 1.875rem rgba(46,45,116,.05);display:flex;gap:16px;align-items:center;flex-wrap:wrap">'+
+' <button id="auStart" style="border:0;border-radius:10px;background:#4F46E5;color:#fff;font-weight:800;font-size:14px;padding:12px 22px;cursor:pointer;flex:none">Start auditing \u2192</button>'+
+' <div style="font-size:12.5px;color:var(--muted);line-height:1.7;min-width:240px;flex:1">'+
+'  <b style="color:var(--ink)">1.</b> The next un-audited file opens with everything about them &nbsp;'+
+'  <b style="color:var(--ink)">2.</b> Check DisputeFox, message them right in the panel &nbsp;'+
+'  <b style="color:var(--ink)">3.</b> Pick what you found \u2014 it saves and opens the next file'+
+' </div>'+
+'</div>'+
 '<div class="au-top">'+
 ' <div class="au-prog"><b id="auDone">—</b> <span class="au-sub" id="auOf"></span><div class="au-bar"><i id="auBarFill" style="width:0%"></i></div></div>'+
 ' <div class="au-pills" id="auPills"></div>'+
@@ -108,6 +120,7 @@ var sectionHTML=''+
 ' <button data-f="completed">Completed</button>'+
 ' <button data-f="free_round">Free round</button>'+
 ' <button data-f="in_progress">In process</button>'+
+' <button data-f="replied">Replied</button>'+
 ' <button data-f="all">All</button>'+
 '</div>'+
 '<input id="auSearch" type="search" placeholder="Find a client…" autocomplete="off">'+
@@ -125,6 +138,7 @@ function load(){
 function visible(){
   var rows=state.rows;
   if(state.filter==='todo')rows=rows.filter(function(r){return !r.audit;});
+  else if(state.filter==='replied')rows=rows.filter(function(r){return r.replied;});
   else if(state.filter!=='all')rows=rows.filter(function(r){return r.audit&&r.audit.outcome===state.filter;});
   if(state.search){
     var q=state.search.toLowerCase();
@@ -165,7 +179,10 @@ function render(){
     document.getElementById('auBarFill').style.width=(t.clients?Math.round(t.audited/t.clients*100):0)+'%';
     document.getElementById('auPills').innerHTML=['graduated','completed','free_round','in_progress'].map(function(k){
       return '<div class="au-pill"><b style="color:'+OUT_COLOR[k]+'">'+(t[k]||0).toLocaleString()+'</b>'+OUT_LABEL[k]+'</div>';
-    }).join('');
+    }).join('')
+    // the after-the-audit part: did the outreach work?
+    +(t.audited?'<div class="au-pill"><b style="color:#2f8a4d">'+(t.auditedMfsnOn||0).toLocaleString()+'</b>of audited: MFSN on</div>'
+      +'<div class="au-pill"><b style="color:#4F46E5">'+(t.auditedReplied||0).toLocaleString()+'</b>of audited: replied</div>':'');
   }
   if(state.loading){host.innerHTML='<div class="au-empty">Loading…</div>';return;}
   if(state.err){host.innerHTML='<div class="au-empty">'+esc(state.err)+'</div>';return;}
@@ -181,6 +198,7 @@ function render(){
     h+='<tr data-id="'+esc(r.id)+'">'+
       '<td class="au-n">'+r.n+'</td>'+
       '<td style="max-width:340px"><span class="au-nm" data-open="'+esc(r.id)+'">'+esc(r.name)+'</span>'
+        +(r.replied?' <span class="au-replied" title="They sent the last message \u2014 waiting on you">replied</span>':'')
         +' <span class="au-sub">'+esc(r.stage||'')+(r.va?(' \u00b7 '+esc(r.va)):'')+'</span>'
         +'<div>'+pkgChips(r.pkg)+'</div></td>'+
       '<td style="white-space:nowrap">'+roundsBar(r)+'</td>'+
@@ -244,6 +262,41 @@ function mark(id,outcome){
 }
 
 /* ---------- the audit drawer: everything about one person ---------- */
+function nextTodo(afterId){
+  var rows=state.rows, start=0;
+  if(afterId!=null){
+    var i=rows.findIndex(function(x){return String(x.id)===String(afterId);});
+    if(i>=0)start=i+1;
+  }
+  for(var k=start;k<rows.length;k++)if(!rows[k].audit)return rows[k];
+  for(var k2=0;k2<start;k2++)if(!rows[k2].audit)return rows[k2];
+  return null;
+}
+// One plain sentence that reads the file FOR her, plus which outcome it
+// usually means -- so the decision starts made and she only corrects it.
+function readFile(r){
+  var first=(r.name||'This client').split(' ')[0];
+  var bits=[], suggest=null, why='';
+  if(r.unlimited){
+    bits.push(first+' has an <b>unlimited</b> package and has used '+(r.roundsUsed||0)+' rounds');
+    suggest='in_progress'; why='unlimited runs until the credit is done';
+  }else if(r.roundsIncluded==null){
+    bits.push(first+'\u2019s package can\u2019t be read automatically ('+esc(String(r.pkg||'').slice(0,40))+'\u2026)');
+    suggest=null; why='';
+  }else if((r.roundsUsed||0)>=r.roundsIncluded){
+    bits.push(first+' paid for <b>'+r.roundsIncluded+'</b> round'+(r.roundsIncluded===1?'':'s')+' and used <b>all of them</b>');
+    suggest='completed'; why='everything they paid for is delivered \u2014 Completed (or Free round to re-engage, or Graduated if the credit is fully done)';
+  }else{
+    bits.push(first+' paid for <b>'+r.roundsIncluded+'</b> round'+(r.roundsIncluded===1?'':'s')+' and has <b>'+(r.roundsIncluded-(r.roundsUsed||0))+' left</b>');
+    suggest='in_progress'; why='rounds are still owed \u2014 usually still In process';
+  }
+  bits.push('monitoring is '+(r.mfsn==='affiliate'?'<b style="color:#2f8a4d">ON</b>':'<b style="color:#b45309">OFF</b>'));
+  if(r.lastPaid){
+    var d=Math.round((Date.now()-new Date(r.lastPaid).getTime())/86400000);
+    if(isFinite(d))bits.push('last paid <b>'+String(r.lastPaid).slice(0,10)+'</b>'+(d>=0?' ('+d+'d ago)':''));
+  }
+  return {text:bits.join(' \u00b7 '), suggest:suggest, why:why};
+}
 var openId=null;
 function when(d){if(!d)return '\u2014';var t=new Date(d);return isFinite(t)?t.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'\u2014';}
 function fact(l,v){return '<div class="fact"><span>'+l+'</span><b>'+v+'</b></div>';}
@@ -273,16 +326,26 @@ function closeFile(){
 function renderFile(row,full,thread){
   var r=row||{};var body=document.getElementById('audBody');
   var a=r.audit;
+  var read=readFile(r);
   var h='';
-  // ---- the audit verdict, right at the top: mark it without leaving ----
-  h+='<h4>Audit</h4>'
-    +(a?'<div class="au-sub" style="margin-bottom:6px">Marked <b style="color:'+OUT_COLOR[a.outcome]+'">'+OUT_LABEL[a.outcome]+'</b> by '+esc(a.who)+' \u00b7 '+String(a.at).slice(0,10)+'</div>':'')
-    +'<div class="au-outbtns">'
+  // ---- the file, read out loud: one sentence that does the thinking ----
+  h+='<div style="background:var(--soft);border-radius:10px;padding:11px 14px;font-size:13px;line-height:1.7">'+read.text+'</div>';
+  if(read.why)h+='<div class="au-sub" style="margin:7px 2px 0">'+read.why+'</div>';
+
+  // ---- the decision: four big labeled cards, click = saved + next file ----
+  h+='<h4>'+(a?'Audited \u2014 change it?':'What did you find? \u2014 pick one, it saves and opens the next file')+'</h4>'
+    +(a?'<div class="au-sub" style="margin-bottom:6px">Marked <b style="color:'+OUT_COLOR[a.outcome]+'">'+OUT_LABEL[a.outcome]+'</b> by '+esc(a.who)+' \u00b7 '+String(a.at).slice(0,10)+' <span class="au-saved">saved \u2713</span></div>':'')
+    +'<div class="au-outcards">'
     +Object.keys(OUT_LABEL).map(function(k){
       var on=a&&a.outcome===k;
-      return '<button data-out="'+k+'"'+(on?' class="on" style="background:'+OUT_COLOR[k]+'"':'')+' title="'+esc(OUT_DESC[k])+'">'+OUT_LABEL[k]+'</button>';
+      var hint=!a&&read.suggest===k?'<span class="au-hint">likely this one</span>':'';
+      return '<div class="au-outcard'+(on?' on':'')+'" data-out="'+k+'" style="--oc:'+OUT_COLOR[k]+'">'
+        +'<b>'+OUT_LABEL[k]+' '+hint+'</b><span>'+esc(OUT_DESC[k])+'</span></div>';
     }).join('')
-    +(a?'<button data-out="">undo</button>':'')
+    +'</div>'
+    +(a?'<div style="margin-top:6px"><a href="#" class="au-sub" data-out="">undo this mark</a></div>':'')
+    +'<div style="display:flex;gap:8px;margin-top:10px">'
+    +'<button id="audSkip" class="au-markbtn">Skip for now \u2192 next file</button>'
     +'</div>';
 
   // ---- everything about them ----
@@ -329,13 +392,28 @@ function renderFile(row,full,thread){
   body.innerHTML=h;
   var mbox=document.getElementById('audMsgs');if(mbox)mbox.scrollTop=mbox.scrollHeight;
 
-  // wiring
+  // wiring: picking an outcome saves it and opens the next un-audited file
+  // -- the whole pass becomes click, read, message, pick, repeat. Undo and
+  // changing an existing mark stay on the same file.
   Array.prototype.forEach.call(body.querySelectorAll('[data-out]'),function(b){
-    b.onclick=function(){
-      mark(r.id,b.dataset.out||null);
-      setTimeout(function(){if(String(openId)===String(r.id))openFile(r.id);},250);
+    b.onclick=function(ev){
+      ev.preventDefault();
+      var out=b.dataset.out||null;
+      var wasUnaudited=!r.audit;
+      mark(r.id,out);
+      if(out&&wasUnaudited){
+        var nx=nextTodo(r.id);
+        setTimeout(function(){ if(nx)openFile(nx.id); else {closeFile();render();} },200);
+      }else{
+        setTimeout(function(){if(String(openId)===String(r.id))openFile(r.id);},250);
+      }
     };
   });
+  var skip=document.getElementById('audSkip');
+  if(skip)skip.onclick=function(){
+    var nx=nextTodo(r.id);
+    if(nx)openFile(nx.id); else closeFile();
+  };
   var mf=body.querySelector('[data-mfsn]');
   if(mf)mf.onclick=function(){
     mf.disabled=true;
@@ -396,6 +474,12 @@ function initAudit(){
   });
   var sb=sec.querySelector('#auSearch');
   if(sb)sb.oninput=function(){state.search=sb.value.trim();showCount=SHOW;render();};
+  var st=sec.querySelector('#auStart');
+  if(st)st.onclick=function(){
+    var nx=nextTodo(null);
+    if(nx)openFile(nx.id);
+    else alert('Every file has been audited.');
+  };
 
   var nav=document.getElementById('navProduction')||document.getElementById('nav');
   if(nav&&!document.getElementById('auditNavBtn')){

@@ -509,3 +509,46 @@ test('the audit list shows every purchase as its own chip, not one truncated str
   assert.ok(/function bureauCell/.test(au), 'TU/EQ/EX round each shown');
   assert.ok(/saved \\u2713/.test(au), 'a mark says saved so nobody wonders if it stuck');
 });
+
+test('the audit runs itself: start button, plain-English readout, pick = save + next', () => {
+  // "make it easier so she knows what to do instantly": one Start button
+  // opens the next un-audited file; the drawer reads the file out loud in a
+  // sentence (rounds bought vs used, monitoring on/off, last paid) and
+  // flags which outcome that usually means; picking an outcome saves and
+  // opens the next file, so the whole pass is read, message, pick, repeat.
+  const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
+  assert.ok(/auStart/.test(au) && /Start auditing/.test(au));
+  assert.ok(/function nextTodo/.test(au), 'always knows which file is next');
+  assert.ok(/function readFile/.test(au) && /used <b>all of them<\/b>/.test(au),
+    'the sentence does the thinking; she only corrects it');
+  assert.ok(/likely this one/.test(au), 'the usual outcome is flagged, never auto-picked');
+  assert.ok(/au-outcard/.test(au) && /it saves and opens the next file/.test(au),
+    'outcomes are big labeled cards with their meaning visible, not tooltips');
+  assert.ok(/audSkip/.test(au), 'skip moves on without marking');
+});
+
+test('after the audit: replies and MFSN signups show up on their own', () => {
+  // "it has to track if they end up signing for MFSN or if somebody
+  // responds". MFSN state is live (the member-list sync flips the pill the
+  // moment they appear on it), and the audit list joins the inbox so a
+  // client who spoke last carries a 'replied' badge, with totals for both.
+  const srv = srvNow();
+  const route = srv.split("app.get('/api/audit',")[1].split('\napp.')[0];
+  assert.ok(/auditedMfsnOn/.test(route) && /auditedReplied/.test(route));
+  assert.ok(/lastDirection === 'inbound'/.test(route), 'replied means THEY spoke last');
+  const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
+  assert.ok(/au-replied/.test(au) && /data-f="replied"/.test(au), 'a badge on the row and a filter for them');
+});
+
+test('threads read oldest-first everywhere -- GHL hands them back reversed', () => {
+  // "the texts seem off and mixed up": GHL returns newest-first and both
+  // thread endpoints passed that through, so every conversation rendered
+  // upside down. Both now sort by time before answering.
+  const srv = srvNow();
+  const msgs = srv.split("app.get('/api/messages/:id'")[1].split('\n});')[0];
+  assert.ok(/localeCompare\(String\(b\.at/.test(msgs));
+  const audThread = srv.split("app.get('/api/audit/:id/thread'")[1].split('\n});')[0];
+  assert.ok(/localeCompare\(String\(b\.at/.test(audThread));
+  assert.ok(/nameHits\.length === 1/.test(audThread),
+    'and a bare name only matches when unique -- two Kiaras must never swap texts');
+});
