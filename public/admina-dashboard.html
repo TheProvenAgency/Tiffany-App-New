@@ -192,7 +192,7 @@
         <div class="col-sm-6 col-lg-3" data-card="upgraded">
           <div class="bg-base p-24 radius-20 h-100">
             <div class="kpi-head d-flex align-items-center justify-content-between gap-8 pb-20 mb-20 border-bottom border-neutral-200">
-              <span class="text-neutral-700 fw-medium">Upgraded</span>
+              <span class="text-neutral-700 fw-medium">Still to migrate</span>
               <div class="dropdown">
                 <button type="button" data-bs-toggle="dropdown" aria-expanded="false">
                   <iconify-icon icon="entypo:dots-three-vertical" class="icon text-secondary-light"></iconify-icon>
@@ -272,8 +272,10 @@ function applySummary(sum){
   setText('admEnrolledSub', pct(m.active, m.enrolled) + '% active monitoring');
   setText('admActives', (m.newActives||0).toLocaleString());
   setText('admActivesSub', pct(m.newActives, m.targetActives) + '% of ' + (m.targetActives||0).toLocaleString() + ' target');
-  setText('admUpgraded', (m.upgraded||0).toLocaleString());
-  setText('admUpgradedSub', pct(m.upgraded, m.enrolled) + '% on new platform');
+  // Flipped per Tiffany 8/17: the useful number is how many are LEFT on the
+  // old platform -- she drives it to zero, then the tile retires.
+  setText('admUpgraded', (m.toUpgrade||0).toLocaleString());
+  setText('admUpgradedSub', 'still on Smart Credit \u2014 goal is 0');
 
   var months = (sum.months || []).slice(-12);
   var labels = months.map(function(x){ return x.ym; });
@@ -311,7 +313,7 @@ function applySummary(sum){
   }
   if (wanted('enrolled'))  ratio('lineChart',   m.active,     m.enrolled,      primaryColor);
   if (wanted('actives'))   ratio('radialChart', m.newActives, m.targetActives, warningColor);
-  if (wanted('upgraded'))  ratio('columnChart', m.upgraded,   m.enrolled,      dangerColor);
+  if (wanted('upgraded'))  ratio('columnChart', m.toUpgrade,  m.enrolled,      dangerColor);
 }
 
 // Cheap, constants-only endpoint -- safe for all four frames to call, and

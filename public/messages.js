@@ -377,6 +377,28 @@ document.getElementById('msgThreadMeta').textContent=c?(c.channel+(c.email?' · 
 // so this app and GHL's own inbox always agree. Marking unread returns you
 // to the list: the whole point of the button is "I'm not dealing with this
 // one right now", so staying inside the thread would be odd.
+// "No reply needed": a client's "you're welcome" is not somebody waiting
+// on an answer. Pinned to their latest message -- a new one brings the
+// thread back into the queue automatically.
+var nb=document.getElementById('msgNoReplyBtn');
+if(c&&c.lastDirection==='inbound'){
+  nb.style.display='';
+  nb.onclick=function(ev){
+    ev.preventDefault();
+    nb.textContent='Saving\u2026';
+    fetch('/api/messages/'+encodeURIComponent(c.id)+'/no-reply',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lastAt:c.lastAt})
+    }).then(function(r){
+      if(!r.ok)return r.json().then(function(j){throw new Error(j.error||'Could not save');});
+      c.unread=0;
+      document.getElementById('view-messages').classList.remove('msg-thread-open');
+      curId=null;
+      renderChips();renderRows();
+      nb.textContent='No reply needed';
+    }).catch(function(e){nb.textContent='No reply needed';alert(e.message);});
+  };
+}else{nb.style.display='none';}
 var ub=document.getElementById('msgUnreadBtn');
 if(c){
   ub.style.display='';
@@ -436,6 +458,7 @@ var sectionHTML=''+
 '<div class="msg-thead"><div><button class="msg-back" id="msgBack">‹</button><span class="nm" id="msgThreadNm">Select a conversation</span>'+
 '<div class="meta" id="msgThreadMeta"></div></div>'+
 '<div style="display:flex;gap:14px;align-items:center">'+
+'<a href="#" id="msgNoReplyBtn" style="display:none" title="Takes this thread out of the waiting-on-a-reply count. If they message again, it comes back on its own.">No reply needed</a>'+
 '<a href="#" id="msgUnreadBtn" style="display:none"></a>'+
 '<a href="#" id="msgThreadOpen" style="display:none">Open client →</a>'+
 '</div></div>'+

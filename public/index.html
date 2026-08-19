@@ -1134,6 +1134,13 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
           <div id="dwList"><div class="cardsub">&mdash;</div></div>
         </div>
       </div></div>
+      <div class="grid-stack-item" gs-id="signups" gs-x="9" gs-y="10" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
+        <div class="card">
+          <h3 class="cardtitle"><span class="cico" style="--ic:#45B369"><i class="ri-user-add-line"></i></span> Signups by month</h3>
+          <div class="cardsub">New clients each month</div>
+          <div id="signupRows" style="margin-top:8px"><div class="cardsub">&mdash;</div></div>
+        </div>
+      </div></div>
       <div class="grid-stack-item" gs-id="clientbase" gs-x="6" gs-y="10" gs-w="3" gs-h="7"><div class="grid-stack-item-content">
         <div class="card">
           <h3 class="cardtitle"><span class="cico" style="--ic:#7F27FF"><i class="ri-team-line"></i></span> Client base <button class="linklike" onclick="showView('clients')" id="viewAllClients">View all →</button></h3>
@@ -1818,6 +1825,22 @@ window.addEventListener('message', ev=>{
 // (bureau round advanced in the drawer) and clients checked off on the
 // desk's daily task list. Both come from the audit log via /api/team-activity,
 // so an undone checkbox is already netted out server-side.
+async function renderSignups(){
+  const el=$('signupRows'); if(!el)return;
+  try{
+    const d=await (await fetch('/api/signups-by-month')).json();
+    const months=d.months||[];
+    const max=Math.max.apply(null,months.map(function(m){return m.count;}).concat([1]));
+    el.innerHTML=months.map(function(m){
+      const label=new Date(m.month+'-15').toLocaleDateString(undefined,{month:'short',year:'2-digit'});
+      const w=Math.max(3,Math.round(m.count/max*100));
+      return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px">'
+        +'<span style="width:56px;color:var(--muted)">'+label+'</span>'
+        +'<span style="flex:1;height:10px;background:var(--soft);border-radius:999px;overflow:hidden"><i style="display:block;height:100%;width:'+w+'%;background:#45B369;border-radius:999px"></i></span>'
+        +'<b style="width:44px;text-align:right;font-variant-numeric:tabular-nums">'+m.count.toLocaleString()+'</b></div>';
+    }).join('');
+  }catch(e){ el.innerHTML='<div class="cardsub">Could not load</div>'; }
+}
 let dwDays=1;
 async function renderDisputeWork(){
   const el=$('dwList'); if(!el)return;
@@ -1830,6 +1853,7 @@ async function renderDisputeWork(){
         chips.querySelectorAll('.dw-chip').forEach(function(x){x.classList.remove('on');});
         b.classList.add('on');
         renderDisputeWork();
+  renderSignups();
       };
     });
   }

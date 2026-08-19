@@ -568,3 +568,50 @@ test('every audit mark is mirrored into GHL as a tag, app record first', () => {
     'the response says whether the GHL copy landed -- the UI can tell the truth');
   assert.ok(/liveMode\(\) && !readOnly\(\)/.test(post), 'no GHL writes in demo or read-only mode');
 });
+
+/* ---------- next round from the 8/17 call ---------- */
+
+test('"no reply needed" closes a thread out of the queue, and a new message reopens it', () => {
+  const replies = require('../lib/replies.js');
+  const convos = [
+    { id: 'cv1', name: 'A', lastDirection: 'inbound', lastAt: '2026-08-15T10:00:00Z', channelKey: 'SMS' },
+    { id: 'cv2', name: 'B', lastDirection: 'inbound', lastAt: '2026-08-15T11:00:00Z', channelKey: 'SMS' }
+  ];
+  const q0 = replies.buildQueue(convos, {});
+  assert.equal(q0.totals.waiting, 2);
+  // dismissed at that exact message: out of the queue
+  const q1 = replies.buildQueue(convos, { dismissals: { cv1: { lastAt: '2026-08-15T10:00:00Z' } } });
+  assert.equal(q1.totals.waiting, 1);
+  assert.equal(q1.items[0].id, 'cv2');
+  // the client speaks again: the dismissal no longer matches, thread returns
+  convos[0].lastAt = '2026-08-16T09:00:00Z';
+  const q2 = replies.buildQueue(convos, { dismissals: { cv1: { lastAt: '2026-08-15T10:00:00Z' } } });
+  assert.equal(q2.totals.waiting, 2, 'a new message reopens the thread by itself -- nothing can silently hide a real question');
+});
+
+test('no-reply is durable, VA-permitted, and pinned to the message it closed', () => {
+  assert.ok(auth.canAccess({ role: 'va' }, 'POST', '/api/messages/x/no-reply'));
+  const st = require('../lib/store.js');
+  const e = st.setReplyDismissal('cv-t', '2026-08-15T10:00:00Z', 'Nica');
+  assert.equal(e.lastAt, '2026-08-15T10:00:00Z');
+  assert.ok(st.getReplyDismissals()['cv-t']);
+  st.setReplyDismissal('cv-t', null);
+  assert.ok(!st.getReplyDismissals()['cv-t'], 'undo works');
+  const srv = srvNow();
+  assert.ok(/hydrateReplyDismissalsFromPostgres/.test(srv), 'survives every deploy');
+  assert.ok(/dismissals: store\.getReplyDismissals\(\)/.test(srv), 'the waiting-reply card actually uses them');
+  const ui = pub('messages.js');
+  assert.ok(/msgNoReplyBtn/.test(ui) && /lastDirection==='inbound'/.test(ui),
+    'the button only shows when the client spoke last -- the only case it means anything');
+});
+
+test('signups by month and the flipped migration tile', () => {
+  const srv = srvNow();
+  const route = srv.split("app.get('/api/signups-by-month'")[1].split('\n});')[0];
+  assert.ok(/slice\(0, 7\)/.test(route) && /i < 6/.test(route), 'six months of new-client counts');
+  const html = pub('index.html');
+  assert.ok(/gs-id="signups"/.test(html) && /renderSignups\(\);/.test(html));
+  const adm = pub('admina-dashboard.html');
+  assert.ok(/Still to migrate/.test(adm) && /m\.toUpgrade\|\|0/.test(adm),
+    'the tile counts who is LEFT on Smart Credit -- she drives it to zero, then it retires');
+});

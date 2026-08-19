@@ -2421,7 +2421,8 @@ app.get('/api/replies-due', async (req, res) => {
     else list = await allConversations(store.getConfig());
     res.json(replies.buildQueue(list, {
       slaDays: Number(req.query.sla) || undefined,
-      limit: Math.min(Number(req.query.limit) || 12, 200)
+      limit: Math.min(Number(req.query.limit) || 12, 200),
+      dismissals: store.getReplyDismissals()
     }));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2702,6 +2703,30 @@ app.post('/api/production/add', async (req, res) => {
 // first in stable roster order so "start at 1 and work down" means
 // something. Admin-only for now (Tiffany, plus whoever she hires to audit
 // -- open it with a capability when that person exists).
+// Signups by month -- "if I got 500 people to sign up last month, what did
+// I do different? Now that's a real KPI." Counts new clients by the month
+// they arrived (GHL dateAdded), last six months, newest first.
+app.get('/api/signups-by-month', async (req, res) => {
+  try {
+    const clients = await getClients();
+    const byMonth = {};
+    for (const c of clients || []) {
+      const at = c.createdAt;
+      if (!at) continue;
+      const m = String(at).slice(0, 7);
+      byMonth[m] = (byMonth[m] || 0) + 1;
+    }
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      const key = d.toISOString().slice(0, 7);
+      months.push({ month: key, count: byMonth[key] || 0 });
+    }
+    res.json({ months });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/audit', async (req, res) => {
   try {
     const roster = auth.stripCfpbSecretsAll(await composedRoster());
@@ -2964,6 +2989,30 @@ app.delete('/api/snippets/:id', (req, res) => {
     return res.status(404).json({ error: 'no such app snippet (GHL-managed snippets are edited in GHL)' });
   }
   res.json({ ok: true });
+});
+
+// "No reply needed" -- closes a thread out of the waiting-reply queue
+// without pretending it was answered. Pinned to the thread's current last
+// message: if the client sends anything new, the thread returns to the
+// queue automatically. Also marks the thread read in GHL (best-effort) so
+// both inboxes drop together.
+app.post('/api/messages/:id/no-reply', async (req, res) => {
+  try {
+    const undo = req.body && req.body.undo === true;
+    const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+    if (undo) {
+      store.setReplyDismissal(req.params.id, null);
+      return res.json({ ok: true, dismissed: false });
+    }
+    const lastAt = req.body && req.body.lastAt;
+    if (!lastAt) return res.status(400).json({ error: 'lastAt required -- the dismissal pins to that message' });
+    store.setReplyDismissal(req.params.id, lastAt, who);
+    if (liveMode() && !readOnly()) {
+      ghl.setConversationUnread(store.getConfig(), req.params.id, false).catch(() => {});
+      store.clearCacheKey('messages:unread');
+    }
+    res.json({ ok: true, dismissed: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/messages/:id/unread', async (req, res) => {
@@ -3319,6 +3368,7 @@ async function bootstrap() {
     store.hydrateNotesFromPostgres(),
     store.hydrateWorkedFromPostgres(),
     store.hydrateAffiliateOverridesFromPostgres(),
+    store.hydrateReplyDismissalsFromPostgres(),
     store.hydrateClientAuditsFromPostgres(),
     store.hydrateAppSnippetsFromPostgres(),
     store.hydrateAuditFromPostgres()
