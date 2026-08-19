@@ -2697,6 +2697,54 @@ app.post('/api/production/add', async (req, res) => {
 // go back to the automatic name-match. Same override map the Clients
 // drawer writes, so every surface reads one truth; both roster caches
 // drop because both render the pill being changed.
+// ---- the audit: touch every file, mark the outcome ----
+// The full roster with each client's audit state attached, un-audited
+// first in stable roster order so "start at 1 and work down" means
+// something. Admin-only for now (Tiffany, plus whoever she hires to audit
+// -- open it with a capability when that person exists).
+app.get('/api/audit', async (req, res) => {
+  try {
+    const roster = auth.stripCfpbSecretsAll(await composedRoster());
+    const audits = store.getClientAudits();
+    const rows = roster.map((c, i) => ({
+      n: i + 1,
+      id: c.id, name: c.name, stage: c.stage, pkg: c.pkg, va: c.va || null,
+      mfsn: c.mfsn || null, roundsUsed: c.roundsUsed, roundsIncluded: c.roundsIncluded,
+      unlimited: c.unlimited, finished: c.finished, lastPaid: c.lastPaid || c.firstPaid || null,
+      audit: audits[c.id] || null
+    }));
+    const byOutcome = { graduated: 0, completed: 0, free_round: 0, in_progress: 0 };
+    let audited = 0;
+    for (const r of rows) if (r.audit) { audited++; if (byOutcome[r.audit.outcome] != null) byOutcome[r.audit.outcome]++; }
+    res.json({
+      rows,
+      totals: { clients: rows.length, audited, remaining: rows.length - audited, ...byOutcome }
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Mark one client's audit outcome (or null to un-mark a mis-click). Also
+// logged to the activity trail, so "who audited how many today" is a real
+// number when the audit becomes somebody's whole job.
+app.post('/api/audit/:id', async (req, res) => {
+  try {
+    const roster = await composedRoster();
+    const client = roster.find(c => String(c.id) === String(req.params.id));
+    if (!client) return res.status(404).json({ error: 'no such client' });
+    const who = (getUsers().find(u => u.id === req.user.userId) || {}).name || 'Unknown';
+    const outcome = req.body && 'outcome' in req.body ? req.body.outcome : undefined;
+    if (outcome === undefined) return res.status(400).json({ error: 'outcome required (or null to clear)' });
+    const entry = store.setClientAudit(client.id, { outcome, who, note: req.body.note });
+    try {
+      store.appendAudit([audit.actionEntry(outcome ? 'client_audited' : 'client_audit_cleared',
+        { who, clientId: String(client.id), clientName: client.name || null })]);
+    } catch (e) { console.error('Activity log write failed (the audit still saved):', e.message); }
+    res.json({ ok: true, audit: entry });
+  } catch (e) {
+    res.status(e.message && e.message.startsWith('outcome must') ? 400 : 500).json({ error: e.message });
+  }
+});
+
 app.post('/api/production/:id/mfsn', async (req, res) => {
   try {
     const valid = ['affiliate', 'not_on_mfsn'];
@@ -3168,6 +3216,7 @@ async function bootstrap() {
     store.hydrateNotesFromPostgres(),
     store.hydrateWorkedFromPostgres(),
     store.hydrateAffiliateOverridesFromPostgres(),
+    store.hydrateClientAuditsFromPostgres(),
     store.hydrateAppSnippetsFromPostgres(),
     store.hydrateAuditFromPostgres()
   ]).catch(e => console.error('Postgres hydration failed:', e.message));

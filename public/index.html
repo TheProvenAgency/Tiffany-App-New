@@ -873,7 +873,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
     </span>
     <select class="btn ghost" id="viewAsEmployeeBtn" style="display:none;margin-right:8px;padding:7px 10px">
       <option value="">View as…</option>
-      <option value="va">VA</option>
+      <option value="va">Team Lead</option>
       <option value="disputer">Disputer</option>
       <option value="employee">Employee</option>
     </select>
@@ -1063,7 +1063,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
       <div class="grid-stack-item" gs-id="ops" gs-x="6" gs-y="0" gs-w="6" gs-h="9"><div class="grid-stack-item-content">
         <div class="card">
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
-            <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-pulse-line"></i></span> Never started</h3>
+            <h3 class="cardtitle"><span class="cico" style="--ic:#8252E9"><i class="ri-pulse-line"></i></span> Awaiting first round</h3>
             <div><span id="opsNever" style="font-size:26px;font-weight:800;color:var(--red)">&mdash;</span>
             <span class="cardsub"> paid, no round filed</span></div>
           </div>
@@ -3038,7 +3038,7 @@ const CAP_LABELS={
   users:'Team accounts', admin:'Settings & team'
 };
 const ROLE_BLURBS={
-  va:'VA — the client desk: full Deal Production and the inbox. No money.',
+  va:'Team Lead — the client desk: full Deal Production and the inbox. No money.',
   disputer:'Disputer — the round queue and the bureau record behind it. Nothing else.',
   employee:'Employee — the client desk plus pipeline. No money.',
   admin:'Admin — everything, including revenue, settings and the team.'
@@ -3559,6 +3559,6 @@ setInterval(loadNotifications,20*1000);
    busy server each queued separately. One promise, shared by all. */
 window.apiMe=function(){return window.__meP||(window.__meP=fetch('/api/me').then(function(r){return r.json();}));};
 </script>
-<script src="/production.js" defer></script><script src="/team.js" defer></script><script src="/role.js" defer></script><script src="/mfsn.js" defer></script><script src="/revenue.js" defer></script><script src="/messages.js" defer></script><script src="/disputes.js" defer></script><script src="/webhook-toast.js" defer></script>
+<script src="/production.js" defer></script><script src="/team.js" defer></script><script src="/role.js" defer></script><script src="/mfsn.js" defer></script><script src="/revenue.js" defer></script><script src="/messages.js" defer></script><script src="/disputes.js" defer></script><script src="/audit.js" defer></script><script src="/webhook-toast.js" defer></script>
 </body>
 </html>

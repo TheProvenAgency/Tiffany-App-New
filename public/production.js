@@ -208,8 +208,8 @@ var FILTERS=[
    her), 'needs' (her client, not enrolled under her link), or null/undefined
    before any MFSN sync has happened yet. */
 function mfsnPill(c){
-if(c.mfsn==='affiliate')return '<span class="pv-mfsn mfsn-yes">Affiliate</span>';
-if(c.mfsn==='needs')return '<span class="pv-mfsn mfsn-no">Needs affiliate</span>';
+if(c.mfsn==='affiliate')return '<span class="pv-mfsn mfsn-yes">MFSN on</span>';
+if(c.mfsn==='needs')return '<span class="pv-mfsn mfsn-no">MFSN off</span>';
 return '<span class="pv-days">-</span>';
 }
 function bpill(b){

@@ -423,3 +423,58 @@ test('the pill is a control in the production drawer and the dispute desk', () =
   assert.ok(/record\.mfsnOverride/.test(srv.split("app.get('/api/disputes/:id'")[1].split('\n});')[0]),
     'the dispute record carries the standing so the desk can show it');
 });
+
+/* ---------- The Audit (Tiffany's file-by-file pass) ---------- */
+
+test('audit outcomes save durably, overwrite cleanly, and clear on a mis-click', () => {
+  const st = require('../lib/store.js');
+  const e1 = st.setClientAudit('t-1', { outcome: 'completed', who: 'Tiffany' });
+  assert.equal(e1.outcome, 'completed');
+  assert.ok(e1.at, 'when it was audited is part of the record');
+  const e2 = st.setClientAudit('t-1', { outcome: 'graduated', who: 'Tiffany' });
+  assert.equal(st.getClientAudits()['t-1'].outcome, 'graduated', 'a re-audit replaces, not duplicates');
+  assert.equal(st.setClientAudit('t-1', { outcome: null }), null);
+  assert.ok(!st.getClientAudits()['t-1'], 'cleared -- the client reads as needing an audit again');
+  assert.throws(() => st.setClientAudit('t-2', { outcome: 'banana' }), /outcome must be/);
+});
+
+test('graduated and completed are separate outcomes, exactly as she drew the line', () => {
+  // "Completed means I did what they paid for -- they can possibly still
+  // need work. Graduated means I'm finished with their credit."
+  const st = require('../lib/store.js');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'lib', 'store.js'), 'utf8');
+  assert.ok(/'graduated', 'completed', 'free_round', 'in_progress'/.test(src),
+    'four outcomes: graduated, completed, free round, still in process');
+});
+
+test('the audit routes are admin-only and the tab is invisible to workers', () => {
+  assert.ok(!auth.canAccess({ role: 'va' }, 'GET', '/api/audit'), 'not even Nica, until Tiffany opens it up');
+  assert.ok(!auth.canAccess({ role: 'disputer' }, 'POST', '/api/audit/x'));
+  assert.ok(auth.canAccess({ role: 'admin' }, 'GET', '/api/audit'));
+  assert.ok(!auth.canAccessAsset({ role: 'va' }, '/audit.js'), 'the module itself is refused to worker sessions');
+  const srv = srvNow();
+  const route = srv.split("app.get('/api/audit',")[1].split('\n});')[0];
+  assert.ok(/stripCfpbSecretsAll/.test(route), 'no portal passwords ride along on 3,900 rows');
+  assert.ok(/audits\[c\.id\] \|\| null/.test(route), 'no entry = not audited = how future clients surface automatically');
+  const post = srv.split("app.post('/api/audit/:id',")[1].split('\n});')[0];
+  assert.ok(/client_audited/.test(post), 'each mark feeds the activity trail -- auditing will be somebody\'s whole job');
+});
+
+test('the audit tab: numbered, un-audited first by default, outcomes explained', () => {
+  const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
+  assert.ok(/filter:'todo'/.test(au), 'opens on Not audited -- the work, not the trophies');
+  assert.ok(/data-open=/.test(au), 'client name opens the full drawer (notes, logins, MFSN, assign)');
+  assert.ok(/OUT_DESC/.test(au) && /upsell/.test(au), 'each outcome says what it means before you click it');
+  assert.ok(/hydrateClientAuditsFromPostgres/.test(srvNow()), 'audit state survives every deploy');
+  assert.ok(/audit\.js" defer/.test(pub('index.html')));
+});
+
+/* ---------- call quick-fixes ---------- */
+
+test("labels match what Tiffany corrected on the call", () => {
+  const html = pub('index.html');
+  assert.ok(/Awaiting first round<\/h3>/.test(html), '"Never started" read as "waiting to onboard" to her -- it means round 1 not filed');
+  assert.ok(html.includes('<option value="va">Team Lead</option>'), 'VA reads as Team Lead; the role value is unchanged so nothing breaks');
+  const pv = pub('production.js');
+  assert.ok(/MFSN on/.test(pv) && /MFSN off/.test(pv), 'pill says on/off, her words');
+});
