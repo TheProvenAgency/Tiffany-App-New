@@ -21,7 +21,7 @@ test('a restored layout is the shape the client actually reads', () => {
   // than losing it.
   const store = fs.readFileSync(path.join(__dirname, '..', 'lib', 'store.js'), 'utf8');
   const fn = store.split('async function hydrateDashboardLayoutsFromPostgres')[1].split('\n}')[0];
-  assert.ok(/out\[key\] = \{ nodes \}/.test(fn));
+  assert.ok(/out\[key\] = \{ nodes, hidden \}/.test(fn), 'nodes plus the hidden-card list');
   assert.ok(/if \(!nodes\.length\) continue/.test(fn), 'an empty layout is not worth restoring');
 });
 

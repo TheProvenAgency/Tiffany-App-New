@@ -344,6 +344,8 @@ html[data-theme="dark"] .rangebox input{color-scheme:dark}
 /* while actively arranging, let the drag/resize outline breathe past the
    card edge instead of getting clipped by the line above */
 .grid-stack.gs-editing .grid-stack-item-content{overflow:visible}
+.gs-hidebtn{position:absolute;top:2px;right:2px;z-index:30;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;line-height:1}
+.gs-hidebtn:hover{color:#fff;background:#EF4444;border-color:transparent}
 /* Cards embedded as iframes (the 4 Admina KPI tiles) own their entire
    surface as a separate document -- a mousedown inside one never reaches
    this page's mouse handlers, so GridStack's drag/resize (which listens
@@ -928,6 +930,7 @@ body:has(#drawer.open) #pipeBoard{padding-right:min(560px,95vw)}
   <section class="view on" id="view-dash">
     <div class="dashbar">
       <button class="chip" id="layoutEditBtn" onclick="toggleLayoutEdit()">⠿ Customize layout</button>
+      <span id="hiddenTray" style="display:none"></span>
       <span class="cardsub" id="layoutHint" style="display:none">Drag to move or resize</span>
       <button class="linklike" id="layoutResetBtn" style="display:none" onclick="resetLayout()">Reset to default</button>
       <!-- Admin-only: promotes whatever's currently on screen to be the
@@ -2120,12 +2123,18 @@ async function loadDashboard(){
     scales:{y:{border:{display:false},grid:{tickBorderDash:[3,3]},ticks:{callback:v=>'$'+(v>=1000?(v/1000)+'K':v)}},x:{grid:{display:false},ticks:{maxTicksLimit:8}}}}});
   // client base
   const leadsPlus=(k.leads||0)+(k.unclassified||0);
-  const segs=[[k.activeClients,GREEN,'Active · in window','active'],[k.newClients,BLUE,'New this period',''],
-    [k.inactiveClients,RED,'Inactive · reactivation','inactive'],[leadsPlus,GRAY,(k.leads>0?'Leads · no purchase':'Unclassified'),'unknown']];
+  // Completed comes from HER audit marks (completed + graduated) and is
+  // pulled OUT of the inactive bucket so the same person is never counted
+  // twice -- the separation she asked for on the walkthrough call.
+  const completed=k.completedClients||0;
+  const inactiveLeft=Math.max(0,(k.inactiveClients||0)-completed);
+  const segs=[[k.activeClients,GREEN,'Active · in window','active'],[k.newClients,BLUE,'New this period','']]
+    .concat(completed?[[completed,'#8252E9','Completed · audited','__audit']]:[])
+    .concat([[inactiveLeft,RED,'Inactive · reactivation','inactive'],[leadsPlus,GRAY,(k.leads>0?'Leads · no purchase':'Unclassified'),'unknown']]);
   const total=k.totalClients||1;
   $('viewAllClients').textContent=`View all ${fmtN(k.totalClients)} →`;
   $('segbar').innerHTML=segs.map(([n,c])=>{const pct=Math.round(n/total*100);return `<div class="cb-seg" style="flex:${Math.max(1,n)}"><span class="cb-segpct">${pct}%</span><div class="cb-segbar" style="background:${c}"></div></div>`;}).join('');
-  $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="statrow" onclick="goClients('${f}')"><span class="dot2" style="background:${c}"></span><span class="lbl">${l}</span><b>${fmtN(n)}</b></div>`).join('');
+  $('tiles').innerHTML=segs.map(([n,c,l,f])=>`<div class="statrow" onclick="${f==='__audit'?"showView('audit')":`goClients('${f}')`}"><span class="dot2" style="background:${c}"></span><span class="lbl">${l}</span><b>${fmtN(n)}</b></div>`).join('');
   const activePct=Math.round((k.activeClients||0)/total*100);
   $('activeRing').style.setProperty('--pct',activePct);
   $('activeRingPct').textContent=activePct+'%';
@@ -3489,6 +3498,7 @@ async function loadDashLayout(){
     // the new card would silently vanish for them. Leaving addAndRemove
     // off means a newly-added card just keeps its shipped default spot
     // until the person drags it, instead of disappearing.
+    if(d.layout&&Array.isArray(d.layout.hidden))dashHidden=d.layout.hidden;
     if(d.layout&&Array.isArray(d.layout.nodes)&&d.layout.nodes.length){
       dashGridStack.load(d.layout.nodes,false);
       // A card that shipped AFTER this layout was saved isn't in the node
@@ -3502,6 +3512,7 @@ async function loadDashLayout(){
         .forEach(el=>dashGridStack.update(el,{x:0,y:0}));
     }
   }catch(e){ /* keep the shipped default layout from the HTML */ }
+  applyHidden();
   // NOTE: this used to "self-heal" rev-kpi-total and revenue-package back
   // up to a hardcoded minimum size on every load, from back when their
   // content changed shape and old saved layouts clipped. That code ran
@@ -3515,12 +3526,40 @@ async function loadDashLayout(){
   // layout, personal or shared-default, is now trusted as-is, full stop.
   resizeDashCharts();
 }
+let dashHidden=[]; // gs-ids of cards hidden via "Customize layout" -- saved with the layout
+function cardTitleOf(id){
+  const el=document.querySelector('.grid-stack-item[gs-id="'+id+'"] .cardtitle, .grid-stack-item[gs-id="'+id+'"] h3');
+  const t=el?el.textContent.replace(/View all.*|→.*/g,'').trim():'';
+  return t||id;
+}
+// Hiding removes the card from the grid flow (others close the gap) but
+// keeps its DOM, so unhiding is instant and loses nothing. Tiffany's ask
+// verbatim: "I want the option to hide and unhide anything."
+function applyHidden(){
+  document.querySelectorAll('#dashGrid .grid-stack-item').forEach(el=>{
+    const id=el.getAttribute('gs-id');
+    const hide=dashHidden.includes(id);
+    const isHidden=el.style.display==='none';
+    if(hide&&!isHidden){ try{dashGridStack.removeWidget(el,false);}catch(e){} el.style.display='none'; }
+    else if(!hide&&isHidden){ el.style.display=''; try{dashGridStack.makeWidget(el);}catch(e){} }
+  });
+  renderHiddenTray();
+}
+function hideCard(id){ if(!dashHidden.includes(id))dashHidden.push(id); applyHidden(); saveDashLayout(); }
+function unhideCard(id){ dashHidden=dashHidden.filter(x=>x!==id); applyHidden(); saveDashLayout(); resizeDashCharts(); }
+function renderHiddenTray(){
+  const tray=$('hiddenTray'); if(!tray)return;
+  if(!dashLayoutEditing||!dashHidden.length){ tray.style.display='none'; return; }
+  tray.style.display='';
+  tray.innerHTML='<span style="color:var(--muted);font-size:12px;margin-right:6px">Hidden:</span>'
+    +dashHidden.map(id=>'<button class="chip" onclick="unhideCard(\''+id+'\')" title="Show this card again">'+cardTitleOf(id)+' \u21a9</button>').join(' ');
+}
 function saveDashLayout(){
   if(!dashGridStack)return;
   clearTimeout(dashLayoutSaveTimer);
   dashLayoutSaveTimer=setTimeout(()=>{
     const nodes=dashGridStack.save(false); // false = positions/sizes only, no HTML content
-    fetch('/api/dashboard-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:{nodes}})});
+    fetch('/api/dashboard-layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:{nodes,hidden:dashHidden}})});
   },500);
 }
 function toggleLayoutEdit(){
@@ -3531,6 +3570,19 @@ function toggleLayoutEdit(){
   $('dashGrid').classList.toggle('gs-editing',dashLayoutEditing);
   $('layoutEditBtn').textContent=dashLayoutEditing?'✓ Done arranging':'⠿ Customize layout';
   $('layoutHint').style.display=dashLayoutEditing?'inline':'none';
+  // an eye button on every card while arranging
+  document.querySelectorAll('#dashGrid .grid-stack-item').forEach(el=>{
+    let b=el.querySelector('.gs-hidebtn');
+    if(dashLayoutEditing){
+      if(!b){
+        b=document.createElement('button');
+        b.className='gs-hidebtn';b.title='Hide this card (unhide from the Hidden list)';b.textContent='\u2715';
+        b.onclick=ev=>{ev.stopPropagation();hideCard(el.getAttribute('gs-id'));};
+        el.querySelector('.grid-stack-item-content').appendChild(b);
+      }
+    } else if(b){ b.remove(); }
+  });
+  renderHiddenTray();
   $('layoutResetBtn').style.display=dashLayoutEditing?'inline':'none';
   // only admins ever reach this view at all (role.js keeps employees off
   // the main Dashboard), but gate on role anyway rather than assume that.

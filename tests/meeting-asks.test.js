@@ -615,3 +615,29 @@ test('signups by month and the flipped migration tile', () => {
   assert.ok(/Still to migrate/.test(adm) && /m\.toUpgrade\|\|0/.test(adm),
     'the tile counts who is LEFT on Smart Credit -- she drives it to zero, then it retires');
 });
+
+test('any dashboard card can be hidden and unhidden, and it survives redeploys', () => {
+  // Her words: "I want the option to hide and unhide anything." An X on
+  // every card in Customize mode; hidden cards collapse (others close the
+  // gap) and sit in a Hidden tray for one-click return. The list saves with
+  // the layout and rides the previously-unused widget_sizes column, so it
+  // hydrates back after a deploy exactly like positions do.
+  const html = pub('index.html');
+  assert.ok(/gs-hidebtn/.test(html) && /hiddenTray/.test(html));
+  assert.ok(/nodes,hidden:dashHidden/.test(html), 'saved with the layout');
+  assert.ok(/d\.layout\.hidden/.test(html), 'loaded with the layout');
+  const st = fs.readFileSync(path.join(__dirname, '..', 'lib', 'store.js'), 'utf8');
+  assert.ok(/hidden: \(layout && layout\.hidden\) \|\| \[\]/.test(st), 'mirrored to Postgres');
+  assert.ok(/widget_sizes\.hidden/.test(st), 'and hydrated back at boot');
+});
+
+test('Client base separates Completed (from her audit) out of Inactive', () => {
+  const srv = srvNow();
+  assert.ok(/completedClients/.test(srv), 'completed = her audit marks of completed+graduated');
+  const html = pub('index.html');
+  assert.ok(/Completed · audited/.test(html));
+  assert.ok(/inactiveLeft=Math\.max\(0,\(k\.inactiveClients\|\|0\)-completed\)/.test(html),
+    'pulled OUT of inactive so nobody is counted twice');
+  assert.ok(/showView\('audit'\)/.test(html.split('const segs=')[1].slice(0, 1200)),
+    'clicking the Completed tile opens The Audit');
+});

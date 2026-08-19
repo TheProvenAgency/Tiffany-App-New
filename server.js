@@ -1274,6 +1274,20 @@ async function buildDashboardPayload({ from, to, granularity }) {
         totalClients: clients.length,
         activeClients: active.length,
         inactiveClients: inactive.length,
+        // Her audit is the source of truth for "completed": every mark of
+        // completed or graduated counts, so this segment grows live as she
+        // works the book -- exactly the separation she asked for on the
+        // Client base card ("I would like to separate completed from
+        // inactive").
+        completedClients: (() => {
+          const marks = store.getClientAudits();
+          let n = 0;
+          for (const k2 of Object.keys(marks)) {
+            const o = marks[k2] && marks[k2].outcome;
+            if (o === 'completed' || o === 'graduated') n++;
+          }
+          return n;
+        })(),
         newClients: newClients.length,
         textsIn: smsIn.reduce((s, d) => s + d.in, 0),
         textsOut: smsIn.reduce((s, d) => s + d.out, 0),
