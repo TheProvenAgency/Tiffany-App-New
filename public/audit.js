@@ -57,6 +57,15 @@ var css=''+
 '#view-audit .au-menu .opt span{font-size:11px;color:var(--muted)}'+
 '#view-audit .au-empty{padding:40px;text-align:center;color:var(--muted)}'+
 '#view-audit .au-more{padding:12px;text-align:center;color:var(--blue,#4F46E5);font-weight:700;cursor:pointer}'+
+'#view-audit .au-pkg{display:inline-block;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:600;margin:2px 4px 0 0;color:var(--ink)}'+
+'#view-audit .au-rbar{display:inline-block;vertical-align:middle;width:64px;height:5px;background:var(--soft);border-radius:999px;margin-left:7px;overflow:hidden}'+
+'#view-audit .au-rbar i{display:block;height:100%;border-radius:999px}'+
+'#view-audit .au-bu{display:inline-block;font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-right:3px}'+
+'#view-audit .au-bu.has{color:var(--ink);border-color:var(--ink)}'+
+'#view-audit .au-mfsn{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700}'+
+'#view-audit .au-mfsn.on{background:rgba(69,179,105,.15);color:#2f8a4d}'+
+'#view-audit .au-mfsn.off{background:rgba(217,119,6,.14);color:#b45309}'+
+'#view-audit .au-saved{color:#2f8a4d;font-weight:700;font-size:11px}'+
 /* the audit drawer: the whole file + their conversation, one panel */
 '#auDrawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,94vw);background:var(--card);box-shadow:-8px 0 40px rgba(0,0,0,.16);z-index:1300;display:none;flex-direction:column}'+
 '#auDrawer.on{display:flex}'+
@@ -124,10 +133,27 @@ function visible(){
   return rows;
 }
 
-function roundsCell(r){
-  if(r.unlimited)return 'unltd';
-  if(r.roundsIncluded==null)return (r.roundsUsed||0)+'/?';
-  return (r.roundsUsed||0)+'/'+r.roundsIncluded;
+// Each comma-separated segment of the package field is a separate thing
+// they bought (the field accumulates purchases) -- so show each purchase
+// as its own chip instead of one truncated string nobody can read.
+function pkgChips(pkg){
+  var parts=String(pkg||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+  if(!parts.length)return '<span class="au-sub">no package recorded</span>';
+  return parts.map(function(pp){return '<span class="au-pkg">'+esc(pp)+'</span>';}).join('');
+}
+function roundsBar(r){
+  if(r.unlimited)return '<span class="au-sub"><b style="color:var(--ink)">'+(r.roundsUsed||0)+'</b> used \u00b7 unlimited</span>';
+  if(r.roundsIncluded==null)return '<span class="au-sub"><b style="color:var(--ink)">'+(r.roundsUsed||0)+'</b> used \u00b7 package unclear</span>';
+  var used=r.roundsUsed||0, inc=r.roundsIncluded||0;
+  var pct=inc?Math.min(100,Math.round(used/inc*100)):0;
+  return '<span class="au-sub"><b style="color:var(--ink)">'+used+'</b> of <b style="color:var(--ink)">'+inc+'</b> rounds</span>'
+    +'<span class="au-rbar"><i style="width:'+pct+'%;background:'+(used>=inc?'#45B369':'#4F46E5')+'"></i></span>';
+}
+function bureauCell(r){
+  return [['TU',r.tu],['EQ',r.eq],['EX',r.ex]].map(function(p){
+    var rd=(p[1]&&p[1].r)||0;
+    return '<span class="au-bu'+(rd?' has':'')+'">'+p[0]+' <b>R'+rd+'</b></span>';
+  }).join('');
 }
 
 function render(){
@@ -149,19 +175,21 @@ function render(){
       :state.filter==='todo'?'Every file has been audited. New clients will appear here as they come in.':'Nobody marked '+(OUT_LABEL[state.filter]||'that')+' yet.')+'</div>';
     return;
   }
-  var h='<table><thead><tr><th>#</th><th>Client</th><th>Stage</th><th>Rounds</th><th>MFSN</th><th>Assigned</th><th>Audit</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>#</th><th>Client &amp; what they bought</th><th>Rounds</th><th>By bureau</th><th>MFSN</th><th>Last paid</th><th>Audit</th></tr></thead><tbody>';
   rows.slice(0,showCount).forEach(function(r){
     var a=r.audit;
     h+='<tr data-id="'+esc(r.id)+'">'+
       '<td class="au-n">'+r.n+'</td>'+
-      '<td><span class="au-nm" data-open="'+esc(r.id)+'">'+esc(r.name)+'</span><div class="au-sub">'+esc(String(r.pkg||'').split(',')[0])+'</div></td>'+
-      '<td>'+esc(r.stage||'—')+'</td>'+
-      '<td class="au-sub">'+roundsCell(r)+'</td>'+
-      '<td>'+(r.mfsn==='affiliate'?'<span style="color:#2f8a4d;font-weight:700;font-size:11.5px">On</span>':'<span style="color:#c98a00;font-weight:700;font-size:11.5px">Off</span>')+'</td>'+
-      '<td class="au-sub">'+esc(r.va||'—')+'</td>'+
+      '<td style="max-width:340px"><span class="au-nm" data-open="'+esc(r.id)+'">'+esc(r.name)+'</span>'
+        +' <span class="au-sub">'+esc(r.stage||'')+(r.va?(' \u00b7 '+esc(r.va)):'')+'</span>'
+        +'<div>'+pkgChips(r.pkg)+'</div></td>'+
+      '<td style="white-space:nowrap">'+roundsBar(r)+'</td>'+
+      '<td style="white-space:nowrap">'+bureauCell(r)+'</td>'+
+      '<td>'+(r.mfsn==='affiliate'?'<span class="au-mfsn on">On</span>':'<span class="au-mfsn off">Off</span>')+'</td>'+
+      '<td class="au-sub" style="white-space:nowrap">'+(r.lastPaid?String(r.lastPaid).slice(0,10):'\u2014')+'</td>'+
       '<td style="position:relative;white-space:nowrap">'+
         (a?'<span class="au-out" style="background:'+OUT_COLOR[a.outcome]+'">'+OUT_LABEL[a.outcome]+'</span>'
-           +'<div class="au-sub">'+esc(a.who)+' · '+String(a.at).slice(0,10)+'</div>'
+           +'<div class="au-sub">'+esc(a.who)+' · '+String(a.at).slice(0,10)+' <span class="au-saved">saved \u2713</span></div>'
            +'<a href="#" class="au-sub" data-clear="'+esc(r.id)+'">undo</a>'
           :'<button class="au-markbtn" data-mark="'+esc(r.id)+'">Mark audited</button>')+
       '</td>'+
@@ -261,8 +289,9 @@ function renderFile(row,full,thread){
   var rounds=[['TransUnion',r.tu],['Equifax',r.eq],['Experian',r.ex]]
     .map(function(p){return p[0].slice(0,2)+' R'+((p[1]&&p[1].r)||0);}).join(' \u00b7 ');
   var allowance=r.unlimited?'Unlimited':(r.roundsIncluded==null?'?':r.roundsIncluded);
-  h+='<h4>The file</h4>'
-    +fact('Bought',esc(r.pkg||'\u2014'))
+  h+='<h4>What they bought</h4>'
+    +'<div style="margin:2px 0 4px">'+pkgChips(r.pkg)+'</div>'
+    +'<h4>The file</h4>'
     +fact('Rounds used',(r.roundsUsed||0)+' of '+allowance+(r.finished?' \u00b7 finished':''))
     +fact('Round by bureau',esc(rounds))
     +fact('Stage',esc(r.stage||'\u2014')+(r.days!=null?' ('+r.days+'d)':''))

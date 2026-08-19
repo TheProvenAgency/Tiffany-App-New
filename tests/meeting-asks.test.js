@@ -484,7 +484,7 @@ test('the audit drawer holds the WHOLE file and their conversation', () => {
   // person AND everything about them -- round they are on, what they paid
   // for, MFSN, all of it -- so one panel serves the whole audit pass.
   const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
-  assert.ok(/Round by bureau/.test(au) && /Bought/.test(au) && /First paid/.test(au)
+  assert.ok(/Round by bureau/.test(au) && /What they bought/.test(au) && /First paid/.test(au)
     && /MyFreeScoreNow/.test(au), 'round, purchases, MFSN -- the facts she listed');
   assert.ok(/data-mfsn/.test(au), 'MFSN markable right in the drawer');
   assert.ok(/data-out=/.test(au), 'the outcome buttons live in the drawer too');
@@ -496,4 +496,16 @@ test('the audit drawer holds the WHOLE file and their conversation', () => {
   const rows = srv.split("app.get('/api/audit',")[1].split('\n});')[0];
   assert.ok(/tu: c\.tu/.test(rows) && /paymentCount/.test(rows) && /firstPaid/.test(rows),
     'the list rows carry bureau rounds and payment history for the drawer');
+});
+
+test('the audit list shows every purchase as its own chip, not one truncated string', () => {
+  // "you have to show what package they got better" -- the package field
+  // accumulates purchases ("3 Month Expedited, Upgrade to Unlimited"), so
+  // each segment renders as its own readable chip, with a rounds progress
+  // bar and per-bureau rounds beside it.
+  const au = fs.readFileSync(path.join(__dirname, '..', 'public', 'audit.js'), 'utf8');
+  assert.ok(/function pkgChips/.test(au) && /split\(','\)/.test(au), 'one chip per purchase');
+  assert.ok(/function roundsBar/.test(au), 'used-of-bought as a visible bar');
+  assert.ok(/function bureauCell/.test(au), 'TU/EQ/EX round each shown');
+  assert.ok(/saved \\u2713/.test(au), 'a mark says saved so nobody wonders if it stuck');
 });
